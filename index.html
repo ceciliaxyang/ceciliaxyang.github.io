@@ -17,6 +17,30 @@
 <meta property="og:image:alt" content="Cecilia is a designer in Oakland, currently leading design teams at Airbnb, above a preview of her Airbnb host app work.">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="css/style.css">
+<script>
+  // Visit /?no-track once in a browser to opt that browser out of analytics
+  // going forward (umami.is/docs/excluding-yourself) — Umami checks this flag
+  // itself before sending anything, so this isn't a filter, it's the actual
+  // off switch. /?track undoes it. Runs before the Umami tag below so the
+  // very first pageview already respects it. Cleans the URL either way so
+  // the query string doesn't linger or get shared by accident.
+  (function () {
+    var params = new URLSearchParams(location.search);
+    if (params.has("no-track")) {
+      localStorage.setItem("umami.disabled", 1);
+      alert("Analytics tracking disabled for this browser.");
+    } else if (params.has("track")) {
+      localStorage.removeItem("umami.disabled");
+      alert("Analytics tracking re-enabled for this browser.");
+    } else {
+      return;
+    }
+    params.delete("no-track");
+    params.delete("track");
+    var query = params.toString();
+    history.replaceState(null, "", location.pathname + (query ? "?" + query : ""));
+  })();
+</script>
 <!-- Umami Cloud analytics (cookie-free). data-domains limits it to the live
      site so local previews/testing don't count as visits. -->
 <script defer src="https://cloud.umami.is/script.js" data-website-id="2f7139b6-2324-4042-8811-f23e68ef36ba" data-domains="ceciliayang.com"></script>
