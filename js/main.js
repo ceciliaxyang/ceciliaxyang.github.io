@@ -50,7 +50,14 @@ document.addEventListener("DOMContentLoaded", function () {
     var sectionHeight = section.getBoundingClientRect().height;
     var deviceOffsetWithinSection = (sectionHeight - deviceHeight) / 2;
     var targetVisible = 0.2 * deviceHeight;
-    hero.style.height = window.innerHeight - deviceOffsetWithinSection - targetVisible + "px";
+    var target = window.innerHeight - deviceOffsetWithinSection - targetVisible;
+    // Clamped to 50-90% of the viewport: if the device measures oddly (seen
+    // on some browsers depending on exactly when this runs relative to font/
+    // layout readiness), the raw math could blow up to ~the full viewport
+    // height, hiding the peek entirely instead of just being imprecise.
+    var min = window.innerHeight * 0.5;
+    var max = window.innerHeight * 0.9;
+    hero.style.height = Math.min(max, Math.max(min, target)) + "px";
   }
   updateHeroHeight();
 
