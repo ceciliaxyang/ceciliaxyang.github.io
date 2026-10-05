@@ -270,11 +270,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (pending === 0) markReady();
   });
 
-  // Card videos: only start playing once the card is substantially on screen.
-  // (Cards can be taller than the viewport on shorter screens, so we don't
-  // require 100% visibility — that could be impossible to satisfy.)
+  // Card videos: start playing as the card arrives, not once it's mostly
+  // there. A card spends most of its arrival on a frozen first frame if the
+  // threshold is high (it was 60%, i.e. the card's top edge about halfway up
+  // the screen). 25% of the card, measured against a viewport extended 15% past
+  // the bottom edge (see rootMargin below), starts playback right as its top
+  // edge reaches the bottom of the screen. (Cards can be taller than the
+  // viewport on shorter screens, so we never require 100% visibility.)
   var cardVideos = document.querySelectorAll(".cs-device video");
-  var IN_VIEW_THRESHOLD = 0.6;
+  var IN_VIEW_THRESHOLD = 0.25;
 
   cardVideos.forEach(function (video) {
     var card = video.closest(".cs-device");
@@ -336,7 +340,10 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         });
       },
-      { threshold: [0, 0.1, 0.15, 0.2, 0.25, 0.5, 0.6, 0.75, 0.99, 1] }
+      {
+        threshold: [0, 0.1, 0.15, 0.2, 0.25, 0.5, 0.6, 0.75, 0.99, 1],
+        rootMargin: "0px 0px 15% 0px",
+      }
     );
     observer.observe(card);
   });
