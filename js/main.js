@@ -242,9 +242,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 150);
   });
 
-  // Card content fades in once every video/image in the card has its first
-  // frame (see .js-media in css/style.css). Anything that errors counts as
-  // done, so one broken asset can't keep a card blank.
+  // Card content fades in once every video/image in the card has something
+  // to show (see .js-media in css/style.css). For a video that's its poster —
+  // a small first-frame still — not the video's own first frame, which on a
+  // slow connection can take seconds and left an empty white card. Anything
+  // that errors counts as done, so one broken asset can't keep a card blank.
   document.querySelectorAll(".cs-device").forEach(function (device) {
     var media = device.querySelectorAll("video, img");
     var pending = 0;
@@ -263,8 +265,19 @@ document.addEventListener("DOMContentLoaded", function () {
       var ready = isVideo ? el.readyState >= 2 : el.complete;
       if (ready) return;
       pending += 1;
-      el.addEventListener(isVideo ? "loadeddata" : "load", settle, { once: true });
-      el.addEventListener("error", settle, { once: true });
+      var done = false;
+      function once() {
+        if (done) return;
+        done = true;
+        settle();
+      }
+      el.addEventListener(isVideo ? "loadeddata" : "load", once, { once: true });
+      el.addEventListener("error", once, { once: true });
+      if (isVideo && el.poster) {
+        var posterImg = new Image();
+        posterImg.onload = posterImg.onerror = once;
+        posterImg.src = el.poster;
+      }
     });
 
     if (pending === 0) markReady();
