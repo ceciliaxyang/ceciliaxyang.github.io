@@ -283,6 +283,53 @@ document.addEventListener("DOMContentLoaded", function () {
     if (pending === 0) markReady();
   });
 
+  // Load order: posters first, then videos, both in page order. The videos
+  // ship with preload="none" (see index.html), so at first only the posters —
+  // small stills — download, and the first cards are never blank waiting
+  // behind tens of MB of video. Each video then starts loading once its own
+  // poster is in and the previous video has its first frame, so the card
+  // you'll reach first gets the bandwidth first. The timeouts keep one slow or
+  // broken file from holding up the rest. A video the visitor scrolls to
+  // before its turn still loads: play() fetches it on its own.
+  (function () {
+    var videos = Array.prototype.slice.call(document.querySelectorAll(".cs-device video"));
+    var STEP_TIMEOUT = 3000;
+
+    function posterSettled(video) {
+      return new Promise(function (resolve) {
+        if (!video.poster) return resolve();
+        var img = new Image();
+        img.onload = img.onerror = resolve;
+        img.src = video.poster; // same URL the <video> requested, so it's cached
+      });
+    }
+
+    function startLoading(video) {
+      // Already loading (e.g. play() got there first) — leave it alone, since
+      // load() would restart it.
+      if (video.readyState > 0 || video.networkState === 2) return Promise.resolve();
+      video.preload = "auto";
+      video.load();
+      return new Promise(function (resolve) {
+        var timer = setTimeout(resolve, STEP_TIMEOUT);
+        function done() {
+          clearTimeout(timer);
+          resolve();
+        }
+        video.addEventListener("loadeddata", done, { once: true });
+        video.addEventListener("error", done, { once: true });
+      });
+    }
+
+    var posters = videos.map(posterSettled);
+    var previous = Promise.resolve();
+    videos.forEach(function (video, i) {
+      previous = Promise.all([previous, posters[i]]).then(function () {
+        return startLoading(video);
+      });
+    });
+  })();
+
   // Card videos: start playing as the card arrives, not once it's mostly
   // there. A card spends most of its arrival on a frozen first frame if the
   // threshold is high (it was 60%, i.e. the card's top edge about halfway up
