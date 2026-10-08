@@ -134,8 +134,12 @@ document.addEventListener("DOMContentLoaded", function () {
             trigger: section,
             start: anchorPoint,
             end: anchorEnd,
-            scrub: 1,
-            fastScrollEnd: true,
+            // Tied directly to scroll position (no smoothing lag). With
+            // scrub: 1 the shrink trailed the scroll by ~1s, so scrolling up
+            // left the receding card too small for longer than it was too
+            // big scrolling down (bigger gaps on the way back up), and
+            // fastScrollEnd snapped it visibly on a fast flick.
+            scrub: true,
           },
         }
       );
