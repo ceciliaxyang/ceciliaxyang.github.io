@@ -20,11 +20,6 @@
 <meta property="og:image:alt" content="Cecilia is a designer in Oakland, currently leading design teams at Airbnb, above a preview of her Airbnb host app work.">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="css/style.css">
-<!-- The first two card posters jump the queue: they're what a visitor sees
-     first, and the videos behind them wait (preload="none"; js/main.js loads
-     them in order once their posters are in). -->
-<link rel="preload" as="image" href="assets/posters/today-tab.jpg" fetchpriority="high">
-<link rel="preload" as="image" href="assets/posters/lock-connect-video.jpg" fetchpriority="high">
 <script>
   // Visit /?no-track once in a browser to opt that browser out of analytics
   // going forward (umami.is/docs/excluding-yourself) — Umami checks this flag
@@ -99,7 +94,7 @@
   <div class="cs-wrap">
     <section class="cs-section cs-card cs-pinned cs-first">
       <div class="cs-device cs-device--today">
-        <video class="cs-today-video" src="assets/today-tab.mp4#t=0.001" poster="assets/posters/today-tab.jpg" muted loop playsinline preload="none"></video>
+        <video class="cs-today-video" src="assets/today-tab.mp4#t=0.001" poster="assets/posters/today-tab.jpg" muted loop playsinline preload="auto"></video>
       </div>
     </section>
 
@@ -107,26 +102,26 @@
       <div class="cs-device cs-device--lock">
         <div class="cs-lock-phone">
           <img class="cs-lock-base" src="assets/lock-screen-base.png" alt="Smart Lock connect screen on an iPhone">
-          <video class="cs-lock-video" src="assets/lock-connect-video.mp4#t=0.001" poster="assets/posters/lock-connect-video.jpg" muted loop playsinline preload="none"></video>
+          <video class="cs-lock-video" src="assets/lock-connect-video.mp4#t=0.001" poster="assets/posters/lock-connect-video.jpg" muted loop playsinline preload="auto"></video>
         </div>
       </div>
     </section>
 
     <section class="cs-section cs-card cs-pinned">
       <div class="cs-device cs-device--setup">
-        <video class="cs-setup-video" src="assets/setup-flow.mp4#t=0.001" poster="assets/posters/setup-flow.jpg" muted loop playsinline preload="none"></video>
+        <video class="cs-setup-video" src="assets/setup-flow.mp4#t=0.001" poster="assets/posters/setup-flow.jpg" muted loop playsinline preload="auto"></video>
       </div>
     </section>
 
     <section class="cs-section cs-card cs-pinned">
       <div class="cs-device cs-device--hostactions">
-        <video class="cs-hostactions-video" src="assets/host-actions.mp4#t=0.001" poster="assets/posters/host-actions.jpg" muted loop playsinline preload="none" data-in-view-threshold="0.15" data-play-delay="400"></video>
+        <video class="cs-hostactions-video" src="assets/host-actions.mp4#t=0.001" poster="assets/posters/host-actions.jpg" muted loop playsinline preload="auto" data-in-view-threshold="0.15" data-play-delay="400"></video>
       </div>
     </section>
 
     <section class="cs-section cs-card cs-pinned">
       <div class="cs-device cs-device--airkey">
-        <video class="cs-airkey-video" src="assets/airkey-guest.mp4#t=0.001" poster="assets/posters/airkey-guest.jpg" muted loop playsinline preload="none"></video>
+        <video class="cs-airkey-video" src="assets/airkey-guest.mp4#t=0.001" poster="assets/posters/airkey-guest.jpg" muted loop playsinline preload="auto"></video>
       </div>
     </section>
 
@@ -135,7 +130,7 @@
         <div class="cs-tips-phone">
           <img class="cs-tips-frame" src="assets/phone-frame-tips.png" alt="">
           <div class="cs-tips-screen">
-            <video class="cs-tips-video" src="assets/tips-enter-exit.mp4#t=0.001" poster="assets/posters/tips-enter-exit.jpg" muted loop playsinline preload="none"></video>
+            <video class="cs-tips-video" src="assets/tips-enter-exit.mp4#t=0.001" poster="assets/posters/tips-enter-exit.jpg" muted loop playsinline preload="auto"></video>
             <img class="cs-tips-nav" src="assets/global-nav.png" alt="">
           </div>
         </div>
