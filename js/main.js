@@ -77,6 +77,17 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     var tiltAngles = [-6, 5, -5, 6, -4];
 
+    // Desktop cards are centered with a CSS translate(-50%, -50%). GSAP reads
+    // that off the computed matrix as pixels and only recognizes it as
+    // "50%" when the card's height is a whole number — which depends on the
+    // window size (e.g. a 1025px-tall window gives 904.99px). When it
+    // misses, the entrance animation's y: 0 wipes out the vertical -50% and
+    // drops the first card ~450px, below the fold. Handing GSAP the percentages
+    // explicitly keeps the centering at any window size, and through resizes.
+    if (isDesktop) {
+      gsap.set(".cs-device", { xPercent: -50, yPercent: -50, x: 0, y: 0 });
+    }
+
     pinnedSections.forEach(function (section, index, sections) {
       var device = section.querySelector(".cs-device");
       var nextSection = sections[index + 1] || lastCard;
