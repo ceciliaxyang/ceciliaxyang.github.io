@@ -185,7 +185,7 @@ a { color: inherit; }
     transform: translateY(calc(100% - var(--peek))); transition: transform .38s cubic-bezier(.2, .8, .2, 1); }
   .bench.expanded { transform: none; overflow-y: auto; }
   .bench:not(.open) { transform: translateY(100%); }
-  .bench-head { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; padding: 8px 0 12px; background: var(--bg); cursor: pointer; }
+  .bench-head { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 8px; padding: 8px 0 12px; background: var(--bg); cursor: pointer; }
   .sheet-handle { display: block; grid-column: 1 / -1; justify-self: center; width: 36px; height: 5px; margin-bottom: 10px; border-radius: 3px; background: #d9d9d9; }
   .peek { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; border-radius: 12px; }
   .peek:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
