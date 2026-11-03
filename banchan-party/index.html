@@ -6,6 +6,7 @@
 <title>Banchan Party</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
+[hidden] { display: none !important; }
 /* Styled after Polish shelf: white page, system type, big rounded photo tiles with a frosted add button,
    grey scope pills, and a fixed pane on the right (a bottom sheet on phones) that lists what you picked. */
 :root {
@@ -234,6 +235,13 @@ a { color: inherit; }
 @media (max-width: 760px) {
   .stage { width: min(100%, 280px); border-radius: 40px; align-self: center; }
 }
+/* Minimized shopping list (desktop); phones keep the bottom sheet's peek bar */
+.reopen { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 13px; line-height: 16px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.reopen:hover { background: #000; }
+.reopen:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.reopen-thumbs { display: flex; padding-left: 6px; }
+.reopen-thumbs img { width: 28px; height: 28px; margin-left: -6px; border-radius: 8px; border: 2px solid var(--text); object-fit: cover; background: var(--swatch); }
+@media (max-width: 760px) { .reopen { display: none; } }
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
 body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 761px) { body.bench-open .toast { bottom: 16px; } }
@@ -264,7 +272,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
       <span class="peek-thumbs" id="peekThumbs" aria-hidden="true"></span>
     </button>
     <button type="button" class="dark-pill bench-share" id="share">Share</button>
-    <button type="button" class="mh-btn" id="closeRecipe" aria-label="Close recipe" title="Close recipe" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
+    <button type="button" class="mh-btn" id="closeRecipe" aria-label="Hide shopping list" title="Hide shopping list"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
   </div>
   <div class="view" id="recipeView" hidden></div>
   <div class="view" id="benchBody">
@@ -281,6 +289,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     <p class="note" id="note"></p>
   </div>
 </aside>
+<button type="button" class="reopen" id="reopen" hidden><span class="reopen-thumbs" id="reopenThumbs" aria-hidden="true"></span><span id="reopenText">Shopping list</span></button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -337,6 +346,7 @@ const ING = {
   oysters:     { n: "Oysters, freshly shucked", a: "protein", d: "ea", unit: "oyster" },
   seedless_cuke:{ n: "Seedless cucumbers", a: "produce", d: "wt" },
   garlic_bulb: { n: "Whole young garlic bulbs", sub: "About 12 medium bulbs per pound", a: "produce", d: "wt" },
+  green_cabbage: { n: "Green cabbage", a: "produce", d: "wt" },
   mustard:     { n: "Mustard greens (gat)", a: "produce", d: "wt" },
   broccoli:    { n: "Broccoli, trimmed", a: "produce", d: "wt" },
   lotus:       { n: "Lotus root, peeled", a: "produce", d: "wt" },
@@ -416,7 +426,10 @@ const ALL_DISHES = [
     ing: [["black_beans",8,"oz"],["garlic",3,"clove"],["soy",3,"tbsp"],["sugar",0.25,"cup"],["oil",1,"tbsp"],["syrup",0.25,"cup"],["sesame_oil",2,"tsp"],["sesame",1,"tsp"]] },
   { id: "maneul", kr: "통마늘 장아찌", name: "Tongmaneul Jangajji", en: "Whole garlic pickles", cat: "veg",
     url: "https://www.maangchi.com/recipe/tongmaneul-jangajji", rating: 4.6, votes: 47, mins: 345600, timeText: "8 months", base: 24, baseNote: "makes about 24 bulbs, counted as one bulb per serving",
-    ing: [["garlic_bulb",2,"lb"],["soy",3,"cup"],["vinegar",3,"cup"],["sugar",2,"cup"],["kosher_salt",0.25,"cup"]] }
+    ing: [["garlic_bulb",2,"lb"],["soy",3,"cup"],["vinegar",3,"cup"],["sugar",2,"cup"],["kosher_salt",0.25,"cup"]] },
+  { id: "yangbaechu", kr: "양배추김치", name: "Yangbaechu Kimchi", en: "Emergency cabbage kimchi", cat: "veg",
+    url: "https://www.maangchi.com/recipe/yangbaechu-kimchi", rating: 4.9, votes: 484, mins: 25, estMins: true, base: 8, baseAssumed: true, baseNote: "no yield listed, counted as 8 servings",
+    ing: [["green_cabbage",2,"lb"],["kosher_salt",0.25,"cup"],["gochugaru",1/3,"cup"],["sugar",1,"tbsp"],["fish_sauce",0.25,"cup"],["garlic",12,"clove"],["scallion",3.5,"ea"],["carrot",4,"chopped_tbsp_carrot"]] }
 ];
 const DISHES = ALL_DISHES.filter(d => !d.hide).sort((a, b) => a.mins - b.mins);
 const CATS = [["all","All"],["veg","Vegetables"],["meat","Meat & seafood"]];
@@ -538,6 +551,13 @@ const STEPS = {
     "After 2 more weeks, repeat once. Put the bulbs back roots-down so the brine fills them.",
     "Leave the jar in a cool place until 8 months have passed. To serve, slice a bulb crosswise.",
   ], tip: "Use young spring garlic with thin skins; the skin softens enough to eat." },
+  yangbaechu: { steps: [
+    "Cut the cabbage into thin strips, about 2–3 inches long and ¼ inch wide.",
+    "Toss with the kosher salt and 1 cup cold water by hand, then let it sit for 10 minutes.",
+    "Meanwhile, mix the gochugaru, sugar, fish sauce, garlic, scallions and carrot into a paste.",
+    "Rinse the cabbage in cold water a couple of times and drain well.",
+    "Mix the paste in thoroughly, pack into a container, and press down to push out the air.",
+  ], tip: "Eat it right away like a salad, or leave it out a few days to ferment for kimchi fried rice or stew." },
   kimchi: { steps: [
     "Quarter the cabbage lengthwise, cut out the core, then cut it into bite-size pieces. Toss with the kosher salt and 1 cup water and let it sit for 2 hours, tossing every 30 minutes.",
     "Meanwhile, whisk the rice flour into 1 cup water in a small pot and cook, stirring, until it bubbles. Stir in the sugar, cook until slightly see-through, then let it cool.",
@@ -632,11 +652,12 @@ const store = {
   set(k, v) { try { localStorage.setItem("banchan." + k, JSON.stringify(v)); } catch {} },
 };
 const state = {
-  sel: new Set(store.get("sel", ["kongnamul", "sigeumchi", "gamja"]).filter(id => DISHES.some(d => d.id === id))),
+  sel: new Set(store.get("sel", []).filter(id => DISHES.some(d => d.id === id))),
   have: new Set(store.get("have", [])),
   serv: store.get("servings", 8),
   cat: "all",
   expanded: false,
+  min: false, // desktop: shopping list minimized to the floating button
   view: null, // a dish id while its recipe shows in the pane
 };
 const save = () => { store.set("sel", [...state.sel]); store.set("have", [...state.have]); store.set("servings", state.serv); };
@@ -740,7 +761,11 @@ function renderRecipe(d) {
 function renderBench() {
   const picked = DISHES.filter(d => state.sel.has(d.id)), n = picked.length, rows = aggregate();
   const recipe = state.view && DISHES.find(d => d.id === state.view);
-  const open = n > 0 || !!recipe;
+  if (!n) state.min = false;
+  const open = !!recipe || (n > 0 && !state.min);
+  $("reopen").hidden = open || !n;
+  $("reopenText").textContent = `Shopping list · ${n}`;
+  $("reopenThumbs").innerHTML = picked.slice(-3).map(d => `<img src="${img(d)}" alt="">`).join("");
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
   $("bench").classList.toggle("expanded", open && state.expanded);
@@ -749,7 +774,9 @@ function renderBench() {
   document.querySelectorAll(".card").forEach(c => c.classList.toggle("viewing", !!recipe && c.dataset.id === recipe.id));
   if (!open) return;
   $("recipeView").hidden = !recipe; $("benchBody").hidden = !!recipe;
-  $("closeRecipe").hidden = !recipe; $("share").hidden = !!recipe;
+  $("share").hidden = !!recipe;
+  $("closeRecipe").setAttribute("aria-label", recipe ? "Close recipe" : "Hide shopping list");
+  $("closeRecipe").title = recipe ? "Close recipe" : "Hide shopping list";
   document.querySelector(".bench-title").textContent = recipe ? "Recipe" : "Shopping list";
   document.querySelectorAll(".serv-out").forEach(o => (o.textContent = state.serv));
   const head = recipe ? [recipe] : picked;
@@ -843,7 +870,13 @@ document.addEventListener("change", e => {
   save(); e.target.closest(".item").classList.toggle("have", e.target.checked);
 });
 $("peek").onclick = () => { if (matchMedia("(max-width: 760px)").matches) { state.expanded = !state.expanded; renderBench(); } };
-$("closeRecipe").onclick = () => { state.view = null; if (!state.sel.size) state.expanded = false; renderBench(); };
+$("closeRecipe").onclick = () => {
+  if (state.view) { state.view = null; if (!state.sel.size) state.expanded = false; }
+  else if (matchMedia("(max-width: 760px)").matches) state.expanded = false;
+  else state.min = true;
+  renderBench();
+};
+$("reopen").onclick = () => { state.min = false; renderBench(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape" && state.view) $("closeRecipe").click(); });
 // A shared list travels in the link as #list.<dish>.<dish>~<servings>.
 // The published preview can't see its own claude.ai address, so links made there point at it directly.
