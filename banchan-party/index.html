@@ -227,12 +227,6 @@ a { color: inherit; }
 .r-steps li { counter-increment: step; display: flex; gap: 12px; font-size: 14px; line-height: 21px; color: var(--text); }
 .r-steps li::before { content: counter(step); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #f2f2f2; font-size: 12px; line-height: 24px; text-align: center; font-weight: 500; }
 .r-tip { margin: 0; padding: 14px 16px; border-radius: 20px; background: #f7f7f7; font-size: 13px; line-height: 19px; color: var(--text); }
-.to-list { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; border: 0; border-radius: 20px; background: #f7f7f7; text-align: left; cursor: pointer; }
-.to-list:hover { background: #efefef; }
-.to-list:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-.to-list .row-text { gap: 2px; }
-.to-list .peek-thumbs { display: flex; }
-.to-list .peek-thumbs img { width: 24px; height: 24px; margin-left: -8px; border-radius: 7px; object-fit: cover; box-shadow: 0 0 0 2px #f7f7f7; }
 .row-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 12px 0; border: 0; background: none; text-align: left; cursor: pointer; }
 .row-open:hover .row-name { text-decoration: underline; }
 .row-open:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 12px; }
@@ -759,8 +753,7 @@ function renderRecipe(d) {
     <p class="section-label">Steps</p>
     <ol class="r-steps">${s.steps.map(t => `<li><span>${esc(t)}</span></li>`).join("")}</ol>
     <p class="r-tip">${esc(s.tip)}</p>
-    <p class="note">Quick steps written for beginners. For photos and more detail, see the <a href="${d.url}" target="_blank" rel="noopener">full recipe on ${siteName(d.url)}</a>.</p>
-    ${n ? `<button type="button" class="to-list" data-list><span class="row-text"><span class="row-name">Shopping list</span><span class="row-sub">${n} dish${n > 1 ? "es" : ""} · ${aggregate().length} ingredients</span></span><span class="peek-thumbs" aria-hidden="true">${picked.slice(-4).map(x => `<img src="${img(x)}" alt="">`).join("")}</span></button>` : ""}`;
+    <p class="note">Quick steps written for beginners. For photos and more detail, see the <a href="${d.url}" target="_blank" rel="noopener">full recipe on ${siteName(d.url)}</a>.</p>`;
 }
 function renderBench() {
   const picked = DISHES.filter(d => state.sel.has(d.id)), n = picked.length, rows = aggregate();
@@ -861,7 +854,6 @@ document.addEventListener("click", e => {
     revealCard(state.view, wasClosed);
     return;
   }
-  if (e.target.closest("[data-list]")) { state.view = null; renderBench(); $("bench").scrollTop = 0; return; }
   const step = e.target.closest("[data-step]");
   if (step) { state.serv = Math.min(20, Math.max(1, state.serv + +step.dataset.step)); save(); renderBench(); return; }
   const chip = e.target.closest("[data-cat]");
