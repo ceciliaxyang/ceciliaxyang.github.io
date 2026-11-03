@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Easy Korean side dishes with beginner recipes and a shared shopping list.">
+<title>Banchan Party</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Styled after Polish shelf: white page, system type, big rounded photo tiles with a frosted add button,
+   grey scope pills, and a fixed pane on the right (a bottom sheet on phones) that lists what you picked. */
+:root {
+  --bg: #ffffff;
+  --fg: #000000;
+  --text: #222222;
+  --muted: #6a6a6a;
+  --soft: #6c6c6c;
+  --line: #dddddd;
+  --hair: #ebebeb;
+  --swatch: #ececec;
+  --pane: 348px;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  padding-left: max(40px, env(safe-area-inset-left, 0px));
+  padding-right: max(40px, env(safe-area-inset-right, 0px));
+}
+@media (max-width: 600px) { body { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); } }
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+
+.page { padding-block: 64px 60px; }
+@media (max-width: 600px) { .page { padding-block: 40px 40px; } }
+
+/* The pane's column (and the gap before it) opens as the pane slides in, pushing the shelf aside. */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--pane); column-gap: 56px; align-items: start;
+  transition: grid-template-columns .45s cubic-bezier(.2, .8, .2, 1), column-gap .45s cubic-bezier(.2, .8, .2, 1); }
+.layout.closed { grid-template-columns: minmax(0, 1fr) 0px; column-gap: 0px; }
+@media (max-width: 760px) { .layout, .layout.closed { grid-template-columns: minmax(0, 1fr); } }
+
+/* Header */
+.shelf-head { display: flex; flex-direction: column; gap: 24px; margin: 0 0 64px; padding: 0 8px; }
+.shelf-title { margin: 0; font-size: 40px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px; color: #000; }
+.shelf-sub { margin: -8px 0 0; max-width: 60ch; font-size: 14px; line-height: 20px; color: var(--soft); }
+.scopes { display: flex; gap: 8px; padding: 8px; margin: -8px; overflow-x: auto; scrollbar-width: none; }
+.scopes::-webkit-scrollbar { display: none; }
+.scope { flex-shrink: 0; min-width: 56px; padding: 12px 16px; border: 0; border-radius: 32px; background: #f2f2f2; color: var(--text);
+  font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.scope:hover { background: #e8e8e8; }
+.scope[aria-pressed="true"] { background: var(--text); color: #fff; }
+.scope:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .shelf-head { gap: 16px; margin-bottom: 40px; padding: 0; }
+  .shelf-title { font-size: 32px; line-height: 40px; letter-spacing: -.9px; }
+  .scopes { margin-inline: -16px; padding-inline: 16px; }
+}
+
+/* Shelf grid */
+/* The column count is set from the full page width (see fitCols), so opening the pane shrinks the cards instead of reflowing them. */
+.grid { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 56px 40px; }
+.card { position: relative; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.card[hidden] { display: none; }
+.card-link { display: flex; flex-direction: column; gap: 28px; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 20%; }
+.card-link:focus-visible { outline: none; }
+.card-link:focus-visible .photo, .card.viewing .photo { outline: 2px solid var(--text); outline-offset: 4px; }
+.photo { display: block; position: relative; width: 100%; max-width: 100%; aspect-ratio: 240 / 260; border-radius: 20% / 18.5%; overflow: hidden; background: var(--swatch); }
+.photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+.card-link:hover .photo img { transform: scale(1.04); }
+/* Frosted round button on the photo */
+.add {
+  position: absolute; top: 20px; right: 20px; z-index: 1;
+  width: 40px; height: 40px; padding: 10px; border: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; background: rgba(17, 17, 17, .5);
+  -webkit-backdrop-filter: blur(48px); backdrop-filter: blur(48px); cursor: pointer;
+}
+.add:hover { background: rgba(17, 17, 17, .62); }
+.add:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.add svg { display: block; overflow: visible; }
+.add .plus { transform-origin: 10px 10px; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .2s ease; }
+.add .check { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .2s ease; }
+.add.on .plus { transform: rotate(90deg) scale(0); opacity: 0; }
+.add.on .check { stroke-dashoffset: 0; transition: stroke-dashoffset .35s cubic-bezier(.3,.7,.3,1) .12s; }
+.card-fx, .card-text, .card-title { display: flex; }
+.card-text { display: flex; flex-direction: column; width: 100%; }
+.card-title { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card-kr, .card-time { font-size: 14px; line-height: 18px; color: #6c6c6c; }
+.card-time { font-variant-numeric: tabular-nums; }
+.card-en { font-size: 20px; font-weight: 500; color: #000; }
+.card-title > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-text, .card-title, .card-fx { box-sizing: border-box; }
+.brand { font-size: 14px; color: #000; }
+.brand .en { color: var(--soft); }
+.name { font-size: 20px; font-weight: 500; color: #000; }
+.card-fx { display: flex; flex-wrap: wrap; gap: 4px; }
+.pill { border: 1px solid var(--line); border-radius: 32px; background: var(--bg); color: var(--text); padding: 6px 12px; font-size: 12px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.pill.go { border-color: var(--text); }
+.card-link:hover .pill.go { background: var(--text); color: #fff; }
+@media (max-width: 600px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
+  .photo { border-radius: 32px; }
+  .card, .card-link { gap: 16px; }
+  .add { top: 12px; right: 12px; width: 36px; height: 36px; padding: 8px; }
+  .name, .card-en { font-size: 17px; }
+  .brand .en { display: none; }
+}
+
+/* Shopping list pane: fixed to the right edge; its left border is the divider between the panes. */
+.bench { position: fixed; z-index: 60; top: 0; bottom: 0; right: 0;
+  width: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)));
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) max(40px, env(safe-area-inset-right, 0px)) 40px 28px;
+  display: flex; flex-direction: column; gap: 24px; background: var(--bg); border-left: 1px solid var(--hair); scrollbar-width: none; }
+.bench::-webkit-scrollbar { display: none; }
+@media (min-width: 761px) {
+  .bench { transform: translateX(100%); transition: transform .45s cubic-bezier(.2, .8, .2, 1); }
+  .bench.open { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .layout, .bench { transition: none !important; } }
+.bench-head { display: flex; align-items: flex-start; gap: 16px; }
+.bench-titles { flex: 1; min-width: 0; }
+.bench-title { margin: 0; padding: 2px 0 12px; font-size: 40px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px; color: #000; }
+.peek { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 0; text-align: left; cursor: default; }
+.bench-title { display: block; }
+.sheet-handle, .peek-mini, .peek-sub, .peek-thumbs { display: none; }
+.dark-pill:focus-visible, .step button:focus-visible, .row-del:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.serv { display: flex; align-items: center; gap: 16px; padding: 4px 0; }
+.serv-text { flex: 1; min-width: 0; }
+.serv-text p { margin: 0; font-size: 14px; line-height: 18px; }
+.serv-text .t { font-weight: 500; color: var(--text); }
+.serv-text .s { color: var(--soft); margin-top: 4px; }
+.step { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: 100px; background: #f2f2f2; }
+.step button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 18px; line-height: 1; color: var(--text); }
+.step button:hover { background: #e4e4e4; }
+.step output { min-width: 24px; text-align: center; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.section-label { margin: 8px 0 -12px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--soft); }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row { display: flex; align-items: center; gap: 16px; min-height: 72px; border-bottom: 1px solid var(--hair); }
+.row-thumb { flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px; overflow: hidden; background: var(--swatch); }
+.row-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.row-text > span { display: block; margin: 0; font-size: 14px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-name { font-weight: 500; color: var(--text); }
+.row-sub { color: var(--soft); }
+.rows.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: flex; align-items: center; min-width: 0; max-width: 100%; border-radius: 32px; background: #f2f2f2; }
+.chip-open { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px; border: 0; background: none; color: var(--text); font-size: 13px; line-height: 16px; font-weight: 500; cursor: pointer; border-radius: 32px; }
+.chip-open img { flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; object-fit: cover; background: var(--swatch); }
+.chip-open span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-open:hover span { text-decoration: underline; }
+.chip-x { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 4px 0 2px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--soft); cursor: pointer; }
+.chip-x:hover { background: #e4e4e4; color: var(--text); }
+.chip-open:focus-visible, .chip-x:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+/* Overlapping stack of the dishes that use an ingredient */
+.uses { display: flex; padding-left: 6px; }
+.uses img { flex-shrink: 0; width: 22px; height: 22px; margin-left: -6px; border-radius: 6px; border: 2px solid var(--bg); box-sizing: content-box; object-fit: cover; background: var(--swatch); }
+.item-tip { color: var(--soft); }
+.row-del { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-right: -8px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text); cursor: pointer; }
+.row-del:hover { background: #f2f2f2; }
+
+.aisle h3 { margin: 16px 0 0; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--soft); }
+.item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); cursor: pointer; }
+.item input { flex-shrink: 0; margin: 1px 0 0; width: 16px; height: 16px; accent-color: var(--text); cursor: pointer; }
+.item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 18px; }
+.item-name { font-weight: 500; color: var(--text); }
+.item-name .opt { font-weight: 400; color: var(--soft); }
+.item-sub { color: var(--soft); font-size: 13px; }
+.item-qty { flex-shrink: 0; text-align: right; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item-qty small { display: block; margin-top: 4px; font-size: 13px; font-weight: 400; color: var(--soft); }
+.item.have .item-name, .item.have .item-qty { color: #a8a8a8; text-decoration: line-through; }
+.dark-pill { flex-shrink: 0; min-width: 56px; padding: 12px 16px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 12px; line-height: 16px; font-weight: 500; cursor: pointer; }
+.dark-pill:hover { background: #000; }
+.note { margin: 0; font-size: 12px; line-height: 18px; color: var(--soft); }
+
+/* Phones: the pane is a bottom sheet. Collapsed, only the peek bar shows; tap it to expand. */
+@media (max-width: 760px) {
+  .bench { --peek: calc(84px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; top: auto; bottom: 0; width: auto; border-left: 0;
+    max-height: 82vh; gap: 16px; padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    border-radius: 24px 24px 0 0; box-shadow: 0 -4px 24px rgba(0, 0, 0, .12); overflow: hidden;
+    transform: translateY(calc(100% - var(--peek))); transition: transform .38s cubic-bezier(.2, .8, .2, 1); }
+  .bench.expanded { transform: none; overflow-y: auto; }
+  .bench:not(.open) { transform: translateY(100%); }
+  .bench-head { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; padding: 8px 0 12px; background: var(--bg); cursor: pointer; }
+  .sheet-handle { display: block; grid-column: 1 / -1; justify-self: center; width: 36px; height: 5px; margin-bottom: 10px; border-radius: 3px; background: #d9d9d9; }
+  .peek { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; border-radius: 12px; }
+  .peek:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+  .bench-share { align-self: center; }
+  .peek-mini { display: block; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; overflow: hidden; background: var(--swatch); }
+  .peek-mini img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .bench-title { font-size: 17px; line-height: 22px; letter-spacing: -.2px; padding: 0; }
+  .peek-sub { display: block; margin: 2px 0 0; font-size: 13px; line-height: 18px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .peek-thumbs { display: flex; flex-shrink: 0; padding-left: 8px; transition: opacity .2s ease; }
+  .peek-thumbs img { width: 24px; height: 24px; margin-left: -8px; border-radius: 7px; object-fit: cover; box-shadow: 0 0 0 2px var(--bg); }
+  .bench.expanded .peek-thumbs { opacity: 0; }
+  body.bench-open .page { padding-bottom: calc(40px + 84px + env(safe-area-inset-bottom, 0px)); }
+  @media (prefers-reduced-motion: reduce) { .bench { transition: none; } }
+}
+/* Recipe view in the pane: a big rounded photo (like the Layers stage), then ingredients and steps. */
+.mh-btn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 12px; border: 0; border-radius: 100px; background: #f2f2f2; color: var(--text); cursor: pointer; }
+.mh-btn:hover { background: #ebebeb; }
+.mh-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.view { display: flex; flex-direction: column; gap: 24px; }
+.stage { flex-shrink: 0; width: 100%; aspect-ratio: 348 / 360; border-radius: 56px; overflow: hidden; background: var(--swatch); }
+.stage img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.r-title { display: flex; flex-direction: column; gap: 8px; }
+.r-title p { margin: 0; }
+.r-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.grey-pill { display: inline-flex; align-items: center; gap: 6px; padding: 12px 16px; border-radius: 32px; background: #f2f2f2; color: var(--text); font-size: 12px; line-height: 16px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.grey-pill:hover { background: #ebebeb; }
+.grey-pill:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.dark-pill.on { background: #f2f2f2; color: var(--text); }
+.r-ings { list-style: none; margin: -12px 0 0; padding: 0; }
+.r-ing { display: flex; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hair); font-size: 14px; line-height: 18px; }
+.r-ing .n { flex: 1; min-width: 0; color: var(--text); }
+.r-ing .n small { color: var(--soft); font-size: 13px; }
+.r-ing .q { flex-shrink: 0; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+.r-steps { margin: -8px 0 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 16px; }
+.r-steps li { counter-increment: step; display: flex; gap: 12px; font-size: 14px; line-height: 21px; color: var(--text); }
+.r-steps li::before { content: counter(step); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #f2f2f2; font-size: 12px; line-height: 24px; text-align: center; font-weight: 500; }
+.r-tip { margin: 0; padding: 14px 16px; border-radius: 20px; background: #f7f7f7; font-size: 13px; line-height: 19px; color: var(--text); }
+.to-list { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; border: 0; border-radius: 20px; background: #f7f7f7; text-align: left; cursor: pointer; }
+.to-list:hover { background: #efefef; }
+.to-list:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.to-list .row-text { gap: 2px; }
+.to-list .peek-thumbs { display: flex; }
+.to-list .peek-thumbs img { width: 24px; height: 24px; margin-left: -8px; border-radius: 7px; object-fit: cover; box-shadow: 0 0 0 2px #f7f7f7; }
+.row-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 12px 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.row-open:hover .row-name { text-decoration: underline; }
+.row-open:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 12px; }
+@media (max-width: 760px) {
+  .stage { width: min(100%, 280px); border-radius: 40px; align-self: center; }
+}
+.toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
+body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 761px) { body.bench-open .toast { bottom: 16px; } }
+@media (prefers-reduced-motion: reduce) { .add .plus, .add .check, .photo img { transition: none !important; } }
+</style>
+
+<div class="page">
+  <div class="layout closed" id="layout">
+    <main>
+      <header class="shelf-head">
+        <h1 class="shelf-title">Banchan party</h1>
+        <div class="scopes" id="scopes" role="group" aria-label="Filter by style"></div>
+      </header>
+      <div class="grid" id="grid"></div>
+    </main>
+  </div>
+</div>
+
+<aside class="bench" id="bench" aria-label="Shopping list">
+  <div class="bench-head" id="benchHead">
+    <span class="sheet-handle" aria-hidden="true"></span>
+    <button type="button" class="peek" id="peek" aria-expanded="false" aria-controls="benchBody">
+      <span class="peek-mini" id="peekMini"></span>
+      <span class="bench-titles">
+        <span class="bench-title" role="heading" aria-level="2">Shopping list</span>
+        <span class="peek-sub" id="peekSub"></span>
+      </span>
+      <span class="peek-thumbs" id="peekThumbs" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="dark-pill bench-share" id="share">Share</button>
+    <button type="button" class="mh-btn" id="closeRecipe" aria-label="Close recipe" title="Close recipe" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
+  </div>
+  <div class="view" id="recipeView" hidden></div>
+  <div class="view" id="benchBody">
+    <ul class="rows chips" id="dishRows" aria-label="Dishes"></ul>
+    <div class="serv">
+      <div class="serv-text"><p class="t">Servings per dish</p></div>
+      <div class="step">
+        <button type="button" data-step="-1" aria-label="Fewer servings">−</button>
+        <output class="serv-out" aria-live="polite">8</output>
+        <button type="button" data-step="1" aria-label="More servings">+</button>
+      </div>
+    </div>
+    <div id="list"></div>
+    <p class="note" id="note"></p>
+  </div>
+</aside>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const AISLES = [
+  ["produce", "Produce"],
+  ["protein", "Meat, fish & tofu"],
+  ["fridge", "Eggs & refrigerated"],
+  ["pantry", "Pantry & sauces"],
+];
+// d: wt (oz) | vol (tsp) | ea
+const ING = {
+  soy_sprouts: { n: "Soybean sprouts", sub: "Look for kongnamul, the sprouts with big yellow heads", a: "produce", d: "wt" },
+  mung_sprouts:{ n: "Mung bean sprouts", sub: "Also sold as sukju", a: "produce", d: "wt" },
+  spinach:     { n: "Spinach", a: "produce", d: "wt" },
+  cucumber:    { n: "Korean cucumbers", sub: "Or use 2 Kirby cucumbers for each one", a: "produce", d: "ea", unit: "cucumber" },
+  radish:      { n: "Korean radish (mu)", a: "produce", d: "wt" },
+  potato:      { n: "Potatoes", a: "produce", d: "wt" },
+  zucchini:    { n: "Zucchini, medium", sub: "Korean aehobak works too", a: "produce", d: "ea", unit: "zucchini", unitPl: "zucchini" },
+  eggplant:    { n: "Asian eggplants, medium", a: "produce", d: "ea", unit: "eggplant" },
+  carrot:      { n: "Carrots", a: "produce", d: "ea", unit: "carrot" },
+  onion:       { n: "Onions, medium", a: "produce", d: "ea", unit: "onion" },
+  scallion:    { n: "Scallions", a: "produce", d: "ea", unit: "stalk" },
+  green_chili: { n: "Green chili peppers", sub: "A green bell pepper works too", a: "produce", d: "ea", unit: "pepper" },
+  red_chili:   { n: "Red chili peppers", sub: "A red bell pepper works too", a: "produce", d: "ea", unit: "pepper" },
+  shishito:    { n: "Shishito peppers (kkwari-gochu)", a: "produce", d: "wt" },
+  garlic:      { n: "Garlic", a: "produce", d: "vol", cloves: true },
+  ginger:      { n: "Ginger, grated", a: "produce", d: "vol" },
+  ginger_sl:   { n: "Ginger, thin slices", a: "produce", d: "ea", unit: "slice" },
+  tofu:        { n: "Tofu, medium or firm", sub: "A standard pack is about 14–18 oz", a: "protein", d: "wt" },
+  fishcake:    { n: "Fish cake sheets (eomuk)", sub: "About 2 oz per sheet", a: "protein", d: "wt" },
+  beef:        { n: "Beef brisket, flank or shank", a: "protein", d: "wt" },
+  anchovy:     { n: "Small dried anchovies (myeolchi)", sub: "About 1 cup packed per 3 oz", a: "protein", d: "wt" },
+  eggs:        { n: "Eggs, large", a: "fridge", d: "ea", unit: "egg", ceil: true },
+  saeujeot:    { n: "Salted shrimp (saeujeot)", sub: "Salt or fish sauce works too", a: "fridge", d: "vol" },
+  soy:         { n: "Soy sauce", a: "pantry", d: "vol" },
+  soup_soy:    { n: "Soup soy sauce (guk ganjang)", sub: "Regular soy sauce or salt works too", a: "pantry", d: "vol" },
+  fish_sauce:  { n: "Fish sauce (myulchi aekjeot)", a: "pantry", d: "vol" },
+  gochugaru:   { n: "Gochugaru (red pepper flakes)", a: "pantry", d: "vol" },
+  sesame_oil:  { n: "Toasted sesame oil", a: "pantry", d: "vol" },
+  sesame:      { n: "Roasted sesame seeds", a: "pantry", d: "vol" },
+  sugar:       { n: "Sugar", a: "pantry", d: "vol" },
+  syrup:       { n: "Corn syrup or oligo syrup", sub: "Honey works too", a: "pantry", d: "vol" },
+  rice_wine:   { n: "Rice wine or mirin", a: "pantry", d: "vol" },
+  vinegar:     { n: "Vinegar", a: "pantry", d: "vol" },
+  oil:         { n: "Cooking oil", a: "pantry", d: "vol" },
+  broth:       { n: "Anchovy broth", sub: "Water or kelp broth works too", a: "pantry", d: "vol" },
+  kelp:        { n: "Dried kelp (dashima), 3-inch piece", sub: "A bay leaf works too", a: "pantry", d: "ea", unit: "piece" },
+  salt:        { n: "Salt", a: "pantry", d: "vol" },
+  pepper:      { n: "Black pepper", a: "pantry", d: "vol" },
+  peppercorns: { n: "Whole black peppercorns", a: "pantry", d: "vol" },
+  napa:        { n: "Napa cabbage", sub: "A head is about 3 lb", a: "produce", d: "wt" },
+  pear:        { n: "Asian pear", a: "produce", d: "wt" },
+  buchu:       { n: "Asian chives (buchu)", a: "produce", d: "wt" },
+  oysters:     { n: "Oysters, freshly shucked", a: "protein", d: "ea", unit: "oyster" },
+  seedless_cuke:{ n: "Seedless cucumbers", a: "produce", d: "wt" },
+  garlic_bulb: { n: "Whole young garlic bulbs", sub: "About 12 medium bulbs per pound", a: "produce", d: "wt" },
+  mustard:     { n: "Mustard greens (gat)", a: "produce", d: "wt" },
+  broccoli:    { n: "Broccoli, trimmed", a: "produce", d: "wt" },
+  lotus:       { n: "Lotus root, peeled", a: "produce", d: "wt" },
+  black_beans: { n: "Dried black beans with green kernels (seoritae)", a: "pantry", d: "wt" },
+  flour:       { n: "Flour", sub: "Wheat or rice flour", a: "pantry", d: "vol" },
+  kosher_salt: { n: "Kosher salt", a: "pantry", d: "vol" },
+  rice_flour:  { n: "Sweet rice flour", sub: "All-purpose flour works too", a: "pantry", d: "vol" },
+};
+const U = { tsp: 1, tbsp: 3, cup: 48, oz: 1, lb: 16, ea: 1, clove: 1, chopped_tbsp_scallion: 0.5, chopped_tbsp_carrot: 1/8 };
+// Ingredient rows: [key, qty | null (to taste), unit, optional?]
+const ALL_DISHES = [
+  { id: "kongnamul", kr: "콩나물무침", name: "Kongnamul Muchim", en: "Seasoned soybean sprouts", cat: "veg", art: "soysprout", plate: "porcelain",
+    url: "https://www.koreanbapsang.com/kongnamul-muchim-seasoned-soybean/", rating: 4.63, votes: 40, mins: 20, base: 4,
+    ing: [["soy_sprouts",1,"lb"],["scallion",1,"ea"],["garlic",1,"tsp"],["sesame_oil",1,"tbsp"],["sesame",1,"tsp"],["salt",1,"tsp"],["pepper",null]] },
+  { id: "sigeumchi", kr: "시금치나물", name: "Sigeumchi Namul", en: "Seasoned spinach", cat: "veg", art: "spinach", plate: "celadon",
+    url: "https://www.koreanbapsang.com/sigeumchi-namul-korean-spinach-side/", rating: 4.70, votes: 73, mins: 15, base: 2,
+    ing: [["spinach",10,"oz"],["scallion",1,"ea"],["soup_soy",2,"tsp"],["garlic",1,"tsp"],["sugar",0.5,"tsp"],["sesame_oil",1,"tsp"],["sesame",1,"tsp"],["salt",null],["pepper",null]] },
+  { id: "oimuchim", kr: "오이무침", name: "Oi Muchim", en: "Spicy cucumber salad", cat: "veg", art: "cucumber", plate: "porcelain",
+    url: "https://www.koreanbapsang.com/oi-muchim-korean-style-cucumber-salad/", rating: 4.62, votes: 279, mins: 15, base: 4,
+    ing: [["cucumber",1,"ea"],["salt",1,"tsp"],["gochugaru",1,"tbsp"],["scallion",1,"chopped_tbsp_scallion"],["garlic",0.5,"tsp"],["vinegar",1,"tsp"],["sugar",0.5,"tsp"],["sesame",1,"tsp"],["sesame_oil",1,"tsp"]] },
+  { id: "musaengchae", kr: "무생채", name: "Mu Saengchae", en: "Spicy radish salad", cat: "veg", art: "radish", plate: "bluewhite",
+    url: "https://www.koreanbapsang.com/mu-saengchae-spicy-korean-radish-salad/", rating: 4.64, votes: 69, mins: 20, base: 4,
+    ing: [["radish",1,"lb"],["salt",1,"tsp"],["scallion",1.5,"ea"],["gochugaru",2,"tbsp"],["garlic",2,"tsp"],["ginger",0.5,"tsp"],["fish_sauce",1,"tbsp"],["sugar",1,"tsp"],["sesame",1,"tsp",true]] },
+  { id: "sukju", kr: "숙주나물", name: "Sukju Namul", en: "Seasoned mung bean sprouts", cat: "veg", art: "mungsprout", plate: "celadon",
+    url: "https://www.koreanbapsang.com/sukju-namul-seasoned-mung-bean-sprouts/", rating: 4.70, votes: 23, mins: 10, estMins: true, base: 4,
+    ing: [["mung_sprouts",1,"lb"],["scallion",1,"ea"],["garlic",1,"tsp"],["sesame_oil",1,"tbsp"],["sesame",1,"tsp"],["salt",1,"tsp"],["pepper",null]] },
+  { id: "gajinamul", kr: "가지나물", name: "Gaji Namul", en: "Steamed eggplant", cat: "veg", art: "eggplant", plate: "porcelain",
+    url: "https://www.koreanbapsang.com/gaji-namul-steamed-eggplant-side-dish/", rating: 4.54, votes: 47, mins: 15, base: 4,
+    ing: [["eggplant",2,"ea"],["scallion",1,"ea"],["garlic",1,"tsp"],["soy",1.5,"tbsp"],["sesame_oil",2,"tsp"],["sugar",0.25,"tsp"],["gochugaru",0.5,"tsp"],["sesame",1,"tsp"],["pepper",null]] },
+  { id: "hobak", kr: "호박볶음", name: "Hobak Bokkeum", en: "Stir-fried zucchini", cat: "veg", art: "zucchini", plate: "onggi",
+    url: "https://www.koreanbapsang.com/hobak-bokkeum-stir-fried-zucchini/", rating: 4.84, votes: 24, mins: 10, base: 2,
+    ing: [["zucchini",1,"ea"],["saeujeot",2,"tsp"],["garlic",1,"tsp"],["scallion",1,"ea"],["sesame_oil",1,"tsp"],["sesame",1,"tsp"],["oil",1,"tbsp"]] },
+  { id: "eomuk", kr: "어묵볶음", name: "Eomuk Bokkeum", en: "Stir-fried fish cake", cat: "meat", art: "fishcake", plate: "porcelain",
+    url: "https://www.koreanbapsang.com/eomuk-bokkem-stir-fried-fish-cake/", rating: 4.69, votes: 57, mins: 20, base: 4, baseAssumed: true,
+    ing: [["fishcake",8,"oz"],["onion",0.25,"ea"],["garlic",1,"tsp"],["scallion",0.5,"ea"],["red_chili",1,"ea"],["green_chili",1,"ea"],["oil",2,"tbsp"],["soy",2,"tbsp"],["rice_wine",1,"tbsp"],["sugar",1,"tsp"],["pepper",null]] },
+  { id: "myeolchi", kr: "멸치볶음", name: "Myeolchi Bokkeum", en: "Sweet & savory anchovies", cat: "meat", art: "anchovy", plate: "black",
+    url: "https://www.koreanbapsang.com/myulchi-bokkeum-stir-fried-anchovies/", rating: 4.62, votes: 44, mins: 15, base: 8,
+    ing: [["anchovy",3,"oz"],["oil",1,"tbsp"],["green_chili",2,"ea",true],["soy",0.5,"tbsp"],["rice_wine",2,"tbsp"],["sugar",2,"tsp"],["syrup",1,"tbsp"],["garlic",3,"clove"],["sesame_oil",1,"tsp"],["sesame",1,"tsp"]] },
+  { id: "gamja", kr: "감자조림", name: "Gamja Jorim", en: "Braised potatoes", cat: "veg", art: "potato", plate: "celadon",
+    url: "https://www.koreanbapsang.com/gamja-jorim-braised-potatoes/", rating: 4.61, votes: 186, mins: 30, base: 4,
+    ing: [["potato",1.5,"lb"],["carrot",1,"ea"],["green_chili",2.5,"ea"],["onion",0.25,"ea"],["oil",1,"tbsp"],["soy",3,"tbsp"],["sugar",1,"tbsp"],["rice_wine",1,"tbsp"],["syrup",1,"tbsp"],["garlic",1,"tsp"],["pepper",0.125,"tsp"],["sesame_oil",1,"tsp"],["sesame",0.5,"tsp"]] },
+  { id: "dubu", hide: true, kr: "두부조림", name: "Dubu Jorim", en: "Braised tofu", cat: "eggtofu", art: "tofu", plate: "onggi",
+    url: "https://www.koreanbapsang.com/dubu-jorim-korean-braised-tofu/", rating: 4.82, votes: 140, mins: 25, base: 4,
+    ing: [["tofu",18,"oz"],["oil",1,"tbsp"],["soy",3,"tbsp"],["sesame_oil",1,"tbsp"],["sugar",1,"tsp"],["gochugaru",1,"tsp"],["sesame",1,"tsp"],["garlic",1,"tsp"],["scallion",2,"ea"]] },
+  { id: "jangjorim", kr: "장조림", name: "Jangjorim", en: "Soy-braised beef", cat: "meat", art: "beef", plate: "bluewhite",
+    url: "https://www.koreanbapsang.com/jangjorim-soy-braised-beef/", rating: 4.72, votes: 49, mins: 80, base: 8,
+    ing: [["beef",1.5,"lb"],["onion",0.5,"ea"],["scallion",2,"ea"],["radish",6,"oz"],["garlic",7,"clove"],["ginger_sl",3,"ea"],["peppercorns",0.5,"tsp"],["soy",5,"tbsp"],["soup_soy",2,"tbsp"],["sugar",3,"tbsp"],["rice_wine",3,"tbsp"],["kelp",1,"ea",true],["shishito",3,"oz",true],["eggs",3,"ea",true]] },
+  { id: "gyeranmari", hide: true, kr: "계란말이", name: "Gyeran Mari", en: "Rolled omelette", cat: "eggtofu", art: "rolled", plate: "porcelain",
+    url: "https://www.koreanbapsang.com/gyeran-mari-korean-rolled-omelette/", rating: 4.96, votes: 46, mins: 15, estMins: true, base: 2,
+    ing: [["eggs",3,"ea"],["scallion",1.25,"chopped_tbsp_scallion"],["carrot",1.25,"chopped_tbsp_carrot"],["salt",0.125,"tsp"],["pepper",null],["oil",null]] },
+  { id: "gyeranjjim", hide: true, kr: "계란찜", name: "Gyeranjjim", en: "Fluffy steamed eggs", cat: "eggtofu", art: "steamed", plate: "ttukbaegi",
+    url: "https://www.koreanbapsang.com/gyeranjjim-korean-steamed-eggs/", rating: 4.70, votes: 152, mins: 20, base: 2,
+    ing: [["eggs",4,"ea"],["broth",1,"cup"],["saeujeot",1.5,"tsp"],["scallion",1,"ea"],["sesame_oil",1,"tsp",true],["sesame",0.5,"tsp",true]] },
+  { id: "kimchi", kr: "막김치", name: "Mak Kimchi", en: "Easy napa cabbage kimchi", cat: "veg",
+    url: "https://www.maangchi.com/recipe/small-batch-easy-kimchi", rating: null, votes: null, mins: 150, estMins: true, base: 16, baseNote: "makes about ½ gallon, counted as 16 half-cup servings",
+    ing: [["napa",3,"lb"],["kosher_salt",6,"tbsp"],["rice_flour",2,"tbsp"],["sugar",1,"tbsp"],["fish_sauce",1/3,"cup"],["saeujeot",1,"tbsp"],["garlic",9,"clove"],["ginger",1,"tsp"],["onion",0.25,"ea"],["pear",3,"oz"],["gochugaru",1,"cup"],["radish",6,"oz"],["carrot",4,"chopped_tbsp_carrot"],["buchu",3,"oz"],["scallion",6,"ea"],["oysters",12,"ea",true],["sesame",null,"",true]] },
+  { id: "oibokkeum", kr: "오이볶음", name: "Oi Bokkeum", en: "Sautéed cucumbers", cat: "veg",
+    url: "https://www.maangchi.com/recipe/oi-bokkeum", rating: 4.6, votes: 53, mins: 15, estMins: true, base: 4,
+    ing: [["seedless_cuke",1,"lb"],["kosher_salt",1.5,"tsp"],["sesame_oil",1,"tbsp"],["sesame",1,"tbsp"]] },
+  { id: "gochu", kr: "고추볶음", name: "Gochu Bokkeum", en: "Stir-fried shishito peppers", cat: "veg",
+    url: "https://www.maangchi.com/recipe/gochu-bokkeum", rating: 4.7, votes: 54, mins: 10, estMins: true, base: 4, baseAssumed: true, baseNote: "no yield listed, counted as 4 servings",
+    ing: [["shishito",8,"oz"],["flour",1,"tbsp"],["oil",2,"tbsp"],["garlic",2,"clove"],["onion",0.5,"ea"],["soy",2,"tbsp"],["sesame_oil",2,"tsp"],["sesame",0.5,"tsp"]] },
+  { id: "broccoli", kr: "브로콜리 두부무침", name: "Broccoli Dubu Muchim", en: "Broccoli with tofu", cat: "veg",
+    url: "https://www.maangchi.com/recipe/broccoli-dubu-muchim", rating: 4.9, votes: 128, mins: 15, estMins: true, base: 4,
+    ing: [["broccoli",14,"oz"],["kosher_salt",3,"tsp"],["tofu",8,"oz"],["garlic",2,"clove"],["scallion",1,"ea"],["sesame_oil",1,"tbsp"],["sesame",2,"tsp"]] },
+  { id: "buchu", kr: "부추김치", name: "Buchu Kimchi", en: "Asian chive kimchi", cat: "veg",
+    url: "https://www.maangchi.com/recipe/buchu-kimchi", rating: 4.8, votes: 261, mins: 45, estMins: true, base: 8, baseAssumed: true, baseNote: "no yield listed, counted as 8 servings",
+    ing: [["buchu",1,"lb"],["fish_sauce",0.5,"cup"],["rice_flour",1,"tbsp"],["sugar",1,"tbsp"],["gochugaru",0.5,"cup"],["onion",0.5,"ea"],["sesame",2,"tbsp"]] },
+  { id: "yeongeun", kr: "연근조림", name: "Yeongeun Jorim", en: "Braised lotus root", cat: "veg",
+    url: "https://www.maangchi.com/recipe/yeon-geun-jorim", rating: 4.8, votes: 342, mins: 120, estMins: true, base: 4,
+    ing: [["lotus",1,"lb"],["vinegar",1,"tsp"],["oil",1.5,"tbsp"],["soy",0.25,"cup"],["garlic",2,"clove"],["syrup",0.75,"cup"],["sesame_oil",2,"tsp"],["sesame",1,"tsp"]] },
+  { id: "gat", kr: "갓김치", name: "Gat Kimchi", en: "Mustard greens kimchi", cat: "veg",
+    url: "https://www.maangchi.com/recipe/gat-kimchi", rating: 4.5, votes: 57, mins: 140, estMins: true, base: 8, baseNote: "makes about 2 lb, counted as 8 servings",
+    ing: [["mustard",2,"lb"],["kosher_salt",3,"tbsp"],["broth",0.5,"cup"],["rice_flour",1,"tbsp"],["sugar",1,"tbsp"],["fish_sauce",0.25,"cup"],["garlic",4,"clove"],["ginger",1,"tsp"],["onion",0.25,"ea"],["gochugaru",0.25,"cup"]] },
+  { id: "kongjorim", kr: "검은콩조림", name: "Geomeun Kongjorim", en: "Braised black beans", cat: "veg",
+    url: "https://www.maangchi.com/recipe/geomeun-kongjorim", rating: 4.7, votes: 154, mins: 660, estMins: true, base: 12, baseNote: "makes about 3 cups, counted as 12 servings; soak the beans 10 hours first",
+    ing: [["black_beans",8,"oz"],["garlic",3,"clove"],["soy",3,"tbsp"],["sugar",0.25,"cup"],["oil",1,"tbsp"],["syrup",0.25,"cup"],["sesame_oil",2,"tsp"],["sesame",1,"tsp"]] },
+  { id: "maneul", kr: "통마늘 장아찌", name: "Tongmaneul Jangajji", en: "Whole garlic pickles", cat: "veg",
+    url: "https://www.maangchi.com/recipe/tongmaneul-jangajji", rating: 4.6, votes: 47, mins: 345600, timeText: "8 months", base: 24, baseNote: "makes about 24 bulbs, counted as one bulb per serving",
+    ing: [["garlic_bulb",2,"lb"],["soy",3,"cup"],["vinegar",3,"cup"],["sugar",2,"cup"],["kosher_salt",0.25,"cup"]] }
+];
+const DISHES = ALL_DISHES.filter(d => !d.hide).sort((a, b) => a.mins - b.mins);
+const CATS = [["all","All"],["veg","Vegetables"],["meat","Meat & seafood"]];
+
+// Short beginner steps, written for this page. The full recipe (link in the pane) has photos and tips.
+const STEPS = {
+  kongnamul: { steps: [
+    "Rinse the sprouts in cold water and pick out any loose bean skins or brown tails.",
+    "Put them in a pot with about 1 cup of water and a pinch of salt. Cover and boil for 5–7 minutes. Keep the lid on the whole time.",
+    "Drain and spread the sprouts out on a plate to cool for a few minutes.",
+    "Toss with the scallion, garlic, sesame oil, sesame seeds, salt and pepper. Taste and add more salt if needed.",
+  ], tip: "Lifting the lid while the sprouts cook can give them a raw, beany smell. Leave it on until they're done." },
+  sigeumchi: { steps: [
+    "Trim the root ends and wash the spinach well. Grit hides near the stems.",
+    "Blanch in a big pot of salted boiling water for about 30 seconds, just until wilted.",
+    "Rinse under cold water, then squeeze out as much water as you can with your hands.",
+    "Cut into 2–3 inch lengths and loosen the clumps.",
+    "Mix with the soup soy sauce, garlic, sugar, scallion, sesame oil and seeds. Season with salt and pepper.",
+  ], tip: "Squeeze the spinach hard. Leftover water makes the dish taste bland." },
+  oimuchim: { steps: [
+    "Halve the cucumber lengthwise and cut it into thin slices on a slight diagonal.",
+    "Toss with the salt and let it sit for 10 minutes, then gently squeeze out the liquid.",
+    "Add the gochugaru, scallion, garlic, vinegar and sugar, and mix well.",
+    "Finish with sesame oil and sesame seeds. Serve within a day for the best crunch.",
+  ], tip: "Use half the gochugaru for a milder version." },
+  musaengchae: { steps: [
+    "Peel the radish and cut it into thin matchsticks, about 2–3 inches long.",
+    "Toss with the salt and let it sit for 10 minutes. Drain off the liquid it releases.",
+    "Rub in the gochugaru first so the radish turns evenly red.",
+    "Add the garlic, ginger, fish sauce, sugar and scallion, and mix with your hands (gloves help).",
+    "Sprinkle with sesame seeds. It keeps in the fridge for several days.",
+  ], tip: "A mandoline or julienne peeler makes the matchsticks much faster." },
+  sukju: { steps: [
+    "Rinse the mung bean sprouts in cold water.",
+    "Blanch in boiling water for 1–2 minutes. They go soft fast, so keep an eye on them.",
+    "Drain, rinse in cold water and gently squeeze out the excess water.",
+    "Toss with the scallion, garlic, sesame oil, sesame seeds, salt and pepper.",
+  ], tip: "Eat these within a day or two. Mung bean sprouts get watery as they sit." },
+  gajinamul: { steps: [
+    "Cut the eggplants into 3-inch pieces, then halve or quarter each piece lengthwise.",
+    "Steam for 5–7 minutes, until soft all the way through.",
+    "Let them cool a little, then tear into thin strips by hand and gently squeeze out the liquid.",
+    "Mix the soy sauce, garlic, sesame oil, sugar, gochugaru and scallion, and toss with the eggplant.",
+    "Finish with sesame seeds and a pinch of pepper.",
+  ], tip: "No steamer? Microwave the pieces in a covered bowl for 4–5 minutes." },
+  hobak: { steps: [
+    "Halve the zucchini lengthwise and slice it into ¼-inch half-moons.",
+    "Finely chop the salted shrimp.",
+    "Heat the oil in a pan over medium-high heat. Cook the garlic for 30 seconds, then add the zucchini and stir-fry for 2–3 minutes.",
+    "Add the salted shrimp and scallion and cook for another minute, until the zucchini is just tender.",
+    "Turn off the heat and stir in the sesame oil and seeds.",
+  ], tip: "No salted shrimp? Season with a little salt or fish sauce." },
+  eomuk: { steps: [
+    "Cut the fish cake into bite-size strips. For a lighter dish, rinse them briefly in hot water to remove excess oil.",
+    "Slice the onion and peppers, and mix the soy sauce, rice wine, sugar and pepper in a small bowl.",
+    "Heat the oil over medium heat. Cook the onion and garlic for 1 minute, then add the fish cake and stir-fry for 2 minutes.",
+    "Pour in the sauce, add the peppers, and toss until everything looks glossy.",
+  ], tip: "For a spicy version, add 2–3 tsp gochugaru with the sauce." },
+  myeolchi: { steps: [
+    "Dry-toast the anchovies in a pan over medium heat for 2 minutes. Shake them in a sieve to remove the dust.",
+    "Add the oil and stir-fry for 1–2 minutes until crisp. Move them to a plate.",
+    "In the same pan, bring the rice wine, soy sauce, sugar, syrup and sliced garlic to a bubble.",
+    "Turn off the heat, add the anchovies (and chilies) back in, and toss quickly to coat.",
+    "Stir in the sesame oil and seeds, then spread out to cool so they don't clump.",
+  ], tip: "Adding the anchovies off the heat keeps them crunchy instead of sticky-hard." },
+  oibokkeum: { steps: [
+    "Slice the cucumbers thinly, toss with 1 tsp of the salt, and let them sit for 10 minutes.",
+    "Wrap them in a clean cloth or cheesecloth and squeeze out as much water as you can.",
+    "Mix the cucumbers with the sesame oil. Grind the sesame seeds with a mortar or spice grinder.",
+    "Heat a skillet over medium-high heat and sauté the cucumbers with the remaining ½ tsp salt for 1 minute.",
+    "Take the pan off the heat, stir in the ground sesame seeds, and serve.",
+  ], tip: "Squeeze hard. The drier the cucumbers, the crunchier they stay." },
+  gochu: { steps: [
+    "Rinse the peppers and leave them damp. Halve any long ones, then toss with the flour to coat.",
+    "Heat the oil in a skillet over medium-high heat. Add the peppers and cook 2 minutes without stirring, until browned underneath.",
+    "Flip and cook 2 more minutes, stirring now and then. Add the onion and garlic and stir for 1 minute.",
+    "Lower the heat to medium, add the soy sauce, and cook about 1 minute until everything is glossy.",
+    "Off the heat, stir in the sesame oil and sprinkle with sesame seeds.",
+  ], tip: "The flour helps the soy sauce cling to the peppers. Keeps a week in the fridge." },
+  broccoli: { steps: [
+    "Bring a large pot of water to a boil with 1 tsp of the salt. Simmer the tofu for 3 minutes, then lift it out to cool.",
+    "Cook the broccoli in the same water for 3–4 minutes, until bright green but still crisp.",
+    "Rinse the broccoli under cold water and drain well.",
+    "Squeeze the water out of the tofu and crumble it over the broccoli.",
+    "Add the remaining 2 tsp salt, the garlic, scallion and sesame oil. Mix gently by hand and top with sesame seeds.",
+  ], tip: "Serve it the day you make it; it keeps up to 3 days in the fridge." },
+  buchu: { steps: [
+    "Cut the chives into 2½-inch pieces and toss with the fish sauce. Let sit 30 minutes, turning every 5 minutes.",
+    "Meanwhile, whisk the rice flour into 1 cup water and cook over medium heat, stirring, until it bubbles. Stir in the sugar for 1 minute, then let it cool.",
+    "Drain the chives over a bowl to catch the salty liquid.",
+    "Stir the cooled flour paste and gochugaru into that liquid, then gently mix in the onion and chives.",
+    "Sprinkle with sesame seeds. Eat it fresh, or leave it out a couple of days to sour before refrigerating.",
+  ], tip: "This one is best fresh, almost like a spicy chive salad." },
+  yeongeun: { steps: [
+    "Slice the lotus root into ¼-inch rounds and soak in cold water for 30 minutes.",
+    "Blanch the slices in boiling water with the vinegar for 5 minutes, then rinse and drain.",
+    "Stir-fry the slices in the oil for a few minutes, until slightly translucent.",
+    "Add 2¼ cups water, the garlic and soy sauce. Cover and cook on low for 40 minutes, turning now and then.",
+    "Stir in the syrup and simmer, covered, 20 minutes more. Uncover, raise the heat, and turn the slices for 10–12 minutes until glossy and almost dry. Finish with sesame oil and seeds.",
+  ], tip: "Add a splash of water if the pan dries out before the slices are tender." },
+  gat: { steps: [
+    "Rinse the mustard greens, sprinkle with the salt (more on the thick stems), and let sit 2 hours, turning every 30 minutes.",
+    "Meanwhile, cook the rice flour in the stock over medium-high heat, stirring, until it bubbles. Stir in the sugar for 30 seconds, then the fish sauce, and let it cool.",
+    "Mix the garlic, ginger, onion and gochugaru into the cooled paste.",
+    "Wash the greens in a couple of changes of cold water and drain.",
+    "Toss the greens with the paste by hand, pack tightly into a container, and serve fresh or let it ferment.",
+  ], tip: "Mustard greens are peppery; they mellow as the kimchi ferments." },
+  kongjorim: { steps: [
+    "Soak the beans in cold water for 10 hours. Drain, keeping the soaking water.",
+    "Simmer the beans in 2½ cups of that water, covered, for 30 minutes. Skim the foam once it boils and leave the lid ajar.",
+    "Cook 20–25 minutes more, until the beans are tender. Add water if they're still chewy.",
+    "Add the garlic, soy sauce, sugar and oil. Cover and simmer on low for 10 minutes.",
+    "Add the syrup, raise the heat to medium-high, and stir for 10 minutes until shiny. Finish with sesame oil and seeds.",
+  ], tip: "Stop while there's still a little sauce; it thickens as it cools. Keeps a month in the fridge." },
+  maneul: { steps: [
+    "Peel off the loose outer skin, trim the roots and stems, then scrub and dry the whole bulbs. Pack them into a jar.",
+    "Boil the soy sauce, 3 cups water, vinegar, sugar and salt. Let it cool completely, pour over the garlic, and weigh it down so it stays under.",
+    "After 1 week, drain the brine, boil it for 12–13 minutes, cool it, and pour it back.",
+    "After 2 more weeks, repeat once. Put the bulbs back roots-down so the brine fills them.",
+    "Leave the jar in a cool place until 8 months have passed. To serve, slice a bulb crosswise.",
+  ], tip: "Use young spring garlic with thin skins; the skin softens enough to eat." },
+  kimchi: { steps: [
+    "Quarter the cabbage lengthwise, cut out the core, then cut it into bite-size pieces. Toss with the kosher salt and 1 cup water and let it sit for 2 hours, tossing every 30 minutes.",
+    "Meanwhile, whisk the rice flour into 1 cup water in a small pot and cook, stirring, until it bubbles. Stir in the sugar, cook until slightly see-through, then let it cool.",
+    "Blend the fish sauce, cooled flour paste, salted shrimp, garlic, ginger, onion and pear until smooth. Stir in the gochugaru, then the radish, carrot, chives, scallions and oysters if using.",
+    "Rinse the cabbage under cold water 3 times, drain well and squeeze gently. Mix it into the paste by hand until every piece is coated.",
+    "Pack it tightly into jars, pressing out air. Eat it fresh with sesame seeds, or let it ferment 1–2 days at room temperature, then refrigerate.",
+  ], tip: "Weigh your cabbage, since heads vary a lot. Wear disposable gloves to mix; gochugaru stains and stings." },
+  gamja: { steps: [
+    "Peel the potatoes and carrot and cut them into ¾-inch cubes. Soak the potatoes in water for 10 minutes, then drain.",
+    "Heat the oil in a pot and cook the potatoes and carrot for 3–4 minutes.",
+    "Add the soy sauce, sugar, rice wine, garlic, pepper and ¾ cup water. Bring to a boil, then cover and simmer for 10 minutes.",
+    "Uncover and add the onion, chili peppers and syrup. Simmer, stirring gently, until the sauce is thick and glossy.",
+    "Finish with sesame oil and sesame seeds.",
+  ], tip: "Stir gently near the end so the potatoes don't break apart." },
+  dubu: { steps: [
+    "Cut the tofu into ½-inch slices, pat dry with paper towels, and sprinkle lightly with salt.",
+    "Pan-fry in the oil over medium-high heat until golden on both sides, about 3 minutes per side.",
+    "Mix the soy sauce, water, sesame oil, sugar, gochugaru, sesame seeds, garlic and scallions.",
+    "Spoon the sauce over the tofu and simmer for 3–5 minutes, basting, until most of the sauce soaks in.",
+  ], tip: "Dry tofu browns better and is less likely to stick." },
+  jangjorim: { steps: [
+    "Soak the beef in cold water for 20 minutes to draw out the blood, then cut it into 2-inch chunks.",
+    "Put the beef, onion, scallion whites, radish, garlic, ginger, peppercorns and kelp in a pot with enough water to cover by an inch. Boil, skim off the foam, then simmer for about 40 minutes.",
+    "Strain the broth and throw out the vegetables (you can keep the garlic).",
+    "Return the beef and broth to the pot with the soy sauces, sugar and rice wine. Add the peeled boiled eggs and simmer for 20 minutes.",
+    "Add the peppers for the last few minutes. Let it cool, then shred the beef by hand and store it in the sauce.",
+  ], tip: "This keeps in the fridge for about a week, so it's a great make-ahead dish." },
+  gyeranmari: { steps: [
+    "Beat the eggs with the salt and pepper until smooth, then stir in the scallion and carrot.",
+    "Heat a lightly oiled nonstick pan over medium-low heat.",
+    "Pour in a thin layer of egg. When it's mostly set, roll it up from one end.",
+    "Push the roll to the far end, pour in more egg so it runs under the roll, and roll again once it's set. Repeat until the egg is used up.",
+    "Let it rest for a few minutes, then slice.",
+  ], tip: "Keep the heat low. If the egg browns, the roll won't stick to itself." },
+  gyeranjjim: { steps: [
+    "Beat the eggs with the broth and finely chopped salted shrimp until smooth. Strain the mixture for an extra-silky texture.",
+    "Pour into a small pot (a ttukbaegi earthenware pot if you have one) and set over medium heat.",
+    "Stir constantly for 2–3 minutes until soft curds form.",
+    "Add the scallion, cover, and cook on the lowest heat for 3–5 minutes, until puffed and set.",
+    "Drizzle with sesame oil and sprinkle with seeds. Serve hot, straight from the pot.",
+  ], tip: "A tight-fitting lid is what makes it puff up." },
+};
+
+/* ---------- formatting ---------- */
+const FR = { 0.125: "⅛", 0.25: "¼", 0.375: "⅜", 0.5: "½", 0.625: "⅝", 0.75: "¾", 0.875: "⅞" };
+function frac(x, step = 0.25) {
+  const v = Math.max(step, Math.round(x / step) * step), w = Math.floor(v + 1e-9), f = +(v - w).toFixed(3);
+  return (w ? String(w) : "") + (f ? FR[f] || "" : "") || "0";
+}
+function fmtVol(t) {
+  if (t < 0.2) return "pinch";
+  if (t >= 12) { const c = t / 48; return `${frac(c, 0.125)} cup${c > 1.06 ? "s" : ""}`; }
+  if (t >= 3) {
+    let tb = Math.floor(t / 3), rem = Math.round((t - tb * 3) * 4) / 4;
+    if (rem >= 3) { tb++; rem = 0; }
+    return `${tb} tbsp` + (rem ? ` + ${frac(rem)} tsp` : "");
+  }
+  return `${frac(t)} tsp`;
+}
+function fmtWt(oz) { return oz >= 16 ? `${frac(oz / 16)} lb` : `${Math.max(1, Math.round(oz))} oz`; }
+function fmtEa(n, ing) {
+  const v = ing.ceil ? String(Math.ceil(n - 1e-9)) : frac(n);
+  return ing.unit ? `${v} ${n > 1 ? ing.unitPl || ing.unit + "s" : ing.unit}` : v;
+}
+function cloves(t) { const n = Math.max(1, Math.round(t)); return `${n} clove${n > 1 ? "s" : ""}`; }
+function fmtQty(ing, q) { return ing.cloves ? cloves(q) : fmt(ing, q); }
+function fmt(ing, q) { return ing.d === "vol" ? fmtVol(q) : ing.d === "wt" ? fmtWt(q) : fmtEa(q, ing); }
+
+/* ---------- aggregation ---------- */
+function aggregate() {
+  const map = new Map();
+  for (const d of DISHES) {
+    if (!state.sel.has(d.id)) continue;
+    const k = state.serv / d.base;
+    for (const [key, q, u, opt] of d.ing) {
+      const ing = ING[key];
+      if (!map.has(key)) map.set(key, { key, ing, total: 0, taste: false, allOpt: true, uses: [] });
+      const e = map.get(key);
+      if (!opt) e.allOpt = false;
+      if (q == null) { e.taste = true; e.uses.push({ d, q: null }); continue; }
+      const amt = q * U[u] * k;
+      e.total += amt; e.uses.push({ d, q: amt, opt });
+    }
+  }
+  return [...map.values()];
+}
+
+
+/* ---------- storage (per-viewer convenience only) ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("banchan." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("banchan." + k, JSON.stringify(v)); } catch {} },
+};
+const state = {
+  sel: new Set(store.get("sel", ["kongnamul", "sigeumchi", "gamja"]).filter(id => DISHES.some(d => d.id === id))),
+  have: new Set(store.get("have", [])),
+  serv: store.get("servings", 8),
+  cat: "all",
+  expanded: false,
+  view: null, // a dish id while its recipe shows in the pane
+};
+const save = () => { store.set("sel", [...state.sel]); store.set("have", [...state.have]); store.set("servings", state.serv); };
+
+/* ---------- aggregation ---------- */
+function aggregate() {
+  const map = new Map();
+  for (const d of DISHES) {
+    if (!state.sel.has(d.id)) continue;
+    const k = state.serv / d.base;
+    for (const [key, q, u, opt] of d.ing) {
+      const ing = ING[key];
+      if (!map.has(key)) map.set(key, { key, ing, total: 0, taste: false, allOpt: true, uses: [] });
+      const e = map.get(key);
+      if (!opt) e.allOpt = false;
+      if (q == null) { e.taste = true; e.uses.push({ d, q: null }); continue; }
+      const amt = q * U[u] * k;
+      e.total += amt; e.uses.push({ d, q: amt, opt });
+    }
+  }
+  const order = Object.keys(ING);
+  return [...map.values()].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+}
+
+/* ---------- render ---------- */
+const $ = id => document.getElementById(id);
+const img = d => `photos/${d.id}.jpg`;
+const addIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="plus" d="M10 4v12M4 10h12"/><path class="check" pathLength="1" d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>`;
+const xIcon = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>`;
+const trashIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.6 6.5v4.5M9.4 6.5v4.5"/></svg>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function renderScopes() {
+  $("scopes").innerHTML = CATS.map(([id, label]) => `<button type="button" class="scope" data-cat="${id}" aria-pressed="${state.cat === id}">${label}</button>`).join("");
+}
+function timeLabel(d) {
+  if (d.timeText) return d.timeText;
+  const h = Math.floor(d.mins / 60), m = d.mins % 60;
+  return (d.estMins ? "~" : "") + (h ? `${h} hr${m ? ` ${m} min` : ""}` : `${m} min`);
+}
+const SITES = { "koreanbapsang.com": "Korean Bapsang", "maangchi.com": "Maangchi" };
+function siteName(url) { const h = new URL(url).hostname.replace(/^www\./, ""); return SITES[h] || h; }
+function renderGrid() {
+  $("grid").innerHTML = DISHES.map(d => {
+    const on = state.sel.has(d.id);
+    return `<article class="card" data-id="${d.id}" ${state.cat !== "all" && d.cat !== state.cat ? "hidden" : ""}>
+      <button type="button" class="card-link" data-open="${d.id}" aria-label="Show the ${d.name} recipe (${d.en})">
+        <span class="photo"><img src="${img(d)}" alt="${esc(d.en)}" loading="lazy" width="720" height="780"></span>
+        <span class="card-text">
+          <span class="card-title">
+            <span class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</span>
+            <span class="card-en">${esc(d.en)}</span>
+            <span class="card-time">${timeLabel(d)} · ${siteName(d.url)}</span>
+          </span>
+        </span>
+      </button>
+      <button type="button" class="add${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} shopping list" title="${on ? "Remove from list" : "Add to list"}">${addIcon}</button>
+    </article>`;
+  }).join("");
+}
+function syncCards() {
+  document.querySelectorAll(".add[data-pick]").forEach(b => {
+    const d = DISHES.find(x => x.id === b.dataset.pick), on = state.sel.has(d.id);
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+    b.setAttribute("aria-label", `${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} shopping list`);
+    b.title = on ? "Remove from list" : "Add to list";
+  });
+}
+const stepper = () => `<div class="serv">
+      <div class="serv-text"><p class="t">Servings</p></div>
+      <div class="step"><button type="button" data-step="-1" aria-label="Fewer servings">−</button><output class="serv-out" aria-live="polite">${state.serv}</output><button type="button" data-step="1" aria-label="More servings">+</button></div>
+    </div>`;
+function renderRecipe(d) {
+  const on = state.sel.has(d.id), k = state.serv / d.base, s = STEPS[d.id];
+  const ings = d.ing.map(([key, q, u, opt]) => {
+    const ing = ING[key], amt = q == null ? null : q * U[u] * k;
+    const qty = amt == null ? "to taste" : fmtQty(ing, amt);
+    return `<li class="r-ing"><span class="n">${ing.n}${opt ? ` <small>· optional</small>` : ""}</span><span class="q">${qty}</span></li>`;
+  }).join("");
+  const picked = DISHES.filter(x => state.sel.has(x.id)), n = picked.length;
+  $("recipeView").innerHTML = `
+    <div class="stage"><img src="${img(d)}" alt="${esc(d.en)}"></div>
+    <div class="r-title">
+      <p class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</p>
+      <p class="card-en">${esc(d.en)}</p>
+      <p class="card-time">${timeLabel(d)}${d.rating ? ` · ★ ${d.rating.toFixed(1)} (${d.votes} ratings)` : ""}${d.baseNote ? ` · ${d.baseNote}` : ""}</p>
+    </div>
+    <div class="r-actions">
+      <button type="button" class="dark-pill${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}">${on ? "✓ On your list" : "Add to shopping list"}</button>
+      <a class="grey-pill" href="${d.url}" target="_blank" rel="noopener">Full recipe on ${siteName(d.url)} ↗</a>
+    </div>
+    ${stepper()}
+    <p class="section-label">Ingredients</p>
+    <ul class="r-ings">${ings}</ul>
+    <p class="section-label">Steps</p>
+    <ol class="r-steps">${s.steps.map(t => `<li><span>${esc(t)}</span></li>`).join("")}</ol>
+    <p class="r-tip">${esc(s.tip)}</p>
+    <p class="note">Quick steps written for beginners. For photos and more detail, see the <a href="${d.url}" target="_blank" rel="noopener">full recipe on ${siteName(d.url)}</a>.</p>
+    ${n ? `<button type="button" class="to-list" data-list><span class="row-text"><span class="row-name">Shopping list</span><span class="row-sub">${n} dish${n > 1 ? "es" : ""} · ${aggregate().length} ingredients</span></span><span class="peek-thumbs" aria-hidden="true">${picked.slice(-4).map(x => `<img src="${img(x)}" alt="">`).join("")}</span></button>` : ""}`;
+}
+function renderBench() {
+  const picked = DISHES.filter(d => state.sel.has(d.id)), n = picked.length, rows = aggregate();
+  const recipe = state.view && DISHES.find(d => d.id === state.view);
+  const open = n > 0 || !!recipe;
+  $("layout").classList.toggle("closed", !open);
+  $("bench").classList.toggle("open", open);
+  $("bench").classList.toggle("expanded", open && state.expanded);
+  $("peek").setAttribute("aria-expanded", String(open && state.expanded));
+  document.body.classList.toggle("bench-open", open);
+  document.querySelectorAll(".card").forEach(c => c.classList.toggle("viewing", !!recipe && c.dataset.id === recipe.id));
+  if (!open) return;
+  $("recipeView").hidden = !recipe; $("benchBody").hidden = !!recipe;
+  $("closeRecipe").hidden = !recipe; $("share").hidden = !!recipe;
+  document.querySelector(".bench-title").textContent = recipe ? "Recipe" : "Shopping list";
+  document.querySelectorAll(".serv-out").forEach(o => (o.textContent = state.serv));
+  const head = recipe ? [recipe] : picked;
+  $("peekSub").textContent = recipe ? `${recipe.name} · ${recipe.en}` : `${n} dish${n > 1 ? "es" : ""} · ${rows.length} ingredients`;
+  $("peekMini").innerHTML = `<img src="${img(head[head.length - 1])}" alt="">`;
+  $("peekThumbs").innerHTML = recipe ? "" : picked.slice(-4).map(d => `<img src="${img(d)}" alt="">`).join("");
+  if (recipe) { renderRecipe(recipe); return; }
+  $("dishRows").innerHTML = picked.map(d => `<li class="chip"><button type="button" class="chip-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span>${esc(d.en)}</span></button>
+      <button type="button" class="chip-x" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${xIcon}</button></li>`).join("");
+  let html = "";
+  for (const [aid, label] of AISLES) {
+    const items = rows.filter(r => r.ing.a === aid);
+    if (!items.length) continue;
+    html += `<section class="aisle"><h3>${label}</h3>`;
+    for (const r of items) {
+      const have = state.have.has(r.key), id = `have-${r.key}`;
+      const qty = r.total > 0 ? fmtQty(r.ing, r.total) : "to taste";
+      const extra = r.ing.cloves && r.total > 0 ? `<small>${fmtVol(r.total)} minced</small>` : (r.total > 0 && r.taste ? `<small>+ to taste</small>` : "");
+      const uses = r.uses.map(u => `<img src="${img(u.d)}" alt="${esc(u.d.en)}" title="${esc(u.d.en)}">`).join("");
+      const sub = `${r.ing.sub ? `<span class="item-tip">Tip: ${r.ing.sub}</span>` : ""}<span class="uses">${uses}</span>`;
+      html += `<label class="item${have ? " have" : ""}" for="${id}"><input type="checkbox" id="${id}" data-have="${r.key}" ${have ? "checked" : ""}>
+        <span class="item-text"><span class="item-name">${r.ing.n}${r.allOpt ? ` <span class="opt">· optional</span>` : ""}</span><span class="item-sub">${sub}</span></span>
+        <span class="item-qty">${qty}${extra}</span></label>`;
+    }
+    html += `</section>`;
+  }
+  $("list").innerHTML = html;
+  const noYield = picked.filter(d => d.baseAssumed).map(d => d.en);
+  const assumed = noYield.length ? `${noYield.join(", ")} ${noYield.length > 1 ? "list" : "lists"} no yield, so ${noYield.length > 1 ? "their serving counts are estimates" : "its serving count is an estimate"}. ` : "";
+  $("note").textContent = assumed;
+  $("note").hidden = !assumed;
+}
+
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 2000); }
+// On desktop, scroll the open dish's card back into view once the pane has finished pushing the grid around.
+function revealCard(id, waitForPane) {
+  if (matchMedia("(max-width: 760px)").matches) return;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setTimeout(() => {
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if (!card || state.view !== id) return;
+    const r = card.getBoundingClientRect();
+    if (r.top >= 0 && r.bottom <= innerHeight) return;
+    card.scrollIntoView({ block: r.height > innerHeight ? "start" : "nearest", behavior: reduce ? "auto" : "smooth" });
+  }, waitForPane && !reduce ? 480 : 0);
+}
+
+// As many 272px columns as fit with the pane closed; the pane then squeezes them rather than dropping one.
+function fitCols() {
+  const cs = getComputedStyle(document.body);
+  const w = document.documentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  $("grid").style.setProperty("--cols", Math.max(1, Math.floor((w + 40) / (272 + 40))));
+}
+addEventListener("resize", fitCols);
+
+// A dish whose photo hasn't been added yet shows its grey tile instead of a broken image.
+document.addEventListener("error", e => { if (e.target.tagName === "IMG") e.target.style.visibility = "hidden"; }, true);
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const pick = e.target.closest("[data-pick]");
+  if (pick) {
+    const id = pick.dataset.pick, d = DISHES.find(x => x.id === id);
+    const adding = !state.sel.has(id);
+    adding ? state.sel.add(id) : state.sel.delete(id);
+    // The + on a card shows the list (unless that dish's recipe is open); the recipe's own button stays put.
+    if (pick.classList.contains("add") && state.view !== id) state.view = null;
+    save(); syncCards(); renderBench();
+    toast(adding ? `Added ${d.name}` : `Removed ${d.name}`);
+    return;
+  }
+  const opener = e.target.closest("[data-open]");
+  if (opener) {
+    const wasClosed = $("layout").classList.contains("closed");
+    state.view = opener.dataset.open; state.expanded = true; renderBench();
+    $("bench").scrollTop = 0;
+    revealCard(state.view, wasClosed);
+    return;
+  }
+  if (e.target.closest("[data-list]")) { state.view = null; renderBench(); $("bench").scrollTop = 0; return; }
+  const step = e.target.closest("[data-step]");
+  if (step) { state.serv = Math.min(20, Math.max(1, state.serv + +step.dataset.step)); save(); renderBench(); return; }
+  const chip = e.target.closest("[data-cat]");
+  if (chip) { state.cat = chip.dataset.cat; renderScopes(); renderGrid(); }
+});
+document.addEventListener("change", e => {
+  const k = e.target.dataset && e.target.dataset.have;
+  if (!k) return;
+  e.target.checked ? state.have.add(k) : state.have.delete(k);
+  save(); e.target.closest(".item").classList.toggle("have", e.target.checked);
+});
+$("peek").onclick = () => { if (matchMedia("(max-width: 760px)").matches) { state.expanded = !state.expanded; renderBench(); } };
+$("closeRecipe").onclick = () => { state.view = null; if (!state.sel.size) state.expanded = false; renderBench(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && state.view) $("closeRecipe").click(); });
+// A shared list travels in the link as #list.<dish>.<dish>~<servings>.
+// The published preview can't see its own claude.ai address, so links made there point at it directly.
+const HOME = /ceciliayang\.com$/.test(location.hostname) || location.protocol === "file:" ? location.href.split("#")[0] : "https://ceciliayang.com/banchan-party/";
+function shareUrl() { return `${HOME}#list.${DISHES.filter(d => state.sel.has(d.id)).map(d => d.id).join(".")}~${state.serv}`; }
+function openSharedList() {
+  const m = location.hash.match(/^#list\.([a-z.]+)(?:~(\d+))?$/);
+  if (!m) return;
+  const ids = m[1].split(".").filter(id => DISHES.some(d => d.id === id));
+  if (!ids.length) return;
+  state.sel = new Set(ids); state.have = new Set(); state.view = null; state.expanded = true;
+  if (m[2]) state.serv = Math.min(20, Math.max(1, +m[2]));
+  save();
+}
+$("share").onclick = async () => {
+  const url = shareUrl(), n = state.sel.size;
+  const text = `Banchan party shopping list: ${n} dish${n > 1 ? "es" : ""}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: "Banchan party", text, url }); return; }
+    catch (err) { if (err.name === "AbortError") return; }
+  }
+  const fallback = () => { const ta = document.createElement("textarea"); ta.value = url; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Link copied. Paste it into Messages."); } catch { toast(url); } ta.remove(); };
+  try { navigator.clipboard.writeText(url).then(() => toast("Link copied. Paste it into Messages."), fallback); } catch { fallback(); }
+};
+openSharedList();
+fitCols(); renderScopes(); renderGrid(); renderBench();
+</script>
