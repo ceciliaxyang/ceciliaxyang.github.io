@@ -865,6 +865,11 @@ $("share").onclick = async () => {
     try { await navigator.share({ title: "Banchan party", text, url }); return; }
     catch (err) { if (err.name === "AbortError") return; }
   }
+  // No share sheet (e.g. Chrome on a Mac): on Apple devices, open Messages with the link filled in.
+  if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) && window.top === window) {
+    location.href = `sms:&body=${encodeURIComponent(`${text} ${url}`)}`;
+    return;
+  }
   const fallback = () => { const ta = document.createElement("textarea"); ta.value = url; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Link copied. Paste it into Messages."); } catch { toast(url); } ta.remove(); };
   try { navigator.clipboard.writeText(url).then(() => toast("Link copied. Paste it into Messages."), fallback); } catch { fallback(); }
 };
