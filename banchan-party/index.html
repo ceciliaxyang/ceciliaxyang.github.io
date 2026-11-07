@@ -285,15 +285,15 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   </div>
 </div>
 
-<aside class="bench" id="bench" aria-label="Your banchan">
+<aside class="bench" id="bench" aria-label="Selected">
   <div class="bench-head" id="benchHead">
     <span class="sheet-handle" aria-hidden="true"></span>
     <div class="head-main">
-    <button type="button" class="mh-btn" id="back" aria-label="Back to your banchan" title="Back" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
+    <button type="button" class="mh-btn" id="back" aria-label="Back to selected dishes" title="Back" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
     <button type="button" class="peek" id="peek" aria-expanded="false" aria-controls="benchBody">
       <span class="peek-mini" id="peekMini"></span>
       <span class="bench-titles">
-        <span class="bench-title" role="heading" aria-level="2">Your banchan</span>
+        <span class="bench-title" role="heading" aria-level="2">Selected</span>
         <span class="peek-sub" id="peekSub"></span>
       </span>
       <span class="peek-thumbs" id="peekThumbs" aria-hidden="true"></span>
@@ -332,7 +332,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   </div>
   <div class="view" id="planView" hidden></div>
 </aside>
-<button type="button" class="reopen" id="reopen" hidden><span class="reopen-thumbs" id="reopenThumbs" aria-hidden="true"></span><span id="reopenText">Your banchan</span></button>
+<button type="button" class="reopen" id="reopen" hidden><span class="reopen-thumbs" id="reopenThumbs" aria-hidden="true"></span><span id="reopenText">Selected</span></button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -1006,7 +1006,7 @@ function renderBench() {
   if (!n) { state.min = false; state.panel = "summary"; }
   const open = !!recipe || (n > 0 && !state.min);
   $("reopen").hidden = open || !n;
-  $("reopenText").textContent = `Your banchan · ${n}`;
+  $("reopenText").textContent = `Selected · ${n}`;
   $("reopenThumbs").innerHTML = picked.slice(-3).map(d => `<img src="${img(d)}" alt="">`).join("");
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
@@ -1022,7 +1022,7 @@ function renderBench() {
   $("share").hidden = !!recipe;
   $("closeRecipe").setAttribute("aria-label", recipe ? "Close recipe" : "Hide panel");
   $("closeRecipe").title = recipe ? "Close recipe" : "Hide panel";
-  document.querySelector(".bench-title").textContent = { recipe: "Recipe", summary: "Your banchan", list: "Shopping list", plan: "Cooking plan" }[panel];
+  document.querySelector(".bench-title").textContent = { recipe: "Recipe", summary: "Selected", list: "Shopping list", plan: "Cooking plan" }[panel];
   document.querySelectorAll(".serv-out").forEach(o => (o.textContent = state.serv));
   const head = recipe ? [recipe] : picked;
   const longest = Math.max(...picked.map(dayMins));
