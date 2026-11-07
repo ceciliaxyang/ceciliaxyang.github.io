@@ -126,6 +126,30 @@ a { color: inherit; }
   .bench-head { position: sticky; z-index: 2; top: calc(-64px - env(safe-area-inset-top, 0px)); margin-top: -24px; padding-top: 24px; background: var(--bg); }
 }
 .bench-titles { flex: 1; min-width: 0; }
+.head-main { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px; }
+/* Summary: two big links into the shopping list and the cooking plan */
+.nav-cards { display: flex; flex-direction: column; gap: 8px; }
+.nav-card { display: flex; align-items: center; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 24px; background: #f5f5f5; color: var(--text); text-align: left; cursor: pointer; }
+.nav-card:hover { background: #eeeeee; }
+.nav-card:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.nav-ico { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: var(--bg); }
+.nav-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.nav-title { font-size: 16px; line-height: 20px; font-weight: 500; }
+.nav-sub { font-size: 13px; line-height: 18px; color: var(--soft); }
+.nav-chev { flex-shrink: 0; color: var(--soft); }
+/* Cooking plan: every dish's steps merged and grouped by phase */
+.plan-intro { margin: 0; font-size: 14px; line-height: 21px; color: var(--text); }
+.phase h3 { margin: 0; font-size: 16px; line-height: 20px; font-weight: 500; color: var(--text); }
+.phase-sub { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--soft); }
+.psteps { list-style: none; margin: 4px 0 0; padding: 0; }
+.pstep { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); cursor: pointer; }
+.pstep input { flex-shrink: 0; margin: 2px 0 0; width: 16px; height: 16px; accent-color: var(--text); cursor: pointer; }
+.pstep-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pstep-t { font-size: 14px; line-height: 20px; color: var(--text); }
+.pstep-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--soft); }
+.pstep-meta > img { flex-shrink: 0; width: 22px; height: 22px; border-radius: 6px; object-fit: cover; background: var(--swatch); }
+.wait { padding: 2px 8px; border-radius: 20px; background: #f2f2f2; color: var(--text); font-size: 12px; font-weight: 500; }
+.pstep.done .pstep-t { color: #a8a8a8; text-decoration: line-through; }
 .bench-title { margin: 0; padding: 2px 0 12px; font-size: 40px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px; color: #000; }
 .peek { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 0; text-align: left; cursor: default; }
 .bench-title { display: block; }
@@ -194,13 +218,16 @@ a { color: inherit; }
   .peek { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; border-radius: 12px; }
   .peek:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
   .bench-share { align-self: center; }
+  .head-main { align-items: center; }
   .peek-mini { display: block; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; overflow: hidden; background: var(--swatch); }
   .peek-mini img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bench-title { font-size: 17px; line-height: 22px; letter-spacing: -.2px; padding: 0; }
   .peek-sub { display: block; margin: 2px 0 0; font-size: 13px; line-height: 18px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .peek-thumbs { display: flex; flex-shrink: 0; padding-left: 8px; transition: opacity .2s ease; }
   .peek-thumbs img { width: 24px; height: 24px; margin-left: -8px; border-radius: 7px; object-fit: cover; box-shadow: 0 0 0 2px var(--bg); }
-  .bench.expanded .peek-thumbs { opacity: 0; }
+  .bench.expanded .peek-thumbs { display: none; }
+  .bench-titles .bench-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #back:not([hidden]) + .peek .peek-mini { display: none; }
   body.bench-open .page { padding-bottom: calc(40px + 84px + env(safe-area-inset-bottom, 0px)); }
   @media (prefers-reduced-motion: reduce) { .bench { transition: none; } }
 }
@@ -258,23 +285,41 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   </div>
 </div>
 
-<aside class="bench" id="bench" aria-label="Shopping list">
+<aside class="bench" id="bench" aria-label="Your banchan">
   <div class="bench-head" id="benchHead">
     <span class="sheet-handle" aria-hidden="true"></span>
+    <div class="head-main">
+    <button type="button" class="mh-btn" id="back" aria-label="Back to your banchan" title="Back" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
     <button type="button" class="peek" id="peek" aria-expanded="false" aria-controls="benchBody">
       <span class="peek-mini" id="peekMini"></span>
       <span class="bench-titles">
-        <span class="bench-title" role="heading" aria-level="2">Shopping list</span>
+        <span class="bench-title" role="heading" aria-level="2">Your banchan</span>
         <span class="peek-sub" id="peekSub"></span>
       </span>
       <span class="peek-thumbs" id="peekThumbs" aria-hidden="true"></span>
     </button>
+    </div>
     <button type="button" class="dark-pill bench-share" id="share">Share</button>
     <button type="button" class="mh-btn" id="closeRecipe" aria-label="Hide shopping list" title="Hide shopping list"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
   </div>
   <div class="view" id="recipeView" hidden></div>
   <div class="view" id="benchBody">
-    <ul class="rows chips" id="dishRows" aria-label="Dishes"></ul>
+    <div class="nav-cards">
+      <button type="button" class="nav-card" data-panel="list"><span class="nav-ico"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5h1.5M7.5 5.5h9.5M3 10h1.5M7.5 10h9.5M3 14.5h1.5M7.5 14.5h9.5"/></svg></span><span class="nav-text"><span class="nav-title">Shopping list</span><span class="nav-sub" id="navListSub"></span></span><svg class="nav-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+      <button type="button" class="nav-card" data-panel="plan"><span class="nav-ico"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10.5" r="6.5"/><path d="M10 6.5v4l2.5 2M8 2h4"/></svg></span><span class="nav-text"><span class="nav-title">Cooking plan</span><span class="nav-sub" id="navPlanSub"></span></span><svg class="nav-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+    </div>
+    <ul class="rows" id="dishRows" aria-label="Dishes"></ul>
+    <div class="serv">
+      <div class="serv-text"><p class="t">Servings per dish</p></div>
+      <div class="step">
+        <button type="button" data-step="-1" aria-label="Fewer servings">−</button>
+        <output class="serv-out" aria-live="polite">8</output>
+        <button type="button" data-step="1" aria-label="More servings">+</button>
+      </div>
+    </div>
+    <p class="note" id="note"></p>
+  </div>
+  <div class="view" id="listView" hidden>
     <div class="serv">
       <div class="serv-text"><p class="t">Servings per dish</p></div>
       <div class="step">
@@ -284,10 +329,10 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
       </div>
     </div>
     <div id="list"></div>
-    <p class="note" id="note"></p>
   </div>
+  <div class="view" id="planView" hidden></div>
 </aside>
-<button type="button" class="reopen" id="reopen" hidden><span class="reopen-thumbs" id="reopenThumbs" aria-hidden="true"></span><span id="reopenText">Shopping list</span></button>
+<button type="button" class="reopen" id="reopen" hidden><span class="reopen-thumbs" id="reopenThumbs" aria-hidden="true"></span><span id="reopenText">Your banchan</span></button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -608,6 +653,140 @@ const STEPS = {
   ], tip: "A tight-fitting lid is what makes it puff up." },
 };
 
+// The same steps, re-cut for the combined cooking plan. Each is [phase, text, { w: minutes to wait, k: kind of cooking }].
+// A dish's phases only move forward, so sorting across dishes by phase keeps each dish's own order.
+const PHASES = [
+  ["ahead", "Start ahead", "These need hours or days before everything else."],
+  ["wash", "Wash", ""],
+  ["start", "Start the long waits", "Get the salting, soaking and cooling going first, longest wait first. Do the rest while they sit."],
+  ["prep", "Cut and prep", ""],
+  ["sauce", "Mix sauces and pastes", ""],
+  ["cook", "Cook, longest first", "Get the braises simmering first, then the quick blanching and stir-frying."],
+  ["finish", "Season and toss", ""],
+  ["serve", "Just before serving", ""],
+];
+const KINDS = ["simmer", "boil", "blanch", "steam", "fry"];
+const PLAN = {
+  kongnamul: [
+    ["prep", "Pick out any loose bean skins or brown tails from the soybean sprouts."],
+    ["cook", "Boil the sprouts in a covered pot with 1 cup water and a pinch of salt for 5–7 minutes. Keep the lid on.", { k: "boil", w: 6 }],
+    ["cook", "Drain and spread them on a plate to cool.", { w: 5 }],
+    ["finish", "Toss the sprouts with the scallion, garlic, sesame oil, sesame seeds, salt and pepper."],
+  ],
+  sigeumchi: [
+    ["prep", "Trim the root ends of the spinach. Check for grit near the stems."],
+    ["cook", "Blanch the spinach in salted boiling water for 30 seconds. Rinse in cold water and squeeze it hard.", { k: "blanch" }],
+    ["finish", "Cut the spinach into 2–3 inch lengths, loosen it, and mix with the soup soy sauce, garlic, sugar, scallion, sesame oil and seeds."],
+  ],
+  oimuchim: [
+    ["start", "Slice the cucumber into thin half-moons, toss with the salt, and let it sit.", { w: 10 }],
+    ["finish", "Squeeze the cucumber gently. Mix in the gochugaru, scallion, garlic, vinegar and sugar, then the sesame oil and seeds."],
+  ],
+  pamuchim: [
+    ["start", "Shred the scallions into thin 4-inch strips and soak them in cold water.", { w: 10 }],
+    ["finish", "Drain the scallions well and toss with the gochugaru, sesame oil and sesame seeds."],
+    ["serve", "Add the soy sauce, vinegar and sugar to the scallions and toss."],
+  ],
+  musaengchae: [
+    ["start", "Cut the radish into thin matchsticks, toss with the salt, and let it sit.", { w: 10 }],
+    ["finish", "Drain the radish. Rub in the gochugaru, then mix in the garlic, ginger, fish sauce, sugar and scallion. Top with sesame seeds."],
+  ],
+  sukju: [
+    ["cook", "Blanch the mung bean sprouts for 1–2 minutes. Rinse in cold water and squeeze gently.", { k: "blanch" }],
+    ["finish", "Toss the mung bean sprouts with the scallion, garlic, sesame oil, sesame seeds, salt and pepper."],
+  ],
+  gajinamul: [
+    ["prep", "Cut the eggplants into 3-inch pieces, then halve or quarter them lengthwise."],
+    ["cook", "Steam the eggplant until soft, then let it cool a little.", { k: "steam", w: 7 }],
+    ["finish", "Tear the eggplant into strips and squeeze gently. Toss with the soy sauce, garlic, sesame oil, sugar, gochugaru and scallion, then sesame seeds and pepper."],
+  ],
+  hobak: [
+    ["prep", "Slice the zucchini into ¼-inch half-moons and finely chop the salted shrimp."],
+    ["cook", "Stir-fry the garlic in oil for 30 seconds, then the zucchini for 2–3 minutes. Add the salted shrimp and scallion for 1 more minute. Off the heat, add sesame oil and seeds.", { k: "fry" }],
+  ],
+  eomuk: [
+    ["prep", "Cut the fish cake into strips (rinse in hot water for a lighter dish). Slice the onion and peppers."],
+    ["sauce", "For the fish cake, mix the soy sauce, rice wine, sugar and pepper."],
+    ["cook", "Cook the onion and garlic in oil for 1 minute, add the fish cake for 2 minutes, then the sauce and peppers until glossy.", { k: "fry" }],
+  ],
+  myeolchi: [
+    ["cook", "Dry-toast the anchovies for 2 minutes and sift off the dust. Fry them in the oil for 1–2 minutes until crisp, then set aside.", { k: "fry" }],
+    ["cook", "In the same pan, bubble the rice wine, soy sauce, sugar, syrup and garlic. Off the heat, toss the anchovies back in with sesame oil and seeds. Spread out to cool."],
+  ],
+  oibokkeum: [
+    ["start", "Thinly slice the seedless cucumbers, toss with 1 tsp of the salt, and let them sit.", { w: 10 }],
+    ["prep", "Grind the sesame seeds for the sautéed cucumbers."],
+    ["cook", "Squeeze the cucumbers dry in a cloth and mix with the sesame oil. Sauté with the remaining salt for 1 minute. Off the heat, stir in the ground sesame.", { k: "fry" }],
+  ],
+  gochu: [
+    ["prep", "Halve any long shishito peppers and toss them, still damp, with the flour."],
+    ["cook", "Brown the peppers in oil for 2 minutes, flip for 2 more, add the onion and garlic for 1 minute, then the soy sauce for 1 minute. Off the heat, add sesame oil and seeds.", { k: "fry" }],
+  ],
+  broccoli: [
+    ["prep", "Cut the broccoli into bite-size florets."],
+    ["cook", "Boil the tofu in salted water for 3 minutes and lift it out. Cook the broccoli in the same water for 3–4 minutes, then rinse it in cold water.", { k: "blanch" }],
+    ["finish", "Squeeze and crumble the tofu over the broccoli. Mix in the remaining salt, garlic, scallion and sesame oil, and top with sesame seeds."],
+  ],
+  buchu: [
+    ["start", "Cut the chives into 2½-inch pieces and toss with the fish sauce. Turn them every 5 minutes.", { w: 30 }],
+    ["start", "For the chive kimchi, cook the rice flour in 1 cup water until it bubbles. Stir in the sugar for 1 minute, then let it cool.", { w: 20 }],
+    ["prep", "Slice the onion for the chive kimchi."],
+    ["finish", "Drain the chives over a bowl. Stir the flour paste and gochugaru into that liquid, then mix in the onion and chives. Top with sesame seeds."],
+  ],
+  yeongeun: [
+    ["start", "Slice the lotus root into ¼-inch rounds and soak them in cold water.", { w: 30 }],
+    ["cook", "Blanch the lotus root in water with the vinegar for 5 minutes, then rinse and drain. Use its own pot.", { k: "simmer", w: 5 }],
+    ["cook", "Stir-fry the lotus root in oil for a few minutes. Add 2¼ cups water, the garlic and soy sauce, cover, and cook on low for 40 minutes. Add the syrup and simmer 20 minutes more.", { w: 60 }],
+    ["cook", "Uncover, raise the heat, and turn the slices for 10–12 minutes until glossy. Finish with sesame oil and seeds.", { w: 12 }],
+  ],
+  gat: [
+    ["start", "Salt the mustard greens (more on the thick stems), turning every 30 minutes.", { w: 120 }],
+    ["start", "For the mustard greens kimchi, cook the rice flour in the stock until it bubbles. Stir in the sugar, then the fish sauce, and let it cool.", { w: 20 }],
+    ["sauce", "Mix the garlic, ginger, onion and gochugaru into the cooled mustard greens paste."],
+    ["finish", "Wash the salted greens in a few changes of cold water and drain. Toss them with the paste and pack into a container."],
+  ],
+  kongjorim: [
+    ["ahead", "Soak the black beans in cold water overnight. Keep the soaking water.", { w: 600 }],
+    ["cook", "Simmer the beans in 2½ cups of the soaking water, lid ajar, skimming the foam, until tender.", { k: "simmer", w: 55 }],
+    ["cook", "Add the garlic, soy sauce, sugar and oil and simmer on low for 10 minutes. Add the syrup and stir on medium-high for 10 minutes until shiny. Finish with sesame oil and seeds.", { w: 20 }],
+  ],
+  maneul: [
+    ["ahead", "Make the garlic pickles months ahead: clean the bulbs, pack them in a jar, and cover with cooled soy-vinegar brine. Re-boil the brine after 1 and 3 weeks, then let them sit for 8 months."],
+    ["serve", "Slice a pickled garlic bulb crosswise."],
+  ],
+  yangbaechu: [
+    ["start", "Cut the green cabbage into thin strips. Toss with the kosher salt and 1 cup cold water, and let it sit.", { w: 10 }],
+    ["prep", "Chop the scallions and carrot for the cabbage kimchi."],
+    ["sauce", "Mix the gochugaru, sugar, fish sauce, garlic, scallions and carrot into a paste."],
+    ["finish", "Rinse and drain the cabbage. Mix in the paste and pack into a container."],
+  ],
+  kimchi: [
+    ["start", "Quarter and core the napa cabbage, then cut it into bite-size pieces. Toss with the kosher salt and 1 cup water, tossing every 30 minutes.", { w: 120 }],
+    ["start", "For the napa kimchi, cook the rice flour in 1 cup water until it bubbles. Stir in the sugar until slightly see-through, then let it cool.", { w: 20 }],
+    ["prep", "Cut the radish, carrot, chives and scallions for the napa kimchi, and peel the pear."],
+    ["sauce", "Blend the fish sauce, flour paste, salted shrimp, garlic, ginger, onion and pear. Stir in the gochugaru, then the cut vegetables (and oysters)."],
+    ["finish", "Rinse the cabbage 3 times, drain and squeeze. Mix it into the paste by hand and pack into jars."],
+  ],
+  gamja: [
+    ["start", "Peel and cube the potatoes and carrot. Soak the potatoes in water.", { w: 10 }],
+    ["prep", "Chop the onion and chili peppers for the potatoes."],
+    ["cook", "Cook the potatoes and carrot in oil for 3–4 minutes. Add the soy sauce, sugar, rice wine, garlic, pepper and ¾ cup water. Cover and simmer.", { k: "simmer", w: 10 }],
+    ["cook", "Add the onion, peppers and syrup and simmer uncovered until glossy. Finish with sesame oil and seeds.", { w: 5 }],
+  ],
+  jangjorim: [
+    ["start", "Soak the beef in cold water to draw out the blood, then cut it into 2-inch chunks.", { w: 20 }],
+    ["cook", "Cover the beef with the onion, scallion whites, radish, garlic, ginger, peppercorns and kelp plus an inch of water. Boil, skim, and simmer.", { k: "simmer", w: 40 }],
+    ["cook", "Meanwhile, hard-boil and peel the eggs.", { w: 10 }],
+    ["cook", "Strain the broth. Simmer the beef and broth with the soy sauces, sugar, rice wine and eggs, adding the peppers near the end.", { w: 20 }],
+    ["finish", "Let the beef cool, shred it by hand, and store it in the sauce."],
+  ],
+};
+// Produce to rinse in the wash step, by shopping-list ingredient
+const WASH = { soy_sprouts: "soybean sprouts", mung_sprouts: "mung bean sprouts", spinach: "spinach", cucumber: "cucumbers", seedless_cuke: "cucumbers",
+  radish: "radish", potato: "potatoes", zucchini: "zucchini", eggplant: "eggplants", carrot: "carrots", scallion: "scallions", green_chili: "chili peppers",
+  red_chili: "chili peppers", shishito: "shishito peppers", napa: "napa cabbage", pear: "pear", buchu: "chives", green_cabbage: "green cabbage",
+  mustard: "mustard greens", broccoli: "broccoli", lotus: "lotus root" };
+
 /* ---------- formatting ---------- */
 const FR = { 0.125: "⅛", 0.25: "¼", 0.375: "⅜", 0.5: "½", 0.625: "⅝", 0.75: "¾", 0.875: "⅞" };
 function frac(x, step = 0.25) {
@@ -661,13 +840,15 @@ const store = {
 const state = {
   sel: new Set(store.get("sel", []).filter(id => DISHES.some(d => d.id === id))),
   have: new Set(store.get("have", [])),
+  done: new Set(store.get("done", [])),
   serv: store.get("servings", 8),
   cat: "all",
   expanded: false,
   min: false, // desktop: shopping list minimized to the floating button
   view: null, // a dish id while its recipe shows in the pane
+  panel: "summary", // or "list" / "plan"
 };
-const save = () => { store.set("sel", [...state.sel]); store.set("have", [...state.have]); store.set("servings", state.serv); };
+const save = () => { store.set("sel", [...state.sel]); store.set("have", [...state.have]); store.set("done", [...state.done]); store.set("servings", state.serv); };
 
 /* ---------- aggregation ---------- */
 function aggregate() {
@@ -764,13 +945,68 @@ function renderRecipe(d) {
     <p class="r-tip">${esc(s.tip)}</p>
     <p class="note">Quick steps written for beginners. For photos and more detail, see the <a href="${d.url}" target="_blank" rel="noopener">full recipe on ${siteName(d.url)}</a>.</p>`;
 }
+function fmtMins(m) { const h = Math.floor(m / 60), r = Math.round(m % 60); return h ? `${h} hr${r ? ` ${r} min` : ""}` : `${r} min`; }
+// Same-day kitchen time for a dish: its total, minus anything done the day before
+function dayMins(d) { return d.timeText ? 0 : d.mins - (PLAN[d.id] || []).filter(s => s[0] === "ahead").reduce((t, s) => t + ((s[2] || {}).w || 0), 0); }
+function buildPlan(picked, rows) {
+  // Consecutive same-phase steps of one dish stay together as a group.
+  const groups = [];
+  for (const d of picked) {
+    const plan = PLAN[d.id] || STEPS[d.id].steps.map(t => ["cook", t]);
+    let g = null;
+    plan.forEach(([p, t, o = {}], i) => {
+      if (!g || g.p !== p) groups.push(g = { p, d, k: o.k, w: 0, steps: [] });
+      g.w += o.w || 0;
+      g.steps.push({ key: `${d.id}.${i}`, t, w: o.w, d });
+    });
+  }
+  const rank = g => KINDS.indexOf(g.k) < 0 ? KINDS.length : KINDS.indexOf(g.k);
+  const out = [];
+  for (const [p, title, sub] of PHASES) {
+    let gs = groups.filter(g => g.p === p);
+    if (p === "ahead" || p === "start") gs.sort((a, b) => b.w - a.w);
+    if (p === "cook") gs.sort((a, b) => rank(a) - rank(b) || b.w - a.w);
+    const steps = gs.flatMap(g => g.steps);
+    if (p === "wash") {
+      const names = [...new Set(rows.filter(r => WASH[r.key]).map(r => WASH[r.key]))];
+      if (names.length) steps.push({ key: "wash", t: "Rinse the produce in cold water and drain.", list: names.join(", "), uses: [...new Set(rows.filter(r => WASH[r.key]).flatMap(r => r.uses.map(u => u.d)))] });
+    }
+    if (p === "prep") {
+      for (const key of ["garlic", "ginger"]) {
+        const r = rows.find(r => r.key === key), ds = r ? [...new Set(r.uses.map(u => u.d))] : [];
+        if (ds.length < 2) continue;
+        const amt = r.total > 0 ? (r.ing.cloves ? `${fmtQty(r.ing, r.total)} (${fmtVol(r.total)} minced)` : fmtVol(r.total)) : "";
+        steps.unshift({ key: `all-${key}`, t: key === "garlic" ? "Peel and mince all the garlic at once." : "Peel and grate all the ginger at once.", list: amt ? `${amt} for ${ds.length} dishes` : "", uses: ds });
+      }
+    }
+    if (steps.length) out.push({ title, sub, steps });
+  }
+  return out;
+}
+function renderPlan(picked, rows) {
+  const phases = buildPlan(picked, rows);
+  const longest = picked.reduce((a, d) => (dayMins(d) > dayMins(a) ? d : a), picked[0]);
+  let n = 0;
+  const intro = dayMins(longest) ? `Every step from your ${picked.length} dish${picked.length > 1 ? "es" : ""}, in the order to do them. ${longest.en} takes longest, so start about ${fmtMins(dayMins(longest))} before you want to eat.` : `Every step from your dishes, in the order to do them.`;
+  $("planView").innerHTML = `<p class="plan-intro">${esc(intro)}</p>` + phases.map(ph => `<section class="phase">
+      <h3>${ph.title}</h3>${ph.sub ? `<p class="phase-sub">${ph.sub}</p>` : ""}
+      <ol class="psteps">${ph.steps.map(s => {
+        const done = state.done.has(s.key), id = `done-${s.key}`; n++;
+        const meta = s.d
+          ? `<img src="${img(s.d)}" alt=""><span>${esc(s.d.en)}</span>`
+          : `<span class="uses">${s.uses.map(d => `<img src="${img(d)}" alt="${esc(d.en)}" title="${esc(d.en)}">`).join("")}</span>${s.list ? `<span>${esc(s.list)}</span>` : ""}`;
+        return `<li><label class="pstep${done ? " done" : ""}" for="${id}"><input type="checkbox" id="${id}" data-done="${s.key}" ${done ? "checked" : ""}>
+          <span class="pstep-text"><span class="pstep-t">${esc(s.t)}</span><span class="pstep-meta">${meta}${s.w ? `<span class="wait">${s.w >= 600 ? "Overnight" : `Wait ${fmtMins(s.w)}`}</span>` : ""}</span></span></label></li>`;
+      }).join("")}</ol></section>`).join("");
+  return n;
+}
 function renderBench() {
   const picked = DISHES.filter(d => state.sel.has(d.id)), n = picked.length, rows = aggregate();
   const recipe = state.view && DISHES.find(d => d.id === state.view);
-  if (!n) state.min = false;
+  if (!n) { state.min = false; state.panel = "summary"; }
   const open = !!recipe || (n > 0 && !state.min);
   $("reopen").hidden = open || !n;
-  $("reopenText").textContent = `Shopping list · ${n}`;
+  $("reopenText").textContent = `Your banchan · ${n}`;
   $("reopenThumbs").innerHTML = picked.slice(-3).map(d => `<img src="${img(d)}" alt="">`).join("");
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
@@ -779,19 +1015,28 @@ function renderBench() {
   document.body.classList.toggle("bench-open", open);
   document.querySelectorAll(".card").forEach(c => c.classList.toggle("viewing", !!recipe && c.dataset.id === recipe.id));
   if (!open) return;
-  $("recipeView").hidden = !recipe; $("benchBody").hidden = !!recipe;
+  const panel = recipe ? "recipe" : state.panel;
+  $("recipeView").hidden = panel !== "recipe"; $("benchBody").hidden = panel !== "summary";
+  $("listView").hidden = panel !== "list"; $("planView").hidden = panel !== "plan";
+  $("back").hidden = panel !== "list" && panel !== "plan";
   $("share").hidden = !!recipe;
-  $("closeRecipe").setAttribute("aria-label", recipe ? "Close recipe" : "Hide shopping list");
-  $("closeRecipe").title = recipe ? "Close recipe" : "Hide shopping list";
-  document.querySelector(".bench-title").textContent = recipe ? "Recipe" : "Shopping list";
+  $("closeRecipe").setAttribute("aria-label", recipe ? "Close recipe" : "Hide panel");
+  $("closeRecipe").title = recipe ? "Close recipe" : "Hide panel";
+  document.querySelector(".bench-title").textContent = { recipe: "Recipe", summary: "Your banchan", list: "Shopping list", plan: "Cooking plan" }[panel];
   document.querySelectorAll(".serv-out").forEach(o => (o.textContent = state.serv));
   const head = recipe ? [recipe] : picked;
-  $("peekSub").textContent = recipe ? `${recipe.name} · ${recipe.en}` : `${n} dish${n > 1 ? "es" : ""} · ${rows.length} ingredients`;
+  const longest = Math.max(...picked.map(dayMins));
+  const planN = recipe ? 0 : renderPlan(picked, rows);
+  $("peekSub").textContent = recipe ? `${recipe.name} · ${recipe.en}`
+    : panel === "list" ? `${rows.length} ingredients` : panel === "plan" ? `${planN} steps` : `${n} dish${n > 1 ? "es" : ""}${longest ? ` · about ${fmtMins(longest)}` : ""}`;
   $("peekMini").innerHTML = `<img src="${img(head[head.length - 1])}" alt="">`;
   $("peekThumbs").innerHTML = recipe ? "" : picked.slice(-4).map(d => `<img src="${img(d)}" alt="">`).join("");
   if (recipe) { renderRecipe(recipe); return; }
-  $("dishRows").innerHTML = picked.map(d => `<li class="chip"><button type="button" class="chip-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span>${esc(d.en)}</span></button>
-      <button type="button" class="chip-x" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${xIcon}</button></li>`).join("");
+  $("dishRows").innerHTML = picked.map(d => `<li class="row"><button type="button" class="row-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><span class="row-thumb"><img src="${img(d)}" alt=""></span>
+      <span class="row-text"><span class="row-name">${esc(d.en)}</span><span class="row-sub">${d.name} · ${timeLabel(d)}</span></span></button>
+      <button type="button" class="row-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${xIcon}</button></li>`).join("");
+  $("navListSub").textContent = `${rows.length} ingredients, by aisle`;
+  $("navPlanSub").textContent = `${planN} steps across ${n} dish${n > 1 ? "es" : ""}, in order`;
   let html = "";
   for (const [aid, label] of AISLES) {
     const items = rows.filter(r => r.ing.a === aid);
@@ -863,12 +1108,16 @@ document.addEventListener("click", e => {
     revealCard(state.view, wasClosed);
     return;
   }
+  const nav = e.target.closest("[data-panel]");
+  if (nav) { state.panel = nav.dataset.panel; state.expanded = true; renderBench(); $("bench").scrollTop = 0; return; }
   const step = e.target.closest("[data-step]");
   if (step) { state.serv = Math.min(20, Math.max(1, state.serv + +step.dataset.step)); save(); renderBench(); return; }
   const chip = e.target.closest("[data-cat]");
   if (chip) { state.cat = chip.dataset.cat; renderScopes(); renderGrid(); }
 });
 document.addEventListener("change", e => {
+  const dk = e.target.dataset && e.target.dataset.done;
+  if (dk) { e.target.checked ? state.done.add(dk) : state.done.delete(dk); save(); e.target.closest(".pstep").classList.toggle("done", e.target.checked); return; }
   const k = e.target.dataset && e.target.dataset.have;
   if (!k) return;
   e.target.checked ? state.have.add(k) : state.have.delete(k);
@@ -882,7 +1131,11 @@ $("closeRecipe").onclick = () => {
   renderBench();
 };
 $("reopen").onclick = () => { state.min = false; renderBench(); };
-document.addEventListener("keydown", e => { if (e.key === "Escape" && state.view) $("closeRecipe").click(); });
+$("back").onclick = () => { state.panel = "summary"; renderBench(); $("bench").scrollTop = 0; };
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (state.view) $("closeRecipe").click(); else if (state.panel !== "summary") $("back").click();
+});
 // A shared list travels in the link as #list.<dish>.<dish>~<servings>.
 // The published preview can't see its own claude.ai address, so links made there point at it directly.
 const HOME = /ceciliayang\.com$/.test(location.hostname) || location.protocol === "file:" ? location.href.split("#")[0] : "https://ceciliayang.com/banchan-party/";
@@ -892,7 +1145,7 @@ function openSharedList() {
   if (!m) return;
   const ids = m[1].split(".").filter(id => DISHES.some(d => d.id === id));
   if (!ids.length) return;
-  state.sel = new Set(ids); state.have = new Set(); state.view = null; state.expanded = true;
+  state.sel = new Set(ids); state.have = new Set(); state.done = new Set(); state.view = null; state.panel = "summary"; state.expanded = true;
   if (m[2]) state.serv = Math.min(20, Math.max(1, +m[2]));
   save();
 }
