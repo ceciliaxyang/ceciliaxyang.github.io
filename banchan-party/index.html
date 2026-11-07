@@ -234,11 +234,11 @@ a { color: inherit; }
   .stage { width: min(100%, 280px); border-radius: 40px; align-self: center; }
 }
 /* Minimized shopping list (desktop); phones keep the bottom sheet's peek bar */
-.reopen { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 13px; line-height: 16px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.reopen { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; padding: 8px 22px 8px 14px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 15px; line-height: 20px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
 .reopen:hover { background: #000; }
 .reopen:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-.reopen-thumbs { display: flex; padding-left: 6px; }
-.reopen-thumbs img { width: 28px; height: 28px; margin-left: -6px; border-radius: 8px; border: 2px solid var(--text); object-fit: cover; background: var(--swatch); }
+.reopen-thumbs { display: flex; padding-left: 8px; }
+.reopen-thumbs img { width: 34px; height: 34px; margin-left: -8px; border-radius: 10px; border: 2px solid var(--text); object-fit: cover; background: var(--swatch); }
 @media (max-width: 760px) { .reopen { display: none; } }
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
 body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
