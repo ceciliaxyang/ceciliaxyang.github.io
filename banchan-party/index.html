@@ -277,16 +277,32 @@ a { color: inherit; }
 .dock-action:hover { background: #f5f5f5; }
 .dock-action[aria-current="true"] { background: #f2f2f2; }
 .dock-open:focus-visible, .dock-del:focus-visible, .dock-action:focus-visible, .dock-share:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 8px; }
+/* Dragging the card down tucks it into a small button; tapping that brings it back */
+.dock { touch-action: none; }
+.dock-rows { touch-action: pan-y; }
+.dock img { -webkit-user-drag: none; }
+.dock:not(.dragging) { transition: transform .2s ease, opacity .2s ease; }
+.dock.dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+.dock.enter { animation: dock-in .25s cubic-bezier(.2, .8, .2, 1); }
+@keyframes dock-in { from { transform: translateY(24px); opacity: 0; } }
+.dock-fab { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; padding: 8px 22px 8px 14px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 15px; line-height: 20px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.dock-fab:hover { background: #000; }
+.dock-fab:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.fab-thumbs { display: flex; padding-left: 8px; }
+.fab-thumbs img, .fab-more { width: 34px; height: 34px; margin-left: -8px; border-radius: 10px; border: 2px solid var(--text); object-fit: cover; background: var(--swatch); }
+.fab-more { display: flex; align-items: center; justify-content: center; box-sizing: content-box; width: 30px; height: 30px; background: #4a4a4a; color: #fff; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .dock, .dock.enter { transition: none; animation: none; } }
 body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
 /* Desktop: with the pane open the card sits just left of it, and the card's Share replaces the pane's */
 @media (min-width: 761px) {
-  body.bench-open .dock { right: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)) + 24px); }
+  body.bench-open .dock, body.bench-open .dock-fab { right: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)) + 24px); }
   .bench-share { display: none; }
 }
 @media (max-width: 760px) {
   .dock { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: auto; padding: 24px; }
   .dock-rows { max-height: 157px; }
-  body.bench-open .dock { display: none; }
+  body.bench-open .dock, body.bench-open .dock-fab { display: none; }
+  .dock-fab { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   body.dock-on .toast { bottom: calc(var(--dock-h, 0px) + 32px + env(safe-area-inset-bottom, 0px)); }
 }
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
@@ -345,6 +361,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   <button type="button" class="dock-action" data-panel="list"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.25 2h1.9l1.7 8.15a1 1 0 0 0 .98.8h6.12a1 1 0 0 0 .97-.76L14.25 5H3.8"/><circle cx="6.25" cy="13.5" r="1"/><circle cx="11.75" cy="13.5" r="1"/></svg><span>Shopping list</span><svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.00008 2L11.6465 7.64645C11.8418 7.84171 11.8418 8.15829 11.6465 8.35355L6.00008 14" stroke="currentColor" stroke-width="1.5"/></svg></button>
   <button type="button" class="dock-action" data-panel="plan"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4.25C6.75 3.3 4.9 3 2.25 3v9.75c2.65 0 4.5.3 5.75 1.25 1.25-.95 3.1-1.25 5.75-1.25V3C11.1 3 9.25 3.3 8 4.25Z"/><path d="M8 4.25V14"/></svg><span>Master recipe</span><svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.00008 2L11.6465 7.64645C11.8418 7.84171 11.8418 8.15829 11.6465 8.35355L6.00008 14" stroke="currentColor" stroke-width="1.5"/></svg></button>
 </section>
+<button type="button" class="dock-fab" id="dockFab" hidden><span class="fab-thumbs" id="fabThumbs" aria-hidden="true"></span><span>Your dishes</span></button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -857,6 +874,7 @@ const state = {
   cat: "all",
   view: null, // a dish id while its recipe shows in the pane
   panel: null, // "list" or "plan" while one shows in the pane
+  dockMin: false, // the card is tucked into its small button
 };
 const save = () => { store.set("sel", [...state.sel]); store.set("have", [...state.have]); store.set("done", [...state.done]); store.set("servings", state.serv); };
 
@@ -1012,12 +1030,17 @@ function renderBench() {
   const recipe = state.view && DISHES.find(d => d.id === state.view);
   if (!n) state.panel = null;
   const open = !!recipe || !!state.panel;
-  $("dock").hidden = !n;
+  if (!n) state.dockMin = false;
+  $("dock").hidden = !n || state.dockMin; $("dockFab").hidden = !n || !state.dockMin;
+  const shown = n > 3 ? picked.slice(-2) : picked;
+  $("fabThumbs").innerHTML = shown.map(d => `<img src="${img(d)}" alt="">`).join("") + (n > 3 ? `<span class="fab-more">+${n - 2}</span>` : "");
+  $("dockFab").setAttribute("aria-label", `Show your dishes (${n})`);
   document.body.classList.toggle("dock-on", n > 0);
   document.querySelectorAll(".dock-action").forEach(b => b.setAttribute("aria-current", String(!recipe && state.panel === b.dataset.panel)));
   $("dockRows").innerHTML = picked.map(d => `<li class="dock-row"><button type="button" class="dock-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span class="dock-text"><span class="dock-name">${esc(d.en)}</span><span class="dock-time">${timeLabel(d)}</span></span></button>
       <button type="button" class="dock-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${dockTrash}</button></li>`).join("");
-  if (!$("dock").hidden) document.body.style.setProperty("--dock-h", `${$("dock").offsetHeight}px`);
+  const shownDock = state.dockMin ? $("dockFab") : $("dock");
+  if (n) document.body.style.setProperty("--dock-h", `${shownDock.offsetHeight}px`);
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
   $("bench").classList.toggle("expanded", open);
@@ -1162,6 +1185,30 @@ const share = async () => {
 };
 $("share").onclick = share;
 $("dockShare").onclick = share;
+$("dockFab").onclick = () => { state.dockMin = false; renderBench(); $("dock").classList.add("enter"); };
+$("dock").addEventListener("animationend", () => $("dock").classList.remove("enter"));
+// Drag the card down past 60px to tuck it away; a shorter drag springs back.
+(() => {
+  const dock = $("dock"); let y0 = null, dy = 0, moved = false;
+  dock.addEventListener("pointerdown", e => { if (e.button > 0) return; y0 = e.clientY; dy = 0; moved = false; });
+  addEventListener("pointermove", e => {
+    if (y0 == null) return;
+    dy = Math.max(0, e.clientY - y0);
+    if (!moved && dy > 6) { moved = true; dock.classList.add("dragging"); }
+    if (moved) dock.style.transform = `translateY(${dy}px)`;
+  });
+  const end = () => {
+    if (y0 == null) return;
+    y0 = null; dock.classList.remove("dragging");
+    if (!moved) return;
+    if (dy < 60) { dock.style.transform = ""; return; }
+    dock.style.transform = `translateY(${dock.offsetHeight + 40}px)`; dock.style.opacity = "0";
+    setTimeout(() => { state.dockMin = true; dock.style.transform = dock.style.opacity = ""; renderBench(); }, 200);
+  };
+  addEventListener("pointerup", end); addEventListener("pointercancel", end);
+  // A drag that ends over a button shouldn't also press it
+  dock.addEventListener("click", e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+})();
 openSharedList();
 fitCols(); renderScopes(); renderGrid(); renderBench();
 </script>
