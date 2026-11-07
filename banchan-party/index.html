@@ -260,7 +260,7 @@ a { color: inherit; }
 @media (max-width: 760px) {
   .stage { width: min(100%, 280px); border-radius: 40px; align-self: center; }
 }
-/* Minimized shopping list (desktop); phones keep the bottom sheet's peek bar */
+/* Minimized pane (desktop); phones keep the bottom sheet's peek bar */
 .reopen { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; padding: 8px 22px 8px 14px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 15px; line-height: 20px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
 .reopen:hover { background: #000; }
 .reopen:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
@@ -300,7 +300,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     </button>
     </div>
     <button type="button" class="dark-pill bench-share" id="share">Share</button>
-    <button type="button" class="mh-btn" id="closeRecipe" aria-label="Hide shopping list" title="Hide shopping list"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
+    <button type="button" class="mh-btn" id="closeRecipe" aria-label="Hide panel" title="Hide panel"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
   </div>
   <div class="view" id="recipeView" hidden></div>
   <div class="view" id="benchBody">
@@ -844,7 +844,7 @@ const state = {
   serv: store.get("servings", 8),
   cat: "all",
   expanded: false,
-  min: false, // desktop: shopping list minimized to the floating button
+  min: false, // desktop: pane minimized to the floating button
   view: null, // a dish id while its recipe shows in the pane
   panel: "summary", // or "list" / "plan"
 };
@@ -902,7 +902,7 @@ function renderGrid() {
           </span>
         </span>
       </button>
-      <button type="button" class="add${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} shopping list" title="${on ? "Remove from list" : "Add to list"}">${addIcon}</button>
+      <button type="button" class="add${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} your banchan" title="${on ? "Remove from your banchan" : "Add to your banchan"}">${addIcon}</button>
     </article>`;
   }).join("");
 }
@@ -910,8 +910,8 @@ function syncCards() {
   document.querySelectorAll(".add[data-pick]").forEach(b => {
     const d = DISHES.find(x => x.id === b.dataset.pick), on = state.sel.has(d.id);
     b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
-    b.setAttribute("aria-label", `${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} shopping list`);
-    b.title = on ? "Remove from list" : "Add to list";
+    b.setAttribute("aria-label", `${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} your banchan`);
+    b.title = on ? "Remove from your banchan" : "Add to your banchan";
   });
 }
 const stepper = () => `<div class="serv">
@@ -934,7 +934,7 @@ function renderRecipe(d) {
       <p class="card-time">${timeLabel(d)}${d.rating ? ` · ★ ${d.rating.toFixed(1)} (${d.votes} ratings)` : ""}${d.baseNote ? ` · ${d.baseNote}` : ""}</p>
     </div>
     <div class="r-actions">
-      <button type="button" class="dark-pill${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}">${on ? "✓ In your list" : "Add to shopping list"}</button>
+      <button type="button" class="dark-pill${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}">${on ? "✓ In your banchan" : "Add to your banchan"}</button>
       <a class="grey-pill" href="${d.url}" target="_blank" rel="noopener">Full recipe on ${siteName(d.url)} ↗</a>
     </div>
     ${stepper()}
