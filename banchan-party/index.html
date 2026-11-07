@@ -259,8 +259,10 @@ a { color: inherit; }
 .dock-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
 .dock-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); }
 .dock-open img { flex-shrink: 0; width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--swatch); }
-.dock-open span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dock-open:hover span { text-decoration: underline; }
+.dock-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dock-name, .dock-time { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-time { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--soft); }
+.dock-open:hover .dock-name { text-decoration: underline; }
 .dock-del { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: -6px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--soft); cursor: pointer; }
 .dock-del:hover { background: #f2f2f2; color: var(--text); }
 .dock-open:focus-visible, .dock-del:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 8px; }
@@ -998,7 +1000,7 @@ function renderBench() {
   const open = !!recipe || !!state.panel;
   $("dock").hidden = open || !n;
   document.body.classList.toggle("dock-on", !open && n > 0);
-  $("dockRows").innerHTML = picked.map(d => `<li class="dock-row"><button type="button" class="dock-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span>${esc(d.en)}</span></button>
+  $("dockRows").innerHTML = picked.map(d => `<li class="dock-row"><button type="button" class="dock-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span class="dock-text"><span class="dock-name">${esc(d.en)}</span><span class="dock-time">${timeLabel(d)}</span></span></button>
       <button type="button" class="dock-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${trashIcon}</button></li>`).join("");
   if (!$("dock").hidden) document.body.style.setProperty("--dock-h", `${$("dock").offsetHeight}px`);
   $("layout").classList.toggle("closed", !open);
