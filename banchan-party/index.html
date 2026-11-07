@@ -127,18 +127,7 @@ a { color: inherit; }
 }
 .bench-titles { flex: 1; min-width: 0; }
 .head-main { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px; }
-/* Summary: two big links into the shopping list and the cooking plan */
-.nav-cards { display: flex; flex-direction: column; gap: 8px; }
-.nav-card { display: flex; align-items: center; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 24px; background: #f5f5f5; color: var(--text); text-align: left; cursor: pointer; }
-.nav-card:hover { background: #eeeeee; }
-.nav-card:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-.nav-ico { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: var(--bg); }
-.nav-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.nav-title { font-size: 16px; line-height: 20px; font-weight: 500; }
-.nav-sub { font-size: 13px; line-height: 18px; color: var(--soft); }
-.nav-chev { flex-shrink: 0; color: var(--soft); }
 /* Cooking plan: every dish's steps merged and grouped by phase */
-.plan-intro { margin: 0; font-size: 14px; line-height: 21px; color: var(--text); }
 .phase h3 { margin: 0; font-size: 16px; line-height: 20px; font-weight: 500; color: var(--text); }
 .phase-sub { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--soft); }
 .psteps { list-style: none; margin: 4px 0 0; padding: 0; }
@@ -260,14 +249,30 @@ a { color: inherit; }
 @media (max-width: 760px) {
   .stage { width: min(100%, 280px); border-radius: 40px; align-self: center; }
 }
-/* Minimized pane (desktop); phones keep the bottom sheet's peek bar */
-.reopen { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; padding: 8px 22px 8px 14px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 15px; line-height: 20px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
-.reopen:hover { background: #000; }
-.reopen:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-.reopen-thumbs { display: flex; padding-left: 8px; }
-.reopen-thumbs img, .reopen-more { width: 34px; height: 34px; margin-left: -8px; border-radius: 10px; border: 2px solid var(--text); object-fit: cover; background: var(--swatch); }
-.reopen-more { display: flex; align-items: center; justify-content: center; box-sizing: content-box; width: 30px; height: 30px; background: #4a4a4a; color: #fff; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
-@media (max-width: 760px) { .reopen { display: none; } }
+/* Your dishes: floating card with the picked dishes and the two ways into the pane */
+.dock { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); min-width: 288px; max-width: calc(100vw - 48px);
+  display: flex; flex-direction: column; gap: 24px; padding: 32px 24px; border-radius: 24px; background: var(--bg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .02), 0 2px 16px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .1); }
+.dock-title { margin: 0; font-size: 18px; line-height: 18px; font-weight: 500; color: var(--text); }
+.dock-rows { list-style: none; margin: -8px 0 0; padding: 0; max-height: 220px; overflow-y: auto; scrollbar-width: none; }
+.dock-rows::-webkit-scrollbar { display: none; }
+.dock-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.dock-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); }
+.dock-open img { flex-shrink: 0; width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--swatch); }
+.dock-open span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-open:hover span { text-decoration: underline; }
+.dock-del { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: -6px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--soft); cursor: pointer; }
+.dock-del:hover { background: #f2f2f2; color: var(--text); }
+.dock-open:focus-visible, .dock-del:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 8px; }
+.dock-actions { display: flex; gap: 8px; }
+.dock-actions .dark-pill { white-space: nowrap; }
+body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
+@media (max-width: 760px) {
+  .dock { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: auto; padding: 24px; }
+  .dock-rows { max-height: 132px; }
+  .dock-actions .dark-pill { flex: 1; }
+  body.dock-on .toast { bottom: calc(var(--dock-h, 0px) + 32px + env(safe-area-inset-bottom, 0px)); }
+}
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
 body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 761px) { body.bench-open .toast { bottom: 16px; } }
@@ -286,12 +291,11 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   </div>
 </div>
 
-<aside class="bench" id="bench" aria-label="Selected">
+<aside class="bench" id="bench" aria-label="Shopping list and recipes">
   <div class="bench-head" id="benchHead">
     <span class="sheet-handle" aria-hidden="true"></span>
     <div class="head-main">
-    <button type="button" class="mh-btn" id="back" aria-label="Back to selected dishes" title="Back" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
-    <button type="button" class="peek" id="peek" aria-expanded="false" aria-controls="benchBody">
+    <button type="button" class="peek" id="peek" aria-expanded="false" aria-controls="listView">
       <span class="peek-mini" id="peekMini"></span>
       <span class="bench-titles">
         <span class="bench-title" role="heading" aria-level="2">Selected</span>
@@ -304,22 +308,6 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     <button type="button" class="mh-btn" id="closeRecipe" aria-label="Hide panel" title="Hide panel"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
   </div>
   <div class="view" id="recipeView" hidden></div>
-  <div class="view" id="benchBody">
-    <div class="nav-cards">
-      <button type="button" class="nav-card" data-panel="list"><span class="nav-ico"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5h1.5M7.5 5.5h9.5M3 10h1.5M7.5 10h9.5M3 14.5h1.5M7.5 14.5h9.5"/></svg></span><span class="nav-text"><span class="nav-title">Shopping list</span><span class="nav-sub" id="navListSub"></span></span><svg class="nav-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
-      <button type="button" class="nav-card" data-panel="plan"><span class="nav-ico"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10.5" r="6.5"/><path d="M10 6.5v4l2.5 2M8 2h4"/></svg></span><span class="nav-text"><span class="nav-title">Cooking plan</span><span class="nav-sub" id="navPlanSub"></span></span><svg class="nav-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
-    </div>
-    <ul class="rows" id="dishRows" aria-label="Dishes"></ul>
-    <div class="serv">
-      <div class="serv-text"><p class="t">Servings per dish</p></div>
-      <div class="step">
-        <button type="button" data-step="-1" aria-label="Fewer servings">−</button>
-        <output class="serv-out" aria-live="polite">8</output>
-        <button type="button" data-step="1" aria-label="More servings">+</button>
-      </div>
-    </div>
-    <p class="note" id="note"></p>
-  </div>
   <div class="view" id="listView" hidden>
     <div class="serv">
       <div class="serv-text"><p class="t">Servings per dish</p></div>
@@ -330,10 +318,18 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
       </div>
     </div>
     <div id="list"></div>
+    <p class="note" id="note"></p>
   </div>
   <div class="view" id="planView" hidden></div>
 </aside>
-<button type="button" class="reopen" id="reopen" hidden><span class="reopen-thumbs" id="reopenThumbs" aria-hidden="true"></span><span id="reopenText">Selected</span></button>
+<section class="dock" id="dock" aria-label="Your dishes" hidden>
+  <h2 class="dock-title">Your dishes</h2>
+  <ul class="dock-rows" id="dockRows"></ul>
+  <div class="dock-actions">
+    <button type="button" class="dark-pill" data-panel="list">Shopping list</button>
+    <button type="button" class="dark-pill" data-panel="plan">Consolidated recipe</button>
+  </div>
+</section>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -844,10 +840,8 @@ const state = {
   done: new Set(store.get("done", [])),
   serv: store.get("servings", 8),
   cat: "all",
-  expanded: false,
-  min: false, // desktop: pane minimized to the floating button
   view: null, // a dish id while its recipe shows in the pane
-  panel: "summary", // or "list" / "plan"
+  panel: null, // "list" or "plan" while one shows in the pane
 };
 const save = () => { store.set("sel", [...state.sel]); store.set("have", [...state.have]); store.set("done", [...state.done]); store.set("servings", state.serv); };
 
@@ -947,8 +941,6 @@ function renderRecipe(d) {
     <p class="note">Quick steps written for beginners. For photos and more detail, see the <a href="${d.url}" target="_blank" rel="noopener">full recipe on ${siteName(d.url)}</a>.</p>`;
 }
 function fmtMins(m) { const h = Math.floor(m / 60), r = Math.round(m % 60); return h ? `${h} hr${r ? ` ${r} min` : ""}` : `${r} min`; }
-// Same-day kitchen time for a dish: its total, minus anything done the day before
-function dayMins(d) { return d.timeText ? 0 : d.mins - (PLAN[d.id] || []).filter(s => s[0] === "ahead").reduce((t, s) => t + ((s[2] || {}).w || 0), 0); }
 function buildPlan(picked, rows) {
   // Consecutive same-phase steps of one dish stay together as a group.
   const groups = [];
@@ -986,10 +978,8 @@ function buildPlan(picked, rows) {
 }
 function renderPlan(picked, rows) {
   const phases = buildPlan(picked, rows);
-  const longest = picked.reduce((a, d) => (dayMins(d) > dayMins(a) ? d : a), picked[0]);
   let n = 0;
-  const intro = dayMins(longest) ? `Every step from your ${picked.length} dish${picked.length > 1 ? "es" : ""}, in the order to do them. ${longest.en} takes longest, so start about ${fmtMins(dayMins(longest))} before you want to eat.` : `Every step from your dishes, in the order to do them.`;
-  $("planView").innerHTML = `<p class="plan-intro">${esc(intro)}</p>` + phases.map(ph => `<section class="phase">
+  $("planView").innerHTML = phases.map(ph => `<section class="phase">
       <h3>${ph.title}</h3>${ph.sub ? `<p class="phase-sub">${ph.sub}</p>` : ""}
       <ol class="psteps">${ph.steps.map(s => {
         const done = state.done.has(s.key), id = `done-${s.key}`; n++;
@@ -1004,43 +994,34 @@ function renderPlan(picked, rows) {
 function renderBench() {
   const picked = DISHES.filter(d => state.sel.has(d.id)), n = picked.length, rows = aggregate();
   const recipe = state.view && DISHES.find(d => d.id === state.view);
-  if (!n) { state.min = false; state.panel = "summary"; }
-  const open = !!recipe || (n > 0 && !state.min);
-  $("reopen").hidden = open || !n;
-  $("reopenText").textContent = "Selected";
-  // Three slots: the latest dishes, with the last slot counting any that don't fit
-  const shown = n > 3 ? picked.slice(-2) : picked;
-  $("reopenThumbs").innerHTML = shown.map(d => `<img src="${img(d)}" alt="">`).join("") + (n > 3 ? `<span class="reopen-more">+${n - 2}</span>` : "");
-  $("reopen").setAttribute("aria-label", `Show selected dishes (${n})`);
+  if (!n) state.panel = null;
+  const open = !!recipe || !!state.panel;
+  $("dock").hidden = open || !n;
+  document.body.classList.toggle("dock-on", !open && n > 0);
+  $("dockRows").innerHTML = picked.map(d => `<li class="dock-row"><button type="button" class="dock-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span>${esc(d.en)}</span></button>
+      <button type="button" class="dock-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${trashIcon}</button></li>`).join("");
+  if (!$("dock").hidden) document.body.style.setProperty("--dock-h", `${$("dock").offsetHeight}px`);
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
-  $("bench").classList.toggle("expanded", open && state.expanded);
-  $("peek").setAttribute("aria-expanded", String(open && state.expanded));
+  $("bench").classList.toggle("expanded", open);
+  $("peek").setAttribute("aria-expanded", String(open));
   document.body.classList.toggle("bench-open", open);
   document.querySelectorAll(".card").forEach(c => c.classList.toggle("viewing", !!recipe && c.dataset.id === recipe.id));
   if (!open) return;
   const panel = recipe ? "recipe" : state.panel;
-  $("recipeView").hidden = panel !== "recipe"; $("benchBody").hidden = panel !== "summary";
+  $("recipeView").hidden = panel !== "recipe";
   $("listView").hidden = panel !== "list"; $("planView").hidden = panel !== "plan";
-  $("back").hidden = panel !== "list" && panel !== "plan";
   $("share").hidden = !!recipe;
-  $("closeRecipe").setAttribute("aria-label", recipe ? "Close recipe" : "Hide panel");
-  $("closeRecipe").title = recipe ? "Close recipe" : "Hide panel";
-  document.querySelector(".bench-title").textContent = { recipe: "Recipe", summary: "Selected", list: "Shopping list", plan: "Cooking plan" }[panel];
+  const what = { recipe: "Close recipe", list: "Close shopping list", plan: "Close recipe" }[panel];
+  $("closeRecipe").setAttribute("aria-label", what); $("closeRecipe").title = what;
+  document.querySelector(".bench-title").textContent = { recipe: "Recipe", list: "Shopping list", plan: "Consolidated recipe" }[panel];
   document.querySelectorAll(".serv-out").forEach(o => (o.textContent = state.serv));
   const head = recipe ? [recipe] : picked;
-  const longest = Math.max(...picked.map(dayMins));
   const planN = recipe ? 0 : renderPlan(picked, rows);
-  $("peekSub").textContent = recipe ? `${recipe.name} · ${recipe.en}`
-    : panel === "list" ? `${rows.length} ingredients` : panel === "plan" ? `${planN} steps` : `${n} dish${n > 1 ? "es" : ""}${longest ? ` · about ${fmtMins(longest)}` : ""}`;
+  $("peekSub").textContent = recipe ? `${recipe.name} · ${recipe.en}` : panel === "list" ? `${rows.length} ingredients` : `${planN} steps`;
   $("peekMini").innerHTML = `<img src="${img(head[head.length - 1])}" alt="">`;
-  $("peekThumbs").innerHTML = recipe ? "" : picked.slice(-4).map(d => `<img src="${img(d)}" alt="">`).join("");
+  $("peekThumbs").innerHTML = "";
   if (recipe) { renderRecipe(recipe); return; }
-  $("dishRows").innerHTML = picked.map(d => `<li class="row"><button type="button" class="row-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><span class="row-thumb"><img src="${img(d)}" alt=""></span>
-      <span class="row-text"><span class="row-name">${esc(d.en)}</span><span class="row-sub">${d.name} · ${timeLabel(d)}</span></span></button>
-      <button type="button" class="row-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${xIcon}</button></li>`).join("");
-  $("navListSub").textContent = `${rows.length} ingredients, by aisle`;
-  $("navPlanSub").textContent = `${planN} steps across ${n} dish${n > 1 ? "es" : ""}, in order`;
   let html = "";
   for (const [aid, label] of AISLES) {
     const items = rows.filter(r => r.ing.a === aid);
@@ -1098,8 +1079,6 @@ document.addEventListener("click", e => {
     const id = pick.dataset.pick, d = DISHES.find(x => x.id === id);
     const adding = !state.sel.has(id);
     adding ? state.sel.add(id) : state.sel.delete(id);
-    // The + on a card shows the list (unless that dish's recipe is open); the recipe's own button stays put.
-    if (pick.classList.contains("add") && state.view !== id) state.view = null;
     save(); syncCards(); renderBench();
     toast(adding ? `Added ${d.name}` : `Removed ${d.name}`);
     return;
@@ -1107,13 +1086,13 @@ document.addEventListener("click", e => {
   const opener = e.target.closest("[data-open]");
   if (opener) {
     const wasClosed = $("layout").classList.contains("closed");
-    state.view = opener.dataset.open; state.expanded = true; renderBench();
+    state.view = opener.dataset.open; renderBench();
     $("bench").scrollTop = 0;
     revealCard(state.view, wasClosed);
     return;
   }
   const nav = e.target.closest("[data-panel]");
-  if (nav) { state.panel = nav.dataset.panel; state.expanded = true; renderBench(); $("bench").scrollTop = 0; return; }
+  if (nav) { state.panel = nav.dataset.panel; state.view = null; renderBench(); $("bench").scrollTop = 0; return; }
   const step = e.target.closest("[data-step]");
   if (step) { state.serv = Math.min(20, Math.max(1, state.serv + +step.dataset.step)); save(); renderBench(); return; }
   const chip = e.target.closest("[data-cat]");
@@ -1127,18 +1106,14 @@ document.addEventListener("change", e => {
   e.target.checked ? state.have.add(k) : state.have.delete(k);
   save(); e.target.closest(".item").classList.toggle("have", e.target.checked);
 });
-$("peek").onclick = () => { if (matchMedia("(max-width: 760px)").matches) { state.expanded = !state.expanded; renderBench(); } };
+// × closes a dish's recipe back to whatever the pane showed before, or closes the pane.
 $("closeRecipe").onclick = () => {
-  if (state.view) { state.view = null; if (!state.sel.size) state.expanded = false; }
-  else if (matchMedia("(max-width: 760px)").matches) state.expanded = false;
-  else state.min = true;
+  if (state.view) state.view = null; else state.panel = null;
   renderBench();
 };
-$("reopen").onclick = () => { state.min = false; renderBench(); };
-$("back").onclick = () => { state.panel = "summary"; renderBench(); $("bench").scrollTop = 0; };
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
-  if (state.view) $("closeRecipe").click(); else if (state.panel !== "summary") $("back").click();
+  if (state.view || state.panel) $("closeRecipe").click();
 });
 // A shared list travels in the link as #list.<dish>.<dish>~<servings>.
 // The published preview can't see its own claude.ai address, so links made there point at it directly.
@@ -1149,7 +1124,7 @@ function openSharedList() {
   if (!m) return;
   const ids = m[1].split(".").filter(id => DISHES.some(d => d.id === id));
   if (!ids.length) return;
-  state.sel = new Set(ids); state.have = new Set(); state.done = new Set(); state.view = null; state.panel = "summary"; state.expanded = true;
+  state.sel = new Set(ids); state.have = new Set(); state.done = new Set(); state.view = null; state.panel = null;
   if (m[2]) state.serv = Math.min(20, Math.max(1, +m[2]));
   save();
 }
