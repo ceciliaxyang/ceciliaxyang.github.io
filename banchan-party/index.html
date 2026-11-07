@@ -249,30 +249,34 @@ a { color: inherit; }
 @media (max-width: 760px) {
   .stage { width: min(100%, 280px); border-radius: 40px; align-self: center; }
 }
-/* Your dishes: floating card with the picked dishes and the two ways into the pane */
-.dock { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); min-width: 288px; max-width: calc(100vw - 48px);
-  display: flex; flex-direction: column; gap: 24px; padding: 32px 24px; border-radius: 24px; background: var(--bg);
+/* Your dishes: floating card with the picked dishes and two action rows into the pane (Figma 2272:8090) */
+.dock { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); width: 288px;
+  display: flex; flex-direction: column; gap: 12px; padding: 32px 24px; border-radius: 24px; background: var(--bg);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .02), 0 2px 16px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .1); }
-.dock-title { margin: 0; font-size: 18px; line-height: 18px; font-weight: 500; color: var(--text); }
-.dock-rows { list-style: none; margin: -8px 0 0; padding: 0; max-height: 220px; overflow-y: auto; scrollbar-width: none; }
+.dock-title { margin: 0 0 4px; font-size: 16px; line-height: 20px; font-weight: 500; color: var(--text); }
+.dock-rows { list-style: none; margin: 0; padding: 0 0 13px; display: flex; flex-direction: column; gap: 12px; max-height: 261px; overflow-y: auto; scrollbar-width: none; }
 .dock-rows::-webkit-scrollbar { display: none; }
-.dock-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-.dock-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); }
-.dock-open img { flex-shrink: 0; width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--swatch); }
-.dock-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dock-row { flex-shrink: 0; display: flex; align-items: center; gap: 7px; height: 40px; }
+.dock-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.dock-open img { flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: var(--swatch); }
+.dock-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 18px; }
 .dock-name, .dock-time { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dock-time { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--soft); }
+.dock-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.dock-time { font-size: 12px; font-weight: 400; color: var(--soft); }
 .dock-open:hover .dock-name { text-decoration: underline; }
-.dock-del { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: -6px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--soft); cursor: pointer; }
-.dock-del:hover { background: #f2f2f2; color: var(--text); }
-.dock-open:focus-visible, .dock-del:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 8px; }
-.dock-actions { display: flex; gap: 8px; }
-.dock-actions .dark-pill { white-space: nowrap; }
+.dock-del { flex-shrink: 0; display: flex; padding: 2px 0 0; border: 0; background: none; color: #8c8c8c; cursor: pointer; }
+.dock-del:hover { color: var(--text); }
+.dock-div { width: 100%; height: 1px; margin: 0; border: 0; background: var(--hair); }
+.dock-action { display: flex; align-items: center; gap: 16px; width: 100%; padding: 8px 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--text); }
+.dock-action > svg { flex-shrink: 0; }
+.dock-action span { flex: 1; min-width: 0; font-size: 16px; line-height: 20px; font-weight: 500; }
+.dock-action .chev { padding-top: 2px; color: #8c8c8c; box-sizing: content-box; }
+.dock-action:hover span { text-decoration: underline; }
+.dock-open:focus-visible, .dock-del:focus-visible, .dock-action:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 8px; }
 body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
 @media (max-width: 760px) {
   .dock { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: auto; padding: 24px; }
-  .dock-rows { max-height: 132px; }
-  .dock-actions .dark-pill { flex: 1; }
+  .dock-rows { max-height: 157px; }
   body.dock-on .toast { bottom: calc(var(--dock-h, 0px) + 32px + env(safe-area-inset-bottom, 0px)); }
 }
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
@@ -327,10 +331,10 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 <section class="dock" id="dock" aria-label="Your dishes" hidden>
   <h2 class="dock-title">Your dishes</h2>
   <ul class="dock-rows" id="dockRows"></ul>
-  <div class="dock-actions">
-    <button type="button" class="dark-pill" data-panel="list">Shopping list</button>
-    <button type="button" class="dark-pill" data-panel="plan">Consolidated recipe</button>
-  </div>
+  <hr class="dock-div">
+  <button type="button" class="dock-action" data-panel="list"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.75 3C19.1284 2.99988 19.4929 3.1428 19.7704 3.40012C20.0479 3.65744 20.2179 4.01013 20.2463 4.3875L20.25 4.5V6H21.78C22.5615 6 23.19 6.618 23.2463 7.389L23.25 7.5V19.5C23.25 20.2845 22.6567 20.9377 21.8903 20.9955L21.78 21H5.22C4.4385 21 3.81 20.382 3.75375 19.611L3.75 19.5V18H2.25C1.87157 18.0001 1.50708 17.8572 1.22959 17.5999C0.952103 17.3426 0.782132 16.9899 0.75375 16.6125L0.75 16.5V4.5C0.74988 4.12157 0.892805 3.75708 1.15012 3.47959C1.40744 3.2021 1.76013 3.03213 2.1375 3.00375L2.25 3H18.75ZM20.25 16.5C20.2501 16.8784 20.1072 17.2429 19.8499 17.5204C19.5926 17.7979 19.2399 17.9679 18.8625 17.9963L18.75 18H5.25V19.5H21.75V7.5H20.25V16.5ZM18.75 4.5H2.25V16.5H18.75V4.5ZM16.5 13.5C16.6989 13.5 16.8897 13.579 17.0303 13.7197C17.171 13.8603 17.25 14.0511 17.25 14.25C17.25 14.4489 17.171 14.6397 17.0303 14.7803C16.8897 14.921 16.6989 15 16.5 15C16.3011 15 16.1103 14.921 15.9697 14.7803C15.829 14.6397 15.75 14.4489 15.75 14.25C15.75 14.0511 15.829 13.8603 15.9697 13.7197C16.1103 13.579 16.3011 13.5 16.5 13.5ZM10.5 7.5C11.2956 7.5 12.0587 7.81607 12.6213 8.37868C13.1839 8.94129 13.5 9.70435 13.5 10.5C13.5 11.2956 13.1839 12.0587 12.6213 12.6213C12.0587 13.1839 11.2956 13.5 10.5 13.5C9.70435 13.5 8.94129 13.1839 8.37868 12.6213C7.81607 12.0587 7.5 11.2956 7.5 10.5C7.5 9.70435 7.81607 8.94129 8.37868 8.37868C8.94129 7.81607 9.70435 7.5 10.5 7.5ZM10.5 9C10.1022 9 9.72064 9.15804 9.43934 9.43934C9.15804 9.72064 9 10.1022 9 10.5C9 10.8978 9.15804 11.2794 9.43934 11.5607C9.72064 11.842 10.1022 12 10.5 12C10.8978 12 11.2794 11.842 11.5607 11.5607C11.842 11.2794 12 10.8978 12 10.5C12 10.1022 11.842 9.72064 11.5607 9.43934C11.2794 9.15804 10.8978 9 10.5 9ZM4.5 6C4.69891 6 4.88968 6.07902 5.03033 6.21967C5.17098 6.36032 5.25 6.55109 5.25 6.75C5.25 6.94891 5.17098 7.13968 5.03033 7.28033C4.88968 7.42098 4.69891 7.5 4.5 7.5C4.30109 7.5 4.11032 7.42098 3.96967 7.28033C3.82902 7.13968 3.75 6.94891 3.75 6.75C3.75 6.55109 3.82902 6.36032 3.96967 6.21967C4.11032 6.07902 4.30109 6 4.5 6Z" fill="currentColor"/></svg><span>Shopping list</span><svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.00008 2L11.6465 7.64645C11.8418 7.84171 11.8418 8.15829 11.6465 8.35355L6.00008 14" stroke="currentColor" stroke-width="1.5"/></svg></button>
+  <hr class="dock-div">
+  <button type="button" class="dock-action" data-panel="plan"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.75 3C19.1284 2.99988 19.4929 3.1428 19.7704 3.40012C20.0479 3.65744 20.2179 4.01013 20.2463 4.3875L20.25 4.5V6H21.78C22.5615 6 23.19 6.618 23.2463 7.389L23.25 7.5V19.5C23.25 20.2845 22.6567 20.9377 21.8903 20.9955L21.78 21H5.22C4.4385 21 3.81 20.382 3.75375 19.611L3.75 19.5V18H2.25C1.87157 18.0001 1.50708 17.8572 1.22959 17.5999C0.952103 17.3426 0.782132 16.9899 0.75375 16.6125L0.75 16.5V4.5C0.74988 4.12157 0.892805 3.75708 1.15012 3.47959C1.40744 3.2021 1.76013 3.03213 2.1375 3.00375L2.25 3H18.75ZM20.25 16.5C20.2501 16.8784 20.1072 17.2429 19.8499 17.5204C19.5926 17.7979 19.2399 17.9679 18.8625 17.9963L18.75 18H5.25V19.5H21.75V7.5H20.25V16.5ZM18.75 4.5H2.25V16.5H18.75V4.5ZM16.5 13.5C16.6989 13.5 16.8897 13.579 17.0303 13.7197C17.171 13.8603 17.25 14.0511 17.25 14.25C17.25 14.4489 17.171 14.6397 17.0303 14.7803C16.8897 14.921 16.6989 15 16.5 15C16.3011 15 16.1103 14.921 15.9697 14.7803C15.829 14.6397 15.75 14.4489 15.75 14.25C15.75 14.0511 15.829 13.8603 15.9697 13.7197C16.1103 13.579 16.3011 13.5 16.5 13.5ZM10.5 7.5C11.2956 7.5 12.0587 7.81607 12.6213 8.37868C13.1839 8.94129 13.5 9.70435 13.5 10.5C13.5 11.2956 13.1839 12.0587 12.6213 12.6213C12.0587 13.1839 11.2956 13.5 10.5 13.5C9.70435 13.5 8.94129 13.1839 8.37868 12.6213C7.81607 12.0587 7.5 11.2956 7.5 10.5C7.5 9.70435 7.81607 8.94129 8.37868 8.37868C8.94129 7.81607 9.70435 7.5 10.5 7.5ZM10.5 9C10.1022 9 9.72064 9.15804 9.43934 9.43934C9.15804 9.72064 9 10.1022 9 10.5C9 10.8978 9.15804 11.2794 9.43934 11.5607C9.72064 11.842 10.1022 12 10.5 12C10.8978 12 11.2794 11.842 11.5607 11.5607C11.842 11.2794 12 10.8978 12 10.5C12 10.1022 11.842 9.72064 11.5607 9.43934C11.2794 9.15804 10.8978 9 10.5 9ZM4.5 6C4.69891 6 4.88968 6.07902 5.03033 6.21967C5.17098 6.36032 5.25 6.55109 5.25 6.75C5.25 6.94891 5.17098 7.13968 5.03033 7.28033C4.88968 7.42098 4.69891 7.5 4.5 7.5C4.30109 7.5 4.11032 7.42098 3.96967 7.28033C3.82902 7.13968 3.75 6.94891 3.75 6.75C3.75 6.55109 3.82902 6.36032 3.96967 6.21967C4.11032 6.07902 4.30109 6 4.5 6Z" fill="currentColor"/></svg><span>Consolidated recipe</span><svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.00008 2L11.6465 7.64645C11.8418 7.84171 11.8418 8.15829 11.6465 8.35355L6.00008 14" stroke="currentColor" stroke-width="1.5"/></svg></button>
 </section>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -873,6 +877,7 @@ const img = d => `photos/${d.id}.jpg`;
 const addIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="plus" d="M10 4v12M4 10h12"/><path class="check" pathLength="1" d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>`;
 const xIcon = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>`;
 const trashIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.6 6.5v4.5M9.4 6.5v4.5"/></svg>`;
+const dockTrash = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4H3.33333M3.33333 4H14M3.33333 4L3.33333 13.3333C3.33333 13.687 3.47381 14.0261 3.72386 14.2761C3.97391 14.5262 4.31305 14.6667 4.66667 14.6667H11.3333C11.687 14.6667 12.0261 14.5262 12.2761 14.2761C12.5262 14.0261 12.6667 13.687 12.6667 13.3333V4M5.33333 4V2.66667C5.33333 2.31304 5.47381 1.97391 5.72386 1.72386C5.97391 1.47381 6.31305 1.33333 6.66667 1.33333H9.33333C9.68696 1.33333 10.0261 1.47381 10.2761 1.72386C10.5262 1.97391 10.6667 2.31304 10.6667 2.66667V4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 function renderScopes() {
@@ -1001,7 +1006,7 @@ function renderBench() {
   $("dock").hidden = open || !n;
   document.body.classList.toggle("dock-on", !open && n > 0);
   $("dockRows").innerHTML = picked.map(d => `<li class="dock-row"><button type="button" class="dock-open" data-open="${d.id}" aria-label="Show the ${esc(d.en)} recipe"><img src="${img(d)}" alt=""><span class="dock-text"><span class="dock-name">${esc(d.en)}</span><span class="dock-time">${timeLabel(d)}</span></span></button>
-      <button type="button" class="dock-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${trashIcon}</button></li>`).join("");
+      <button type="button" class="dock-del" data-pick="${d.id}" aria-label="Remove ${esc(d.en)}" title="Remove">${dockTrash}</button></li>`).join("");
   if (!$("dock").hidden) document.body.style.setProperty("--dock-h", `${$("dock").offsetHeight}px`);
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
