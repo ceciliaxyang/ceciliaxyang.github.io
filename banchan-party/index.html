@@ -1124,11 +1124,9 @@ document.addEventListener("error", e => { if (e.target.tagName === "IMG") e.targ
 document.addEventListener("click", e => {
   const pick = e.target.closest("[data-pick]");
   if (pick) {
-    const id = pick.dataset.pick, d = DISHES.find(x => x.id === id);
-    const adding = !state.sel.has(id);
-    adding ? state.sel.add(id) : state.sel.delete(id);
+    const id = pick.dataset.pick;
+    state.sel.has(id) ? state.sel.delete(id) : state.sel.add(id);
     save(); syncCards(); renderBench();
-    toast(adding ? `Added ${d.name}` : `Removed ${d.name}`);
     return;
   }
   const opener = e.target.closest("[data-open]");
