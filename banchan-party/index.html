@@ -202,6 +202,11 @@ a { color: inherit; }
     transform: translateY(calc(100% - var(--peek))); transition: transform .38s cubic-bezier(.2, .8, .2, 1); }
   .bench.expanded { transform: none; overflow-y: auto; }
   .bench:not(.open) { transform: translateY(100%); }
+  /* Pull the header up to make the sheet full height; pull it down to shrink it back, then down again to tuck it into the button */
+  .bench { transition: transform .38s cubic-bezier(.2, .8, .2, 1), height .38s cubic-bezier(.2, .8, .2, 1), max-height .38s cubic-bezier(.2, .8, .2, 1), border-radius .38s ease; }
+  .bench.full { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); }
+  .bench.dragging { transition: none; }
+  .bench-head { touch-action: none; }
   .bench-head { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 8px; padding: 8px 0 12px; background: var(--bg); cursor: pointer; }
   .sheet-handle { display: block; grid-column: 1 / -1; justify-self: center; width: 36px; height: 5px; margin-bottom: 10px; border-radius: 3px; background: #d9d9d9; }
   .peek { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; border-radius: 12px; }
@@ -285,7 +290,7 @@ a { color: inherit; }
 .dock.dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
 .dock.enter { animation: dock-in .25s cubic-bezier(.2, .8, .2, 1); }
 @keyframes dock-in { from { transform: translateY(24px); opacity: 0; } }
-.dock-fab { position: fixed; z-index: 70; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; padding: 8px 22px 8px 14px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 15px; line-height: 20px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.dock-fab { position: fixed; z-index: 70; left: 50%; translate: -50% 0; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; padding: 8px 22px 8px 14px; border: 0; border-radius: 32px; background: var(--text); color: #fff; font-size: 15px; line-height: 20px; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
 .dock-fab:hover { background: #000; }
 .dock-fab:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 .fab-thumbs { display: flex; padding-left: 8px; }
@@ -295,14 +300,16 @@ a { color: inherit; }
 body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
 /* Desktop: with the pane open the card sits just left of it, and the card's Share replaces the pane's */
 @media (min-width: 761px) {
-  body.bench-open .dock, body.bench-open .dock-fab { right: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)) + 24px); }
+  body.bench-open .dock { right: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)) + 24px); }
+  /* centered in the space left of the pane */
+  body.bench-open .dock-fab { left: calc((100% - 28px - var(--pane) - max(40px, env(safe-area-inset-right, 0px))) / 2); }
   .bench-share { display: none; }
 }
 @media (max-width: 760px) {
   .dock { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: auto; padding: 24px; }
   .dock-rows { max-height: 157px; }
   body.bench-open .dock, body.bench-open .dock-fab { display: none; }
-  .dock-fab { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .dock-fab { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   body.dock-on .toast { bottom: calc(var(--dock-h, 0px) + 32px + env(safe-area-inset-bottom, 0px)); }
 }
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
@@ -1044,6 +1051,7 @@ function renderBench() {
   $("layout").classList.toggle("closed", !open);
   $("bench").classList.toggle("open", open);
   $("bench").classList.toggle("expanded", open);
+  if (!open) $("bench").classList.remove("full");
   $("peek").setAttribute("aria-expanded", String(open));
   document.body.classList.toggle("bench-open", open);
   document.querySelectorAll(".card").forEach(c => c.classList.toggle("viewing", !!recipe && c.dataset.id === recipe.id));
@@ -1208,6 +1216,56 @@ $("dock").addEventListener("animationend", () => $("dock").classList.remove("ent
   addEventListener("pointerup", end); addEventListener("pointercancel", end);
   // A drag that ends over a button shouldn't also press it
   dock.addEventListener("click", e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+})();
+// Phones: drag the sheet's header. It snaps to full height, back to its usual height, or closes into the button.
+(() => {
+  const bench = $("bench"), head = $("benchHead"), phone = matchMedia("(max-width: 760px)");
+  let y0 = null, h0 = 0, dy = 0, moved = false;
+  const settle = fn => setTimeout(fn, 380);
+  head.addEventListener("pointerdown", e => {
+    if (!phone.matches || e.button > 0 || !bench.classList.contains("open")) return;
+    y0 = e.clientY; h0 = bench.offsetHeight; dy = 0; moved = false;
+  });
+  addEventListener("pointermove", e => {
+    if (y0 == null) return;
+    dy = e.clientY - y0;
+    if (!moved && Math.abs(dy) > 6) { moved = true; bench.classList.add("dragging"); }
+    if (!moved) return;
+    const vis = Math.min(innerHeight, h0 - dy);
+    if (vis >= h0) { bench.style.height = bench.style.maxHeight = `${vis}px`; bench.style.transform = ""; }
+    else { bench.style.height = bench.style.maxHeight = `${h0}px`; bench.style.transform = `translateY(${h0 - vis}px)`; }
+  });
+  const end = () => {
+    if (y0 == null) return;
+    y0 = null;
+    if (!moved) return;
+    const full = bench.classList.contains("full"), normal = Math.min(innerHeight * .82, bench.scrollHeight);
+    const vis = h0 - dy;
+    bench.getBoundingClientRect();
+    bench.classList.remove("dragging");
+    if (vis > (full ? innerHeight - 80 : h0 + 40)) {
+      // full height
+      bench.style.height = bench.style.maxHeight = `${innerHeight}px`; bench.style.transform = "";
+      bench.classList.add("full");
+      settle(() => (bench.style.height = bench.style.maxHeight = ""));
+    } else if (full ? vis > normal * .6 : vis > h0 - 80) {
+      // back to the usual height
+      bench.classList.remove("full");
+      bench.style.height = bench.style.maxHeight = `${normal}px`; bench.style.transform = "";
+      settle(() => (bench.style.height = bench.style.maxHeight = ""));
+    } else {
+      // close into the button
+      bench.style.transform = "translateY(100%)";
+      settle(() => {
+        bench.style.height = bench.style.maxHeight = bench.style.transform = "";
+        bench.classList.add("dragging");
+        state.view = null; state.panel = null; state.dockMin = true; renderBench();
+        bench.getBoundingClientRect(); bench.classList.remove("dragging");
+      });
+    }
+  };
+  addEventListener("pointerup", end); addEventListener("pointercancel", end);
+  head.addEventListener("click", e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
 })();
 openSharedList();
 fitCols(); renderScopes(); renderGrid(); renderBench();
