@@ -300,9 +300,9 @@ a { color: inherit; }
 body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
 /* Desktop: with the pane open the card sits just left of it, and the card's Share replaces the pane's */
 @media (min-width: 761px) {
-  body.bench-open .dock { right: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)) + 24px); }
-  /* centered in the space left of the pane */
-  body.bench-open .dock-fab { left: calc((100% - 28px - var(--pane) - max(40px, env(safe-area-inset-right, 0px))) / 2); }
+  /* the button sits where the card was, so the card looks like it shrinks into it */
+  .dock-fab { left: auto; translate: none; right: calc(24px + env(safe-area-inset-right, 0px)); }
+  body.bench-open .dock, body.bench-open .dock-fab { right: calc(28px + var(--pane) + max(40px, env(safe-area-inset-right, 0px)) + 24px); }
   .bench-share { display: none; }
 }
 @media (max-width: 760px) {
