@@ -66,7 +66,7 @@ a { color: inherit; }
 .card[hidden] { display: none; }
 .card-link { display: flex; flex-direction: column; gap: 28px; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 20%; }
 .card-link:focus-visible { outline: none; }
-.card-link:focus-visible .dish, .card.viewing .dish { outline: 2px solid var(--text); outline-offset: 6px; }
+.card-link:focus-visible .dish { outline: 2px solid var(--text); outline-offset: 6px; }
 /* Each dish sits in its own illustrated Korean plate or bowl, seen from above (see WARES) */
 .photo { display: grid; place-items: center; width: 100%; max-width: 100%; aspect-ratio: 1; }
 .dish { position: relative; width: 92%; aspect-ratio: 1; border-radius: 50%; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
@@ -1201,7 +1201,6 @@ function renderBench() {
   if (!open) $("bench").classList.remove("full");
   $("peek").setAttribute("aria-expanded", String(open));
   document.body.classList.toggle("bench-open", open);
-  document.querySelectorAll(".card").forEach(c => c.classList.toggle("viewing", !!recipe && c.dataset.id === recipe.id));
   if (!open) return;
   const panel = recipe ? "recipe" : state.panel;
   $("recipeView").hidden = panel !== "recipe";
