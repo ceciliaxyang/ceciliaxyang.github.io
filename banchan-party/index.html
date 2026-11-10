@@ -65,10 +65,18 @@ a { color: inherit; }
 .card[hidden] { display: none; }
 .card-link { display: flex; flex-direction: column; gap: 28px; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 20%; }
 .card-link:focus-visible { outline: none; }
-.card-link:focus-visible .photo, .card.viewing .photo { outline: 2px solid var(--text); outline-offset: 4px; }
-.photo { display: block; position: relative; width: 100%; max-width: 100%; aspect-ratio: 240 / 260; border-radius: 20% / 18.5%; overflow: hidden; background: var(--swatch); }
-.photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
-.card-link:hover .photo img { transform: scale(1.04); }
+.card-link:focus-visible .dish, .card.viewing .dish { outline: 2px solid var(--text); outline-offset: 6px; }
+/* Each dish sits in its own illustrated Korean plate or bowl, seen from above (see WARES) */
+.photo { display: grid; place-items: center; width: 100%; max-width: 100%; aspect-ratio: 1; }
+.dish { position: relative; width: 92%; aspect-ratio: 1; border-radius: 50%; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+.card-link:hover .dish { transform: scale(1.03); }
+/* round shadow under the plate; a CSS filter shadow gets clipped at the browser's paint-tile edges */
+.dish::before { content: ""; position: absolute; inset: 3%; border-radius: 50%; box-shadow: 0 10px 22px rgba(40, 30, 20, .16), 0 2px 4px rgba(40, 30, 20, .12); }
+.dish svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.food { position: absolute; border-radius: 50%; overflow: hidden; background: var(--swatch); }
+.food img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* the food sits down inside the well */
+.food::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 4px 10px rgba(0, 0, 0, .28), inset 0 0 0 1px rgba(0, 0, 0, .08); }
 /* Frosted round button on the photo */
 .add {
   position: absolute; top: 20px; right: 20px; z-index: 1;
@@ -85,7 +93,7 @@ a { color: inherit; }
 .add.on .plus { transform: rotate(90deg) scale(0); opacity: 0; }
 .add.on .check { stroke-dashoffset: 0; transition: stroke-dashoffset .35s cubic-bezier(.3,.7,.3,1) .12s; }
 .card-fx, .card-text, .card-title { display: flex; }
-.card-text { display: flex; flex-direction: column; width: 100%; }
+.card-text { display: flex; flex-direction: column; width: 100%; text-align: center; }
 .card-title { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .card-kr, .card-time { font-size: 14px; line-height: 18px; color: #6c6c6c; }
 .card-time { font-variant-numeric: tabular-nums; }
@@ -101,7 +109,6 @@ a { color: inherit; }
 .card-link:hover .pill.go { background: var(--text); color: #fff; }
 @media (max-width: 600px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
-  .photo { border-radius: 32px; }
   .card, .card-link { gap: 16px; }
   .add { top: 12px; right: 12px; width: 36px; height: 36px; padding: 8px; }
   .name, .card-en { font-size: 17px; }
@@ -315,7 +322,7 @@ body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
 .toast { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg); border-radius: 32px; padding: 8px 16px; font-size: 14px; max-width: calc(100vw - 32px); }
 body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 761px) { body.bench-open .toast { bottom: 16px; } }
-@media (prefers-reduced-motion: reduce) { .add .plus, .add .check, .photo img { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .add .plus, .add .check, .dish { transition: none !important; } }
 </style>
 
 <div class="page">
@@ -924,12 +931,117 @@ function timeLabel(d) {
 }
 const SITES = { "koreanbapsang.com": "Korean Bapsang", "maangchi.com": "Maangchi" };
 function siteName(url) { const h = new URL(url).hostname.replace(/^www\./, ""); return SITES[h] || h; }
+// Dishware for the cards. Each variant draws in a 200 × 200 box around (100, 100); `food` is the photo circle's share of the plate.
+const { WARES, WARE_OF } = (() => {
+  // Each variant draws in a 200 × 200 box around (100, 100). `base` stays fixed (so the light always comes from the top left),
+  // `art` is the rim pattern and gets turned to a different angle on each plate, `shine` is the fixed glaze highlight.
+  const C = 100;
+  const ring = (r, fill, extra = "") => `<circle cx="${C}" cy="${C}" r="${r}" fill="${fill}" ${extra}/>`;
+  const around = (n, draw, off = 0) => Array.from({ length: n }, (_, i) => `<g transform="rotate(${off + i * 360 / n} ${C} ${C})">${draw(i)}</g>`).join("");
+  // a closed outline whose radius follows fn(angle), for lobed and petal rims
+  const polar = (fn, step = 1.5) => { let d = ""; for (let a = 0; a < 360; a += step) { const t = a * Math.PI / 180, r = fn(t); d += `${a ? "L" : "M"}${(C + r * Math.cos(t)).toFixed(2)} ${(C + r * Math.sin(t)).toFixed(2)}`; } return d + "Z"; };
+  const wave = (r, amp, waves) => { let d = ""; for (let a = 0; a <= 360; a += 2) { const t = a * Math.PI / 180, rr = r + amp * Math.sin(waves * t); d += `${a ? "L" : "M"}${(C + rr * Math.cos(t)).toFixed(2)} ${(C + rr * Math.sin(t)).toFixed(2)}`; } return d; };
+  // soft scallops: a gentle wave around the edge
+  const lobed = (r, depth, n) => polar(t => r - depth / 2 + depth / 2 * Math.cos(n * t));
+  const plum = fill => `<g fill="${fill}">${[0, 72, 144, 216, 288].map(a => `<circle cy="-2.6" r="1.9" transform="rotate(${a})"/>`).join("")}<circle r="1" fill="#fbfbf8"/></g>`;
+  const peony = p => `${[0, 72, 144, 216, 288].map(a => `<ellipse rx="2.6" ry="5" cy="-4.4" transform="rotate(${a})" fill="url(#p${p})" opacity=".95"/>`).join("")}<circle r="1.4" fill="#c9a86a"/>`;
+  const pearl = id => `<linearGradient id="p${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3f7ff"/><stop offset=".35" stop-color="#d9f2ea"/><stop offset=".65" stop-color="#f1e1f6"/><stop offset="1" stop-color="#fff4dc"/></linearGradient>`;
+  const grad = (id, a, b, c) => `<radialGradient id="g${id}" cx="44%" cy="38%" r="68%"><stop offset="0" stop-color="${a}"/><stop offset=".72" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></radialGradient>`;
+  const crane = `<path d="M-6 .6q-4-6.5-8.5-6q4.5 2 6 6.2M-4 1q3-6.8 8-7.6q-3.2 3-4.6 7.4" fill="#f4f6ee"/><ellipse cx="-1" cy="1.4" rx="6" ry="1.9" fill="#f4f6ee"/><path d="M4.5 1q3.5-.6 6-2.6" stroke="#f4f6ee" stroke-width="1.1" stroke-linecap="round" fill="none"/><path d="M10.4 -1.6l2.4-.4" stroke="#3c4a38" stroke-width="1" stroke-linecap="round"/><circle cx="10.4" cy="-1.6" r=".9" fill="#b0453a"/><path d="M-7 1.6l-5 1.8M-7 2.2l-4.6 2.6" stroke="#3c4a38" stroke-width=".7" stroke-linecap="round"/>`;
+  const cloud = `<path d="M-8 1.5a2.6 2.6 0 0 1 4.6-2.2a3.2 3.2 0 0 1 6 .2a2.4 2.4 0 0 1 4.2 2" fill="none" stroke="#f4f6ee" stroke-width="1.5" stroke-linecap="round"/>`;
+  const porcelainShine = `<path d="M17.8 70.1A87.5 87.5 0 0 1 56.3 24.2" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>`;
+  const lacquerShine = `<path d="M17.8 70.1A87.5 87.5 0 0 1 56.3 24.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".16"/>`;
+
+  const WARES = [
+    { key: "bk-plain", family: "White porcelain", name: "Plain", kr: "백자", food: .74,
+      base: id => `<defs>${grad(id, "#fbfaf6", "#efece4", "#e2ded3")}</defs>${ring(97, `url(#g${id})`)}${ring(96.5, "none", 'stroke="#fff" stroke-width="1.4" opacity=".9"')}${ring(76.5, "#ebe9e2")}${ring(77, "none", 'stroke="#d6d3c8" stroke-width=".8"')}`,
+      art: () => "", shine: () => porcelainShine },
+
+    { key: "bk-lobed", family: "White porcelain", name: "Lobed rim", kr: "백자 화형접시", food: .72,
+      base: id => `<defs>${grad(id, "#fbfaf6", "#efece4", "#e0dccf")}</defs>
+        <path d="${lobed(97.5, 3.6, 12)}" fill="url(#g${id})"/>
+        <path d="${lobed(96.6, 3.4, 12)}" fill="none" stroke="#fff" stroke-width="1.2" opacity=".85"/>
+        <path d="${lobed(87, 2.4, 12)}" fill="none" stroke="#dcd8cc" stroke-width=".7"/>
+        ${ring(75, "#ebe9e2")}${ring(75.5, "none", 'stroke="#d6d3c8" stroke-width=".8"')}`,
+      art: () => "", shine: () => porcelainShine },
+
+    { key: "bk-iron", family: "White porcelain", name: "Iron-brown bamboo", kr: "철화백자", food: .72,
+      base: id => `<defs>${grad(id, "#fbf9f3", "#efebe1", "#e1dccf")}</defs>${ring(97, `url(#g${id})`)}${ring(96.5, "none", 'stroke="#fff" stroke-width="1.4" opacity=".9"')}${ring(75, "#ebe8df")}${ring(75.5, "none", 'stroke="#d6d1c4" stroke-width=".8"')}`,
+      // one loose stalk with two nodes and two sprays of leaves, painted along the rim band (between the food and the edge)
+      art: () => {
+        const pt = (r, deg) => { const t = deg * Math.PI / 180; return `${(C + r * Math.cos(t)).toFixed(2)} ${(C + r * Math.sin(t)).toFixed(2)}`; };
+        const seg = (a0, a1, w) => `<path d="M${pt(86.5, a0)}A86.5 86.5 0 0 1 ${pt(86.5, a1)}" stroke-width="${w}"/>`;
+        const leaf = (r, deg, turn, len = 17) => `<path d="M0 0q${len * .4} -3.6 ${len} 0q${-len * .6} 3.6 ${-len} 0Z" transform="translate(${pt(r, deg)}) rotate(${deg + 90 + turn})"/>`;
+        return `<g fill="none" stroke="#6e4326" stroke-linecap="round" opacity=".88">${seg(102, 124, 2.6)}${seg(126.5, 149, 2.3)}${seg(151.5, 167, 2)}</g>
+          <g fill="#6e4326" opacity=".85">${leaf(86, 150, -10, 16)}${leaf(86, 150, -27, 14)}${leaf(86, 150, -46, 11)}${leaf(86, 167, -12, 13)}${leaf(86, 167, -32, 11)}${leaf(86, 125, 196, 13)}${leaf(86, 125, 214, 11)}</g>`;
+      },
+      shine: () => porcelainShine },
+
+    { key: "cel-crane", family: "Celadon", name: "Cranes and clouds", kr: "청자 상감운학문", food: .72,
+      base: id => `<defs>${grad(id, "#c9d9c2", "#a9c2a3", "#8eab8a")}</defs>${ring(97, `url(#g${id})`)}${ring(96, "none", 'stroke="#d8e5d2" stroke-width="1.2" opacity=".8"')}${ring(74.5, "#97b293")}${ring(75, "none", 'stroke="#7f9c7b" stroke-width="1"')}`,
+      art: () => around(8, i => `<g transform="translate(100 ${i % 2 ? 14.6 : 15})">${i % 2 ? cloud : crane}</g>`), shine: () => "" },
+
+    { key: "cel-lotus", family: "Celadon", name: "Lotus petals", kr: "청자 연판문", food: .72,
+      base: id => `<defs>${grad(id, "#cddcc5", "#adc5a6", "#8fac8b")}</defs>
+        <path d="${polar(t => 93.5 + 3.8 * Math.abs(Math.cos(8 * t)) ** 2.2)}" fill="url(#g${id})"/>
+        ${ring(74.5, "#99b495")}${ring(75, "none", 'stroke="#7f9c7b" stroke-width="1"')}`,
+      // carved petals: a darker cut line with a pale edge beside it, like glaze pooling in an incision
+      art: () => around(16, () => `<path d="M100 24.5Q92.5 15 100 4.5Q107.5 15 100 24.5" fill="none" stroke="#7d9a79" stroke-width=".9"/><path d="M100.8 23Q107 15 101 6.5" fill="none" stroke="#e1ecdb" stroke-width=".7" opacity=".8"/><path d="M100 21.5v-12" stroke="#89a585" stroke-width=".5"/>`, 11.25),
+      shine: () => "" },
+
+    { key: "cel-mum", family: "Celadon", name: "Chrysanthemums", kr: "청자 상감국화문", food: .72,
+      base: id => `<defs>${grad(id, "#c6d7bf", "#a6bfa0", "#8ba887")}</defs>${ring(97, `url(#g${id})`)}${ring(96, "none", 'stroke="#d8e5d2" stroke-width="1.2" opacity=".8"')}${ring(74.5, "#95b091")}${ring(75, "none", 'stroke="#7f9c7b" stroke-width="1"')}
+        ${ring(78.5, "none", 'stroke="#f2f4ec" stroke-width=".7"')}${ring(92.5, "none", 'stroke="#f2f4ec" stroke-width=".7"')}`,
+      art: () => around(10, () => `<g transform="translate(100 14.5)">${Array.from({ length: 10 }, (_, k) => `<ellipse rx="1" ry="2.6" cy="-2.9" transform="rotate(${k * 36})" fill="#f4f6ee"/>`).join("")}<circle r="1.6" fill="#2f3a2c"/></g>`) + around(10, () => `<circle cx="100" cy="14.5" r=".8" fill="#2f3a2c"/>`, 18),
+      shine: () => "" },
+
+    { key: "bw-plum", family: "Blue and white", name: "Plum blossoms", kr: "청화백자 매화문", food: .72,
+      base: id => `<defs>${grad(id, "#fbfbf8", "#f1f2ef", "#e7e9e8")}</defs>${ring(97, `url(#g${id})`)}${ring(94.5, "none", 'stroke="#2f4f8f" stroke-width="1.8"')}${ring(92, "none", 'stroke="#2f4f8f" stroke-width=".6"')}${ring(75, "none", 'stroke="#2f4f8f" stroke-width="1.2"')}${ring(77.5, "none", 'stroke="#2f4f8f" stroke-width=".5"')}`,
+      art: () => around(8, () => `<g transform="translate(100 15.5)">${plum("#4a68a6")}</g>`) + around(8, () => `<g transform="translate(100 15.5)" fill="none" stroke="#33508c" stroke-width="1" stroke-linecap="round"><path d="M-7 1q7-4 14 0M-2 -1l-1.5-2.4M3 -.6l1.6-2.2"/></g>`, 22.5),
+      shine: () => "" },
+
+    { key: "bw-char", family: "Blue and white", name: "Longevity and fortune", kr: "청화백자 수복문", food: .72,
+      base: id => `<defs>${grad(id, "#fbfbf8", "#f1f2ef", "#e6e8e7")}</defs>${ring(97, `url(#g${id})`)}${ring(94.5, "none", 'stroke="#2f4f8f" stroke-width=".8"')}${ring(92.8, "none", 'stroke="#2f4f8f" stroke-width=".8"')}${ring(77.5, "none", 'stroke="#2f4f8f" stroke-width=".8"')}${ring(75.5, "none", 'stroke="#2f4f8f" stroke-width=".8"')}`,
+      art: () => around(8, i => `<text x="100" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#2c4a8c" font-family="'Apple SD Gothic Neo','Songti SC','Hiragino Mincho ProN',serif">${i % 2 ? "福" : "壽"}</text>`) + around(8, () => `<g fill="#3d5c9c"><circle cx="98.4" cy="15.6" r="1"/><circle cx="101.6" cy="15.6" r="1"/></g>`, 22.5),
+      shine: () => "" },
+
+    { key: "lq-black", family: "Lacquer and pearl", name: "Black, pearl peonies", kr: "나전칠기", food: .72,
+      base: id => `<defs>${grad(id, "#2b2724", "#191614", "#0f0d0c")}${pearl(id)}</defs>${ring(97, `url(#g${id})`)}${ring(94.5, "none", 'stroke="#4a4038" stroke-width="1.2"')}${ring(75, "#181513")}`,
+      art: id => around(6, () => `<g transform="translate(100 14.5) scale(.9)">${peony(id)}</g>`) + around(6, () => `<g transform="translate(100 14.5)" fill="none" stroke="url(#p${id})" stroke-width=".8" opacity=".8"><path d="M-9 0q4.5-3 9 0q4.5 3 9 0"/><ellipse cx="-4.5" cy="-2.6" rx=".9" ry="1.8" fill="url(#p${id})" stroke="none" transform="rotate(-30 -4.5 -2.6)"/><ellipse cx="4.5" cy="2.6" rx=".9" ry="1.8" fill="url(#p${id})" stroke="none" transform="rotate(-30 4.5 2.6)"/></g>`, 30),
+      shine: () => lacquerShine },
+
+    { key: "lq-red", family: "Lacquer and pearl", name: "Red, pearl vine", kr: "주칠 나전", food: .72,
+      base: id => `<defs>${grad(id, "#a33a26", "#7c2416", "#57160c")}${pearl(id)}</defs>${ring(97, `url(#g${id})`)}${ring(94.5, "none", 'stroke="#4d130b" stroke-width="1.4"')}${ring(75, "#4f140c")}`,
+      // one continuous scrolling vine with leaves on alternate sides and a small flower at every crest
+      art: id => `<path d="${wave(85.5, 4, 12)}" fill="none" stroke="url(#p${id})" stroke-width="1.1" opacity=".9"/>`
+        + around(12, () => `<g transform="translate(100 10.5)"><circle r="1.6" fill="url(#p${id})"/>${[0, 90, 180, 270].map(a => `<ellipse rx=".9" ry="1.7" cy="-1.9" transform="rotate(${a + 45})" fill="url(#p${id})"/>`).join("")}</g>`, 7.5)
+        + around(12, () => `<g transform="translate(100 17.5)"><ellipse rx="1.1" ry="2.5" fill="url(#p${id})" transform="rotate(35)" opacity=".9"/></g>`, 22.5),
+      shine: () => lacquerShine },
+  ];
+
+  // In the page's order (quickest first): no two neighbours share a variant in the 2-, 3- or 4-column grid,
+  // and none share a family in the 3-column one. Greens stay off celadon; lacquer goes to the darker dishes.
+  const WARE_OF = { sukju: "bw-char", hobak: "bk-iron", gochu: "bw-plum", sigeumchi: "bk-lobed", oimuchim: "cel-mum", pamuchim: "bk-plain",
+    gajinamul: "cel-lotus", myeolchi: "lq-black", oibokkeum: "bw-char", broccoli: "bk-iron", kongnamul: "cel-crane", musaengchae: "bk-lobed",
+    eomuk: "lq-red", yangbaechu: "bw-char", gamja: "cel-mum", buchu: "bw-plum", jangjorim: "bk-plain", yeongeun: "lq-black", gat: "bk-lobed",
+    kimchi: "cel-crane", kongjorim: "bw-plum", maneul: "cel-mum" };
+  return { WARES, WARE_OF };
+})();
+let plateUid = 0;
+// One plate: the variant's fixed base, its rim pattern turned to this plate's own angle, the glaze highlight, then the food.
+// Every plate also sits a shade lighter or darker, so repeats read as a matching set rather than copies.
+function plate(d, seed) {
+  const w = WARES.find(x => x.key === (WARE_OF[d.id] || "bk-plain")), id = ++plateUid, f = w.food * 100;
+  const rot = (seed * 47) % 360, tone = 1 + (((seed * 37) % 7) - 3) * .014;
+  const src = WARE_OF[d.id] ? `photos/plate/${d.id}.jpg` : img(d);
+  return `<span class="dish"><svg viewBox="0 0 200 200" aria-hidden="true" style="filter:brightness(${tone.toFixed(3)})">${w.base(id)}<g transform="rotate(${rot} 100 100)">${w.art(id)}</g>${w.shine(id)}</svg><span class="food" style="inset:${(100 - f) / 2}%"><img src="${src}" alt="${esc(d.en)}" loading="lazy" width="400" height="400"></span></span>`;
+}
 function renderGrid() {
-  $("grid").innerHTML = DISHES.map(d => {
+  $("grid").innerHTML = DISHES.map((d, i) => {
     const on = state.sel.has(d.id);
     return `<article class="card" data-id="${d.id}" ${state.cat !== "all" && d.cat !== state.cat ? "hidden" : ""}>
       <button type="button" class="card-link" data-open="${d.id}" aria-label="Show the ${d.name} recipe (${d.en})">
-        <span class="photo"><img src="${img(d)}" alt="${esc(d.en)}" loading="lazy" width="720" height="780"></span>
+        <span class="photo">${plate(d, i)}</span>
         <span class="card-text">
           <span class="card-title">
             <span class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</span>
