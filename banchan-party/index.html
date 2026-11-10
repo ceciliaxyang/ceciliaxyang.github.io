@@ -43,7 +43,8 @@ a { color: inherit; }
 
 /* Header */
 .shelf-head { display: flex; flex-direction: column; align-items: center; gap: 24px; margin: 0 0 64px; padding: 0 8px; text-align: center; }
-.shelf-title { margin: 0; font-size: 40px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px; color: #000; }
+.shelf-title { margin: 0; font-size: 48px; line-height: 52px; font-weight: 500; letter-spacing: -1.44px; color: #000; text-wrap: balance; }
+.shelf-title [lang="ko"] { letter-spacing: -.5px; }
 .shelf-sub { margin: -8px 0 0; max-width: 60ch; font-size: 14px; line-height: 20px; color: var(--soft); }
 .scopes { display: flex; gap: 8px; padding: 8px; margin: -8px; overflow-x: auto; scrollbar-width: none; }
 .scopes::-webkit-scrollbar { display: none; }
@@ -329,7 +330,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   <div class="layout closed" id="layout">
     <main>
       <header class="shelf-head">
-        <h1 class="shelf-title">Banchan party</h1>
+        <h1 class="shelf-title">Banchan party <span lang="ko">반찬 파티</span></h1>
         <div class="scopes" id="scopes" role="group" aria-label="Filter by style"></div>
       </header>
       <div class="grid" id="grid"></div>
