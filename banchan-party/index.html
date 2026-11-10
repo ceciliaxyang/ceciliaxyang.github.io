@@ -324,6 +324,12 @@ body.dock-on .page { padding-bottom: calc(var(--dock-h, 0px) + 48px); }
 body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 761px) { body.bench-open .toast { bottom: 16px; } }
 @media (prefers-reduced-motion: reduce) { .add .plus, .add .check, .dish { transition: none !important; } }
+/* First visit in a session: the header and then the dishes rise in, one after another. */
+@keyframes rise { from { opacity: 0; transform: translateY(36px); } }
+.intro .shelf-head > *, .intro .card { animation: rise .9s cubic-bezier(.2,.8,.2,1) both; }
+.intro .scopes { animation-delay: .08s; }
+.intro .card { animation-delay: calc(.2s + var(--i, 0) * 70ms); }
+@media (prefers-reduced-motion: reduce) { .intro .shelf-head > *, .intro .card { animation: none; } }
 </style>
 
 <div class="page">
@@ -1413,4 +1419,12 @@ $("dock").addEventListener("animationend", () => $("dock").classList.remove("ent
 })();
 openSharedList();
 fitCols(); renderScopes(); renderGrid(); renderBench();
+(function intro() {
+  try { if (sessionStorage.getItem("seen")) return; sessionStorage.setItem("seen", "1"); } catch { return; }
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  [...document.querySelectorAll(".card:not([hidden])")].forEach((c, i) => c.style.setProperty("--i", Math.min(i, 12)));
+  document.body.classList.add("intro");
+  // Drop the class once it has played, so filtering later doesn't replay it.
+  setTimeout(() => document.body.classList.remove("intro"), 2400);
+})();
 </script>
