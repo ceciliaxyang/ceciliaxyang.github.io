@@ -43,9 +43,8 @@ a { color: inherit; }
 
 /* Header */
 .shelf-head { display: flex; flex-direction: column; align-items: center; gap: 24px; margin: 0 0 64px; padding: 0 8px; text-align: center; }
-.shelf-title { display: flex; flex-direction: column; gap: 6px; margin: 0; font-size: 48px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px; color: #000; }
-/* Korean name on its own line under the English (Figma 2272:1987) */
-.shelf-title [lang="ko"] { font-size: 36px; line-height: 48px; letter-spacing: 0; color: #6c6c6c; }
+.shelf-title { margin: 0; font-size: 48px; line-height: 52px; font-weight: 500; letter-spacing: -1.44px; color: #000; text-wrap: balance; }
+.shelf-title [lang="ko"] { letter-spacing: -.5px; color: var(--muted); }
 .shelf-sub { margin: -8px 0 0; max-width: 60ch; font-size: 14px; line-height: 20px; color: var(--soft); }
 .scopes { display: flex; gap: 8px; padding: 8px; margin: -8px; overflow-x: auto; scrollbar-width: none; }
 .scopes::-webkit-scrollbar { display: none; }
@@ -56,8 +55,7 @@ a { color: inherit; }
 .scope:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 @media (max-width: 600px) {
   .shelf-head { gap: 16px; margin-bottom: 40px; padding: 0; }
-  .shelf-title { font-size: 36px; line-height: 36px; letter-spacing: -.9px; gap: 4px; }
-  .shelf-title [lang="ko"] { font-size: 27px; line-height: 36px; }
+  .shelf-title { font-size: 32px; line-height: 40px; letter-spacing: -.9px; }
   .scopes { margin-inline: -16px; padding-inline: 16px; }
 }
 
