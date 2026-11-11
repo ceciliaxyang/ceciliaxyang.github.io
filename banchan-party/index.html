@@ -250,6 +250,9 @@ a { color: inherit; }
 .stage img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .r-title { display: flex; flex-direction: column; gap: 8px; }
 .r-title p { margin: 0; }
+/* same clock and time as the cards, with the rating after it */
+.r-time { display: flex; align-items: center; gap: 4px; }
+.r-time svg { flex-shrink: 0; display: block; }
 .r-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .grey-pill { display: inline-flex; align-items: center; gap: 6px; padding: 12px 16px; border-radius: 32px; background: #f2f2f2; color: var(--text); font-size: 12px; line-height: 16px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .grey-pill:hover { background: #ebebeb; }
@@ -260,7 +263,7 @@ a { color: inherit; }
 .r-ing .n { flex: 1; min-width: 0; color: var(--text); }
 .r-ing .n small { color: var(--soft); font-size: 13px; }
 .r-ing .q { flex-shrink: 0; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
-.r-steps { margin: -8px 0 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 16px; }
+.r-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 16px; }
 .r-steps li { counter-increment: step; display: flex; gap: 12px; font-size: 14px; line-height: 21px; color: var(--text); }
 .r-steps li::before { content: counter(step); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #f2f2f2; font-size: 12px; line-height: 24px; text-align: center; font-weight: 500; }
 .r-tip { margin: 0; padding: 14px 16px; border-radius: 20px; background: #f7f7f7; font-size: 13px; line-height: 19px; color: var(--text); }
@@ -1135,9 +1138,9 @@ function renderRecipe(d) {
   $("recipeView").innerHTML = `
     <div class="stage"><img src="${img(d)}" alt="${esc(d.en)}"></div>
     <div class="r-title">
-      <p class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</p>
       <p class="card-en">${esc(d.en)}</p>
-      <p class="card-time">${timeLabel(d)}${d.rating ? ` · ★ ${d.rating.toFixed(1)} (${d.votes} ratings)` : ""}</p>
+      <p class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</p>
+      <p class="card-time r-time">${clockIcon}<span>${shortTime(d)}${d.rating ? ` · ★ ${d.rating.toFixed(1)} (${d.votes} ratings)` : ""}</span></p>
     </div>
     <div class="r-actions">
       <button type="button" class="dark-pill${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}">${on ? "✓ In your banchan" : "Add to your banchan"}</button>
