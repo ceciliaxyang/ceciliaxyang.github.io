@@ -1115,7 +1115,7 @@ function renderRecipe(d) {
     const qty = amt == null ? "to taste" : fmtQty(ing, amt);
     return `<li class="r-ing"><span class="n">${ing.n}${opt ? ` <small>· optional</small>` : ""}</span><span class="q">${qty}</span></li>`;
   }).join("");
-  const picked = DISHES.filter(x => state.sel.has(x.id)), n = picked.length;
+  const picked = pickedDishes(), n = picked.length;
   $("recipeView").innerHTML = `
     <div class="stage"><img src="${img(d)}" alt="${esc(d.en)}"></div>
     <div class="r-title">
@@ -1186,8 +1186,10 @@ function renderPlan(picked, rows) {
       }).join("")}</ol></section>`).join("");
   return n;
 }
+// in the order they were added, so a new pick lands at the end of the list
+const pickedDishes = () => [...state.sel].map(id => DISHES.find(d => d.id === id)).filter(Boolean);
 function renderBench() {
-  const picked = DISHES.filter(d => state.sel.has(d.id)), n = picked.length, rows = aggregate();
+  const picked = pickedDishes(), n = picked.length, rows = aggregate();
   const recipe = state.view && DISHES.find(d => d.id === state.view);
   if (!n) state.panel = null;
   const open = !!recipe || !!state.panel;
