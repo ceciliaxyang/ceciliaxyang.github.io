@@ -293,6 +293,11 @@ a { color: inherit; }
 .dock-open:focus-visible, .dock-del:focus-visible, .dock-action:focus-visible, .dock-share:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 8px; }
 /* Dragging the card down tucks it into a small button; tapping that brings it back */
 .dock { touch-action: none; }
+/* grabber at the top: shows the card can be dragged down, and tucks it away when pressed */
+.dock-grab { position: absolute; top: 0; left: 50%; translate: -50% 0; width: 64px; height: 22px; padding: 0; border: 0; border-radius: 11px; background: none; cursor: grab; }
+.dock-grab::before { content: ""; position: absolute; top: 10px; left: 14px; right: 14px; height: 5px; border-radius: 3px; background: #d9d9d9; transition: background .15s ease; }
+.dock-grab:hover::before, .dock.dragging .dock-grab::before { background: #b5b5b5; }
+.dock-grab:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
 .dock-rows { touch-action: pan-y; }
 .dock img { -webkit-user-drag: none; }
 .dock:not(.dragging) { transition: transform .2s ease, opacity .2s ease; }
@@ -377,6 +382,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   <div class="view" id="planView" hidden></div>
 </aside>
 <section class="dock" id="dock" aria-label="Your banchan" hidden>
+  <button type="button" class="dock-grab" id="dockGrab" aria-label="Minimize your banchan" title="Drag down or click to minimize"></button>
   <div class="dock-head"><h2 class="dock-title">Your banchan</h2><button type="button" class="dock-share" id="dockShare">Share</button></div>
   <ul class="dock-rows" id="dockRows"></ul>
   <hr class="dock-div">
@@ -1363,9 +1369,13 @@ $("dock").addEventListener("animationend", () => $("dock").classList.remove("ent
     y0 = null; dock.classList.remove("dragging");
     if (!moved) return;
     if (dy < 60) { dock.style.transform = ""; return; }
-    dock.style.transform = `translateY(${dock.offsetHeight + 40}px)`; dock.style.opacity = "0";
-    setTimeout(() => { state.dockMin = true; dock.style.transform = dock.style.opacity = ""; renderBench(); }, 200);
+    tuck();
   };
+  const tuck = () => {
+    dock.style.transform = `translateY(${dock.offsetHeight + 40}px)`; dock.style.opacity = "0";
+    setTimeout(() => { state.dockMin = true; dock.style.transform = dock.style.opacity = ""; renderBench(); $("dockFab").focus({ preventScroll: true }); }, 200);
+  };
+  $("dockGrab").onclick = tuck;
   addEventListener("pointerup", end); addEventListener("pointercancel", end);
   // A drag that ends over a button shouldn't also press it
   dock.addEventListener("click", e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
