@@ -88,6 +88,12 @@ a { color: inherit; }
   -webkit-backdrop-filter: blur(8px) saturate(160%); backdrop-filter: blur(8px) saturate(160%);
 }
 .add:hover { background: rgba(160, 160, 160, .32); }
+/* Cooking time, in a pill under the dish's names (Figma 2277:4982) */
+.time-badge {
+  align-self: center; display: flex; align-items: center; gap: 4px; margin-top: 12px; padding: 8px 10px 8px 8px; border-radius: 100px;
+  font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; background: #f2f2f2;
+}
+.time-badge svg { flex-shrink: 0; display: block; }
 .add:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .add svg { display: block; overflow: visible; }
 .add .plus { transform-origin: 10px 10px; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .2s ease; }
@@ -113,6 +119,7 @@ a { color: inherit; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
   .card, .card-link { gap: 16px; }
   .add { top: 24px; right: 24px; width: 36px; height: 36px; padding: 8px; }
+  .time-badge { margin-top: 8px; padding: 6px 8px 6px 6px; font-size: 13px; }
   .name, .card-en { font-size: 17px; }
   .brand .en { display: none; }
 }
@@ -1084,6 +1091,9 @@ function plate(d, seed) {
   const src = WARE_OF[d.id] ? `photos/plate/${d.id}.jpg` : img(d);
   return `<span class="dish"><svg viewBox="0 0 200 200" aria-hidden="true" style="filter:brightness(${tone.toFixed(3)})">${w.base(id)}<g transform="rotate(${rot} 100 100)">${w.art(id)}</g>${w.shine(id)}</svg><span class="food" style="inset:${(100 - f) / 2}%"><img src="${src}" alt="${esc(d.en)}" loading="lazy" width="400" height="400"></span></span>`;
 }
+const clockIcon = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 .25a7.75 7.75 0 1 1 0 15.5A7.75 7.75 0 0 1 8 .25Zm0 1.5a6.25 6.25 0 1 0 0 12.5 6.25 6.25 0 0 0 0-12.5Zm.75 5.81 3.12 1.79-.74 1.3-3.88-2.21V3h1.5v4.56Z"/></svg>`;
+// the badge leaves off the "~" that marks an estimated time
+const shortTime = d => timeLabel(d).replace(/^~/, "");
 function renderGrid() {
   $("grid").innerHTML = DISHES.map((d, i) => {
     const on = state.sel.has(d.id);
@@ -1092,10 +1102,10 @@ function renderGrid() {
         <span class="photo">${plate(d, i)}</span>
         <span class="card-text">
           <span class="card-title">
-            <span class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</span>
             <span class="card-en">${esc(d.en)}</span>
-            <span class="card-time">${timeLabel(d)}</span>
+            <span class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</span>
           </span>
+          <span class="time-badge">${clockIcon}<span>${shortTime(d)}</span></span>
         </span>
       </button>
       <button type="button" class="add${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Add"} ${d.name} ${on ? "from" : "to"} your banchan" title="${on ? "Remove from your banchan" : "Add to your banchan"}">${addIcon}</button>
