@@ -53,16 +53,30 @@ a { color: inherit; }
 .scope:hover { background: #e8e8e8; }
 .scope[aria-pressed="true"] { background: var(--text); color: #fff; }
 .scope:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+/* the filters and the photos/names toggle share a row; the filters scroll if they run out of room */
+.shelf-tools { display: flex; align-items: center; gap: 16px; max-width: 100%; }
+.shelf-tools .scopes { min-width: 0; }
+.looks { flex-shrink: 0; display: flex; gap: 2px; padding: 4px; border-radius: 32px; background: #f2f2f2; }
+.look { display: grid; place-items: center; width: 40px; height: 32px; padding: 0; border: 0; border-radius: 32px; background: none; color: var(--text);
+  cursor: pointer; transition: background .15s ease, color .15s ease; }
+.look:hover { background: #e8e8e8; }
+.look[aria-pressed="true"] { background: var(--text); color: #fff; }
+.look:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 @media (max-width: 600px) {
   .shelf-head { gap: 16px; margin-bottom: 40px; padding: 0; }
   .shelf-title { font-size: 32px; line-height: 40px; letter-spacing: -.9px; }
-  .scopes { margin-inline: -16px; padding-inline: 16px; }
+  .shelf-tools { gap: 8px; margin-inline: -16px; max-width: calc(100% + 32px); }
+  .scopes { margin-inline: 0; padding-inline: 16px 0; }
+  .looks { margin-right: 16px; }
 }
 
 /* Shelf grid */
 /* The column count is set from the full page width (see fitCols), so opening the pane shrinks the cards instead of reflowing them. */
 .grid { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 56px 40px; }
 .card { position: relative; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+/* photos only: the names hide (each card still says its name to screen readers) and the rows close up */
+.photos-only .card-text { display: none; }
+.photos-only.grid { row-gap: 32px; }
 .card[hidden] { display: none; }
 .card-link { display: flex; flex-direction: column; gap: 28px; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 20%; }
 .card-link:focus-visible { outline: none; }
@@ -116,6 +130,7 @@ a { color: inherit; }
 .card-link:hover .pill.go { background: var(--text); color: #fff; }
 @media (max-width: 600px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
+  .photos-only.grid { row-gap: 16px; }
   .card, .card-link { gap: 16px; }
   .add { top: 24px; right: 24px; width: 36px; height: 36px; padding: 8px; }
   .time-badge { margin-top: 4px; padding: 6px 8px 6px 6px; }
@@ -342,7 +357,7 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 /* First visit in a session: the header and then the dishes rise in, one after another. */
 @keyframes rise { from { opacity: 0; transform: translateY(36px); } }
 .intro .shelf-head > *, .intro .card { animation: rise .9s cubic-bezier(.2,.8,.2,1) both; }
-.intro .scopes { animation-delay: .08s; }
+.intro .shelf-tools { animation-delay: .08s; }
 .intro .card { animation-delay: calc(.2s + var(--i, 0) * 70ms); }
 @media (prefers-reduced-motion: reduce) { .intro .shelf-head > *, .intro .card { animation: none; } }
 </style>
@@ -352,7 +367,13 @@ body.bench-open .toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     <main>
       <header class="shelf-head">
         <h1 class="shelf-title">Banchan party <span lang="ko">반찬 파티</span></h1>
-        <div class="scopes" id="scopes" role="group" aria-label="Filter by style"></div>
+        <div class="shelf-tools">
+          <div class="scopes" id="scopes" role="group" aria-label="Filter by style"></div>
+          <div class="looks" id="looks" role="group" aria-label="Show">
+            <button type="button" class="look" data-look="full" title="Photos and names" aria-label="Photos and names"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="5.5" r="4"/><path d="M3.5 13h9M5.5 15.25h5"/></svg></button>
+            <button type="button" class="look" data-look="photos" title="Photos only" aria-label="Photos only"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="4.25" cy="4.25" r="3"/><circle cx="11.75" cy="4.25" r="3"/><circle cx="4.25" cy="11.75" r="3"/><circle cx="11.75" cy="11.75" r="3"/></svg></button>
+          </div>
+        </div>
       </header>
       <div class="grid" id="grid"></div>
     </main>
@@ -943,6 +964,7 @@ const state = {
   done: new Set(store.get("done", [])),
   serv: store.get("servings", 8),
   cat: "all",
+  look: store.get("look", "full"), // "full" shows names under the photos, "photos" hides them
   view: null, // a dish id while its recipe shows in the pane
   panel: null, // "list" or "plan" while one shows in the pane
   dockMin: false, // the card is tucked into its small button
@@ -978,6 +1000,10 @@ const trashIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" s
 const dockTrash = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4H3.33333M3.33333 4H14M3.33333 4L3.33333 13.3333C3.33333 13.687 3.47381 14.0261 3.72386 14.2761C3.97391 14.5262 4.31305 14.6667 4.66667 14.6667H11.3333C11.687 14.6667 12.0261 14.5262 12.2761 14.2761C12.5262 14.0261 12.6667 13.687 12.6667 13.3333V4M5.33333 4V2.66667C5.33333 2.31304 5.47381 1.97391 5.72386 1.72386C5.97391 1.47381 6.31305 1.33333 6.66667 1.33333H9.33333C9.68696 1.33333 10.0261 1.47381 10.2761 1.72386C10.5262 1.97391 10.6667 2.31304 10.6667 2.66667V4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
+function renderLook() {
+  $("grid").classList.toggle("photos-only", state.look === "photos");
+  document.querySelectorAll("[data-look]").forEach(b => b.setAttribute("aria-pressed", b.dataset.look === state.look));
+}
 function renderScopes() {
   $("scopes").innerHTML = CATS.map(([id, label]) => `<button type="button" class="scope" data-cat="${id}" aria-pressed="${state.cat === id}">${label}</button>`).join("");
 }
@@ -1315,7 +1341,9 @@ document.addEventListener("click", e => {
   const step = e.target.closest("[data-step]");
   if (step) { state.serv = Math.min(20, Math.max(1, state.serv + +step.dataset.step)); save(); renderBench(); return; }
   const chip = e.target.closest("[data-cat]");
-  if (chip) { state.cat = chip.dataset.cat; renderScopes(); renderGrid(); }
+  if (chip) { state.cat = chip.dataset.cat; renderScopes(); renderGrid(); return; }
+  const look = e.target.closest("[data-look]");
+  if (look) { state.look = look.dataset.look; store.set("look", state.look); renderLook(); }
 });
 document.addEventListener("change", e => {
   const dk = e.target.dataset && e.target.dataset.done;
@@ -1443,7 +1471,7 @@ $("dock").addEventListener("animationend", () => $("dock").classList.remove("ent
   head.addEventListener("click", e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
 })();
 openSharedList();
-fitCols(); renderScopes(); renderGrid(); renderBench();
+fitCols(); renderScopes(); renderLook(); renderGrid(); renderBench();
 (function intro() {
   try { if (sessionStorage.getItem("seen")) return; sessionStorage.setItem("seen", "1"); } catch { return; }
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
