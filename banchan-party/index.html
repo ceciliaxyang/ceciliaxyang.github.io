@@ -1137,7 +1137,7 @@ function renderRecipe(d) {
     <div class="r-title">
       <p class="card-kr"><span lang="ko">${d.kr}</span> · ${d.name}</p>
       <p class="card-en">${esc(d.en)}</p>
-      <p class="card-time">${timeLabel(d)}${d.rating ? ` · ★ ${d.rating.toFixed(1)} (${d.votes} ratings)` : ""}${d.baseNote ? ` · ${d.baseNote}` : ""}</p>
+      <p class="card-time">${timeLabel(d)}${d.rating ? ` · ★ ${d.rating.toFixed(1)} (${d.votes} ratings)` : ""}</p>
     </div>
     <div class="r-actions">
       <button type="button" class="dark-pill${on ? " on" : ""}" data-pick="${d.id}" aria-pressed="${on}">${on ? "✓ In your banchan" : "Add to your banchan"}</button>
