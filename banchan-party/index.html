@@ -1240,7 +1240,7 @@ function renderBench() {
   document.querySelectorAll(".serv-out").forEach(o => (o.textContent = state.serv));
   const head = recipe ? [recipe] : picked;
   const planN = recipe ? 0 : renderPlan(picked, rows);
-  $("peekSub").textContent = recipe ? `${recipe.name} · ${recipe.en}` : panel === "list" ? `${rows.length} ingredients` : `${planN} steps`;
+  $("peekSub").textContent = recipe ? `${recipe.en} · ${recipe.name}` : panel === "list" ? `${rows.length} ingredients` : `${planN} steps`;
   $("peekMini").innerHTML = `<img src="${img(head[head.length - 1])}" alt="">`;
   $("peekThumbs").innerHTML = "";
   if (recipe) { renderRecipe(recipe); return; }
