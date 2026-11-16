@@ -10,38 +10,60 @@
 </head>
 <body>
   <div class="page">
-    <header class="head">
-      <div class="head-top">
-        <h1 class="title">Mahjong Coach</h1>
-        <div class="head-actions">
-          <button type="button" class="scope" id="guideBtn">Fan guide</button>
-          <button type="button" class="scope" id="newBtn">New game</button>
-        </div>
-      </div>
-      <div class="scopes" id="status" aria-live="polite"></div>
-    </header>
+    <h1 class="visually-hidden">Mahjong coach</h1>
 
+    <!-- The table: side players on the left and right; in the middle the player opposite, the white box
+         (everyone's discards, then the latest move) and you -->
     <main class="table" id="table" aria-label="Mahjong table">
-      <section class="seat seat-top" data-p="2"></section>
       <section class="seat seat-left" data-p="3"></section>
       <div class="center">
-        <div class="pool pool-top" data-p="2"></div>
-        <div class="pool pool-left" data-p="3"></div>
-        <div class="compass" id="compass"></div>
-        <div class="pool pool-right" data-p="1"></div>
-        <div class="pool pool-bottom" data-p="0"></div>
+        <section class="seat seat-top" data-p="2"></section>
+        <div class="felt">
+          <div class="discards" id="discards" aria-label="Discards"></div>
+          <hr class="felt-div">
+          <div class="bar" id="bar"></div>
+        </div>
+        <section class="me" id="me" aria-label="Your hand">
+          <div class="exposed" id="meExposed"></div>
+          <div class="hand" id="hand"></div>
+          <div class="me-plate" id="mePlate"></div>
+        </section>
       </div>
       <section class="seat seat-right" data-p="1"></section>
     </main>
 
-    <section class="me" id="me" aria-label="Your hand">
-      <div class="bar" id="bar"></div>
-      <div class="me-row">
-        <div class="me-plate" id="mePlate"></div>
-        <div class="exposed" id="meExposed"></div>
+    <!-- floating actions, bottom left -->
+    <div class="fab">
+      <button type="button" class="fab-btn dark" id="newBtn">New game</button>
+      <div class="settings-wrap">
+        <button type="button" class="fab-btn light" id="settingsBtn" aria-haspopup="true" aria-expanded="false" aria-controls="settings">Settings</button>
+            <div class="settings" id="settings" role="group" aria-label="Settings" hidden>
+              <div class="set-row set-static">
+                <span class="set-text"><b>Difficulty</b><small>How well the other players play</small></span>
+                <div class="seg" role="radiogroup" aria-label="Difficulty">
+                  <button type="button" role="radio" data-diff="easy" aria-checked="false">Easy</button>
+                  <button type="button" role="radio" data-diff="normal" aria-checked="true">Normal</button>
+                  <button type="button" role="radio" data-diff="hard" aria-checked="false">Hard</button>
+                </div>
+              </div>
+              <hr class="set-sep">
+              <button type="button" class="set-row" id="sortBtn" role="switch" aria-checked="true">
+                <span class="set-text"><b>Autosort</b><small>Keep your hand and the discards sorted. Off: drag your tiles yourself</small></span><span class="switch" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="set-row" id="scoresBtn" role="switch" aria-checked="false">
+                <span class="set-text"><b>Scores</b><small>Show everyone's points next to their name</small></span><span class="switch" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="set-row" id="claimedBtn" role="switch" aria-checked="false">
+                <span class="set-text"><b>Claimed tiles</b><small>Outline the tile in each called set that was taken from a discard</small></span><span class="switch" aria-hidden="true"></span>
+              </button>
+              <hr class="set-sep">
+              <button type="button" class="set-row" id="guideBtn">
+                <span class="set-text"><b>Fan guide</b><small>Every scoring pattern and how many fan it's worth</small></span>
+                <svg class="set-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
       </div>
-      <div class="hand" id="hand"></div>
-    </section>
+    </div>
   </div>
 
   <button type="button" class="coach" id="coach" aria-label="Open coach">

@@ -222,6 +222,7 @@ export function hint(state) {
     return { title: "My pick", html };
   }
   if (state.phase === "claim" && state.claim?.options[0] && !state.claim.responses[0]) {
+    if (state.claim.options[0].none) return { title: "Continue", html: `<p>You can't pung, chow or win with ${t(kindOf(state.lastDiscard.id))}. Press Continue.</p>` };
     const rec = recommendClaim(state, 0, state.claim.options[0]);
     const pick = rec.pick;
     const k = rec.ev.k;

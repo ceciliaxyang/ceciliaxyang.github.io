@@ -2,13 +2,13 @@
 // winning-hand decomposition and Hong Kong style fan scoring. No game state lives here.
 //
 // Tile kinds 0-33 are the playable tiles:
-//   0-8 Characters 1-9, 9-17 Dots 1-9, 18-26 Bamboo 1-9,
+//   0-8 Characters 1-9, 9-17 Circles 1-9, 18-26 Bamboo 1-9,
 //   27-30 winds East South West North, 31-33 dragons Red Green White.
 // Kinds 34-41 are bonus tiles: Flowers 1-4 then Seasons 1-4.
 // Physical tile ids 0-143: four copies of each playable kind (id >> 2), then the 8 bonus tiles.
 
 export const kindOf = (id) => (id < 136 ? id >> 2 : 34 + (id - 136));
-export const suitOf = (k) => (k < 27 ? Math.floor(k / 9) : 3); // 0 chars, 1 dots, 2 bamboo, 3 honors
+export const suitOf = (k) => (k < 27 ? Math.floor(k / 9) : 3); // 0 chars, 1 circles, 2 bamboo, 3 honors
 export const numOf = (k) => (k % 9) + 1;
 export const isSuited = (k) => k < 27;
 export const isHonor = (k) => k >= 27 && k < 34;

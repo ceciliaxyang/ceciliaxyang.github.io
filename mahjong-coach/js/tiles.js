@@ -7,7 +7,7 @@ const WIND_EN = ["East", "South", "West", "North"];
 const DRAGON_EN = ["Red", "Green", "White"];
 const BONUS = ["梅", "蘭", "菊", "竹", "春", "夏", "秋", "冬"];
 const BONUS_EN = ["Plum", "Orchid", "Chrysanthemum", "Bamboo", "Spring", "Summer", "Autumn", "Winter"];
-const SUIT_EN = ["Characters", "Dots", "Bamboo"];
+const SUIT_EN = ["Characters", "Circles", "Bamboo"];
 
 const RED = "#c8302c";
 const GREEN = "#23774a";
@@ -23,7 +23,7 @@ export function tileName(k) {
   return `${BONUS_EN[k - 34]} (${k < 38 ? "flower" : "season"} ${((k - 34) % 4) + 1})`;
 }
 
-/* Short label like "5 Dots" → used inside sentences. */
+/* Short label like "5 Circles" → used inside sentences. */
 export const shortName = tileName;
 
 function dot(x, y, r, color) {
@@ -75,6 +75,16 @@ function text(ch, y, size, color, weight = 700) {
   return `<text x="30" y="${y}" text-anchor="middle" font-family="${SERIF}" font-size="${size}" font-weight="${weight}" fill="${color}">${ch}</text>`;
 }
 
+/* Small five-petal flower in the corner of every bonus tile (flowers and seasons), so they read as
+   bonus tiles at a glance. */
+function flowerMark(cx, cy, col) {
+  const petals = [0, 72, 144, 216, 288].map((deg) => {
+    const a = ((deg - 90) * Math.PI) / 180;
+    return `<circle cx="${(cx + Math.cos(a) * 3.6).toFixed(2)}" cy="${(cy + Math.sin(a) * 3.6).toFixed(2)}" r="2.7" fill="${col}"/>`;
+  }).join("");
+  return `<g opacity=".9">${petals}<circle cx="${cx}" cy="${cy}" r="1.9" fill="${FACE}"/></g>`;
+}
+
 export function faceSvg(k) {
   let body;
   if (k < 9) body = text(NUMERALS[k], 34, 27, INK) + text("萬", 70, 30, RED);
@@ -89,8 +99,11 @@ export function faceSvg(k) {
     const i = k - 34;
     const col = [RED, BLUE, "#c77a12", GREEN, GREEN, RED, "#c77a12", BLUE][i];
     body = `<text x="9" y="17" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="600" fill="${col}">${(i % 4) + 1}</text>` +
-      text(BONUS[i], 56, 38, col);
+      text(BONUS[i], 56, 38, col) + flowerMark(49, 69, col);
   }
+  // Small corner number on circles and bamboo, haloed in the tile's ivory so it reads over the pattern.
+  if (k >= 9 && k < 27)
+    body = `<g transform="translate(4.8 4.8) scale(.84)">${body}</g>` + `<text x="56" y="76" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="#fbf9f4" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
   return `<svg viewBox="0 0 60 80" aria-hidden="true">${body}</svg>`;
 }
 

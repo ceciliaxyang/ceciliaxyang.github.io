@@ -1,6 +1,6 @@
 # Mahjong Coach
 
-Hong Kong style Chinese mahjong for one player against three bots (Mei, Jun, Lin), with a coach.
+Hong Kong style Chinese mahjong for one player against three bots (named by seat wind, e.g. "Player 北"), with a coach.
 When one of your moves was clearly worse than the best one, the coach chathead (bottom right)
 lights up. Tap it to see why, and **Take it back** to replay the move.
 
@@ -22,6 +22,13 @@ Then open http://localhost:3000/mahjong-coach/
 - Four sets and a pair wins. Seven pairs and thirteen orphans count too.
 - Pung, kong or win can be claimed from anyone's discard; chow only from the player before you.
   Priority: win > pung/kong > chow.
+- The game never suggests a pung, chow or kong. After each discard you press **Continue** (or Space).
+  To call, tap tiles in your hand: they lift and Continue becomes **Call**. The game works out whether
+  it's a pung, chow or kong and explains if it isn't a valid call. **Mahjong** appears only when you can win.
+- **Difficulty** (Settings): Easy bots make looser discards, play no defense and call less; Normal (default)
+  play efficient, fast hands with basic defense; Hard defend earlier, keep scoring pairs and take every call
+  that speeds them up. In 800-hand simulations a Normal-strength player wins ~45% of hands against Easy
+  bots and ~25% against Normal (the fair share at a four-player table); Hard is only slightly tougher.
 - A win needs at least 1 fan (`minFan` in `createGame`). The Fan guide button lists every fan.
 - The last 14 tiles are the dead wall. A hand with no winner when the live wall runs out is a draw.
 - The dealer keeps the deal after a dealer win or a draw. Otherwise it passes, and the round wind
@@ -55,3 +62,5 @@ until you reload.
 
 `?autoplay` plays your seat automatically with occasional deliberate mistakes. It's for testing the
 flow and the coach's notes.
+`?sandbox` is a normal game for manual testing. Both test modes save to their own slot, so they
+never touch your real game or your settings.

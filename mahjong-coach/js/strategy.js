@@ -7,10 +7,16 @@ export function isValueTile(state, p, k) {
   return isDragon(k) || k - 27 === seatWind(state, p) || k - 27 === state.prevailing;
 }
 
-/* Opponents who look close to winning: three or more sets shown. */
-export function threats(state, p) {
+/* Opponents who look close to winning: three or more sets shown. Hard bots are warier: two sets, or
+   any called set once the wall is running low. */
+export function threats(state, p, level = "normal") {
   const out = [];
-  state.players.forEach((pl, q) => { if (q !== p && pl.melds.filter((m) => !m.concealed).length >= 3) out.push(q); });
+  const late = state.wall.length - 14 <= 24;
+  state.players.forEach((pl, q) => {
+    if (q === p) return;
+    const shown = pl.melds.filter((m) => !m.concealed).length;
+    if (shown >= 3 || (level === "hard" && (shown >= 2 || (late && shown >= 1)))) out.push(q);
+  });
   return out;
 }
 
@@ -53,18 +59,21 @@ export function hasFanPath(state, p, { extraMeldKind = null, removeKinds = [] } 
 
 /* Rank discards for p's current 14-tile shape: speed first (shanten, then tiles that help),
    tempered by keeping value pairs and by safety when someone looks ready. */
-export function rankDiscards(state, p) {
+export function rankDiscards(state, p, level = "normal") {
   const pl = state.players[p];
   const c = handCounts(pl);
   const open = pl.melds.length;
   const unseen = unseenFor(state, p);
   const res = analyzeDiscards(c, open, unseen);
-  const th = threats(state, p);
+  // Easy plays no defense; Hard spots danger earlier and weighs it more
+  const th = level === "easy" ? [] : threats(state, p, level);
+  const keepPair = level === "hard" ? 16 : level === "easy" ? 0 : 8;
+  const [farW, nearW] = level === "hard" ? [9, 4] : [6, 2.5];
   for (const r of res) {
     let score = -r.shanten * 100 + r.ukeire;
-    if (isHonor(r.k) && isValueTile(state, p, r.k) && c[r.k] >= 2) score -= 8;
+    if (isHonor(r.k) && isValueTile(state, p, r.k) && c[r.k] >= 2) score -= keepPair;
     r.danger = danger(state, p, r.k, th);
-    if (th.length && r.shanten >= 1) score -= r.danger * (r.shanten >= 2 ? 6 : 2.5);
+    if (th.length && r.shanten >= 1) score -= r.danger * (r.shanten >= 2 ? farW : nearW);
     r.score = score;
   }
   res.sort((a, b) => b.score - a.score);
@@ -122,7 +131,9 @@ export function recommendClaim(state, q, opts) {
 
 /* ---------------- Bots ---------------- */
 
-export function botAct(state, p, opts) {
+/* Bots at three levels. Normal is the original strategy; Easy is looser; Hard defends earlier and keeps
+   scoring pairs. Every level always declares a legal win. */
+export function botAct(state, p, opts, level = "normal") {
   if (opts.tsumo && opts.tsumo.legal) return { type: "tsumo" };
   const pl = state.players[p];
   if (opts.kongs.length) {
@@ -135,19 +146,27 @@ export function botAct(state, p, opts) {
       if (s1 <= s0) return { type: "kong", k: kg.k, kongType: kg.type };
     }
   }
-  const { list } = rankDiscards(state, p);
-  const k = list[0].k;
+  const { list } = rankDiscards(state, p, level);
+  let k = list[0].k;
+  // Easy: about a third of the time, settle for one of the top few discards instead of the best
+  if (level === "easy" && list.length > 1 && Math.random() < 0.35) k = list[1 + Math.floor(Math.random() * Math.min(3, list.length - 1))].k;
   const id = pl.hand.filter((x) => kindOf(x) === k).pop();
   return { type: "discard", id };
 }
 
-export function botClaim(state, q, opts) {
+export function botClaim(state, q, opts, level = "normal") {
   const rec = recommendClaim(state, q, opts);
   const pick = rec.pick;
   if (pick.type === "win") return { type: "win" };
   if (pick.type === "pass") return { type: "pass" };
-  // bots are a little more conservative than the coach about opening up early
-  if (rec.strength === "mild" && pick.type === "chow" && rec.ev.closed) return { type: "pass" };
+  // Easy: never chows, and only pungs/kongs a scoring tile about half the time
+  if (level === "easy") {
+    if (pick.type === "chow") return { type: "pass" };
+    return pick.value && Math.random() < 0.5 ? { type: pick.type } : { type: "pass" };
+  }
+  // Normal bots are a little more conservative than the coach about opening up early; Hard bots take
+  // every call that gets them closer (speed wins hands at a 1-fan minimum)
+  if (level !== "hard" && rec.strength === "mild" && pick.type === "chow" && rec.ev.closed) return { type: "pass" };
   return pick.type === "chow" ? { type: "chow", chow: pick.chow } : { type: pick.type };
 }
 

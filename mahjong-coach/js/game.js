@@ -12,7 +12,13 @@
 
 import { kindOf, countsOf, scoreWin, shanten, isSuited, isBonus, suitOf, POINTS } from "./engine.js";
 
-export const NAMES = ["You", "Mei", "Jun", "Lin"];
+export const NAMES = ["You", "Player 1", "Player 2", "Player 3"];
+const WIND_CH = ["東", "南", "西", "北"];
+/* Opponents are numbered in play order from you: Player 1 on your right, 2 opposite, 3 on your left.
+   (Their seat wind shows in their label.) Also fixes up names in games saved before this naming. */
+export function refreshNames(state) {
+  state.players.forEach((pl, p) => { if (p !== 0) pl.name = `Player ${p}`; });
+}
 // The last 14 tiles are the dead wall: only kong and flower replacements come from there.
 export const DEAD_WALL = 14;
 export const liveTiles = (state) => Math.max(0, state.wall.length - DEAD_WALL);
@@ -64,6 +70,7 @@ export function startHand(state) {
     for (let n = 0; n < 13; n++) state.players[p].hand.push(state.wall.shift());
   }
   state.players[state.dealer].hand.push(state.wall.shift());
+  refreshNames(state);
   state.flags = {};
   for (let i = 0; i < 4; i++) replaceFlowers(state, (state.dealer + i) % 4);
   sortHands(state);
@@ -189,7 +196,9 @@ export function discard(state, p, id) {
   if (i < 0) throw new Error("tile not in hand");
   pl.hand.splice(i, 1);
   sortHands(state);
-  pl.discards.push({ id, taken: false });
+  // n = order thrown across the whole table, so the shared discard area can show them in sequence
+  const n = state.players.reduce((a, x) => a + x.discards.length, 0);
+  pl.discards.push({ id, taken: false, n });
   state.lastDiscard = { id, from: p };
   state.drawn = null;
   state.afterClaim = false;
@@ -203,6 +212,10 @@ function openClaims(state) {
     const o = claimOptions(state, q);
     if (o) options[q] = o;
   }
+  // Like mahjong4friends, you respond to every opponent discard (Continue or a call),
+  // even when no call is legal. Robbing a kong only ever offers a win, so that stays legal-only.
+  const ld = state.lastDiscard;
+  if (!options[0] && ld.from !== 0 && !ld.robbing) options[0] = { win: null, pung: false, kong: false, chows: [], none: true };
   state.claim = { options, responses: {} };
   state.phase = "claim";
 }

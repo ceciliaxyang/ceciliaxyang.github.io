@@ -4,6 +4,9 @@
 :root {
   color-scheme: light;
   --bg: #ffffff;
+  --page: #f7f7f7;   /* page background; the felt sits on it in white */
+  --tag: #ebebeb;    /* player name tags */
+  --turn: #d7251c;   /* the tag of whoever has to act */
   --fg: #000000;
   --text: #222222;
   --muted: #6a6a6a;
@@ -19,14 +22,21 @@
   --spring: cubic-bezier(.34, 1.56, .64, 1);
   --ease: cubic-bezier(.2, .8, .2, 1);
   /* tile widths */
+  /* Table tile sizes, three only:
+     --lg   your hand and the tile in play (always the largest)
+     --mid  the discards and your own called sets / flowers (always the same as each other)
+     --opp  every opponent's tiles, all three seats alike */
   --lg: clamp(22px, calc((100vw - 56px) / 15), 54px);
+  --mid: calc(var(--lg) * .8);
+  --opp: 40px;
+  --tag-size: 48px;  /* opponent label circle */
   --md: 34px;
   --sm: clamp(17px, 2.1vw, 26px);
   --xs: 20px;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; background: var(--bg); color: var(--fg); }
+html, body { margin: 0; background: var(--page); color: var(--fg); }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -36,17 +46,71 @@ button { font: inherit; color: inherit; }
 p { text-wrap: pretty; }
 
 .page {
-  max-width: 1160px;
+  /* no maximum width: the table (and the white box) widen with the window */
   margin: 0 auto;
-  padding: calc(32px + env(safe-area-inset-top)) max(40px, env(safe-area-inset-right)) 120px max(40px, env(safe-area-inset-left));
+  padding: calc(20px + env(safe-area-inset-top)) max(26px, env(safe-area-inset-right)) 140px max(26px, env(safe-area-inset-left));
 }
-@media (max-width: 600px) { .page { padding: calc(16px + env(safe-area-inset-top)) 16px 96px; } }
+@media (max-width: 600px) { .page { padding: calc(20px + env(safe-area-inset-top)) 14px 110px; } }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* Header */
-.head { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
-.head-top { display: flex; align-items: center; gap: 16px; }
-.title { flex: 1; margin: 0; font-size: 40px; line-height: 40px; font-weight: 500; letter-spacing: -1.2px; }
-.head-actions { display: flex; gap: 8px; }
+/* Floating actions, bottom left: New game (dark) and Settings (light). No header. */
+.fab {
+  position: fixed; left: max(26px, env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; align-items: center; gap: 4px;
+}
+/* material: translucent, blurred backgrounds (what's behind shows through, softened); no elevation */
+.fab-btn {
+  height: 48px; padding: 0 24px; border: 0; border-radius: 100px; font-size: 14px; line-height: 18px; font-weight: 500; cursor: pointer;
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  transition: transform .15s ease, background .15s ease;
+}
+.fab-btn:active { transform: scale(.97); }
+.fab-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.fab-btn.dark { background: rgba(34, 34, 34, .78); color: #fff; }
+.fab-btn.dark:hover { background: rgba(0, 0, 0, .85); }
+.fab-btn.light { background: rgba(221, 221, 221, .55); color: var(--text); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .06); }
+.fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
+@media (max-width: 600px) {
+  .fab { left: max(12px, env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .fab-btn { height: 40px; padding: 0 16px; font-size: 13px; }
+}
+/* Settings menu: a small card of switches under the Settings button */
+.settings-wrap { position: relative; }
+.settings {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 320px; padding: 8px;
+  border-radius: 24px; background: #fff; box-shadow: 0 12px 40px rgba(0, 0, 0, .14), 0 1px 2px rgba(0, 0, 0, .06);
+  animation: pop .25s var(--spring); transform-origin: top right;
+}
+@keyframes pop { from { opacity: 0; transform: scale(.94) translateY(-4px); } }
+.set-row {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; border: 0; border-radius: 16px;
+  background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer;
+}
+.set-row:hover { background: var(--felt); }
+.set-row:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.set-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.set-text b { font-size: 14px; line-height: 18px; font-weight: 500; }
+.set-text small { font-size: 12px; line-height: 16px; color: var(--muted); }
+.switch { position: relative; flex-shrink: 0; width: 40px; height: 24px; border-radius: 12px; background: var(--line); transition: background .2s ease; }
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .25s var(--spring);
+}
+.set-row[aria-checked="true"] .switch { background: var(--text); }
+.set-row[aria-checked="true"] .switch::after { transform: translateX(16px); }
+.set-sep { margin: 6px 14px; border: 0; border-top: 1px solid var(--hair); }
+/* Difficulty: a small segmented control */
+.set-row.set-static { cursor: default; flex-wrap: wrap; row-gap: 10px; }
+.set-row.set-static:hover { background: none; }
+.seg { display: inline-flex; padding: 3px; border-radius: 100px; background: var(--pill); }
+.seg button {
+  padding: 6px 12px; border: 0; border-radius: 100px; background: none; font-size: 13px; line-height: 16px; font-weight: 500;
+  color: var(--muted); cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+.seg button[aria-checked="true"] { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .1); }
+.seg button:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.set-chev { flex-shrink: 0; color: var(--muted); }
+.fab .settings { top: auto; bottom: calc(100% + 8px); left: 0; right: auto; transform-origin: bottom left; }
 .scopes { display: flex; gap: 8px; flex-wrap: wrap; }
 .scope {
   flex-shrink: 0; padding: 12px 16px; border: 0; border-radius: 32px; background: var(--pill); color: var(--text);
@@ -57,10 +121,7 @@ button.scope:hover { background: var(--pill-hover); }
 span.scope { cursor: default; }
 .scope.dark { background: var(--text); color: #fff; }
 @media (max-width: 600px) {
-  .head { gap: 12px; margin-bottom: 14px; }
-  .title { font-size: 24px; line-height: 28px; letter-spacing: -.6px; }
-  .head-actions { gap: 6px; }
-  .head-actions .scope { padding: 9px 12px; }
+  .settings { width: min(320px, calc(100vw - 32px)); }
   /* one row that scrolls sideways instead of wrapping */
   .scopes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
   .scopes::-webkit-scrollbar { display: none; }
@@ -99,101 +160,164 @@ span.scope { cursor: default; }
 .tile.face-down { background: linear-gradient(#4a7d6d, var(--back)); }
 .tile.face-down svg { visibility: hidden; }
 
-/* Table */
+/* Table: the side players' columns on the left and right; the middle column holds the player opposite,
+   the white box (discards + the latest move) and you. All three opponent labels sit along the top. */
 .table {
-  display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 3fr) minmax(80px, 1fr); grid-template-rows: auto 1fr;
-  grid-template-areas: "top top top" "left center right"; gap: 16px 20px;
-  padding: 20px 24px; border-radius: 36px; background: var(--felt);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 64px; align-items: start;  /* at most 64px either side of the white box */
+  --top-w: var(--opp); --side-w: var(--opp);
 }
-.seat { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.seat-top { grid-area: top; align-items: center; }
-.seat-left { grid-area: left; align-items: flex-start; justify-content: center; }
-.seat-right { grid-area: right; align-items: flex-end; justify-content: center; }
+.seat { display: flex; flex-direction: column; align-items: center; gap: 24px; min-width: 0; }
+.seat-top { --seat-w: var(--top-w); }
+/* side columns are exactly as wide as a sideways tile; a longer name just extends past, centered */
+.seat-left, .seat-right { --seat-w: var(--side-w); width: calc(var(--side-w) * 1.334); }
+.seat-left > *, .seat-right > * { flex-shrink: 0; }
+.center { display: flex; flex-direction: column; gap: 48px; min-width: 0; }
+/* labels: the seat wind in a grey circle (red while it's that player's move) and the name; the player
+   opposite has the name beside the circle, the side players under it, you beside it */
+.who { display: flex; align-items: center; gap: 12px; }
+.seat-left .who, .seat-right .who { flex-direction: column; gap: 24px; }
+.pname { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.pname .pts { margin-left: 6px; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 .plate {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 100px; background: #fff;
-  font-size: 13px; line-height: 16px; font-weight: 500; color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: var(--tag); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--text);
   transition: background .25s ease, color .25s ease;
 }
-.plate .wind {
-  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--pill);
-  font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif; font-weight: 700; font-size: 14px;
+.plate.circle { width: var(--tag-size); height: var(--tag-size); border-radius: 50%; }
+.plate.on { background: var(--turn); color: #fff; }
+/* Opponents' tiles: one line along each player's side, called sets and flowers face-up at the start, then
+   the face-down hand. Side players' tiles lie sideways; the player opposite's read right-side up for you. */
+.seat .tile { --w: var(--seat-w); }
+.line { display: flex; align-items: flex-end; gap: 12px; }
+.seat-left .line, .seat-right .line { flex-direction: column; align-items: stretch; gap: 8px; }
+.backs { display: flex; gap: 2px; }
+.seat-left .backs, .seat-right .backs { flex-direction: column; gap: 1px; }
+/* side seats: tiles lie sideways (wider than tall); face-down ones just swap width and height */
+.seat-left .tile, .seat-right .tile { width: calc(var(--w) * 1.333); height: var(--w); }
+.seat-left .tile svg, .seat-right .tile svg {
+  position: absolute; left: 50%; top: 50%; width: var(--w); height: calc(var(--w) * 1.333); transform: translate(-50%, -50%) rotate(90deg);
 }
-.plate .wind.dealer { background: var(--red); color: #fff; }
-.plate .pts { color: var(--muted); font-variant-numeric: tabular-nums; }
-.plate .count { color: var(--muted); }
-.plate.on { background: var(--text); color: #fff; }
-.plate.on .wind:not(.dealer) { background: rgba(255, 255, 255, .16); }
-.plate.on .pts, .plate.on .count { color: rgba(255, 255, 255, .7); }
-.plate.thinking .nm::after { content: "…"; display: inline-block; width: 1ch; animation: dots 1s steps(3) infinite; overflow: hidden; vertical-align: bottom; }
-@keyframes dots { from { width: 0; } to { width: 1.2ch; } }
-.backs { display: flex; gap: 2px; flex-wrap: wrap; }
-.seat-left .backs, .seat-right .backs { max-width: 132px; }
-.seat-right .backs { justify-content: flex-end; }
-.exposed { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
-.seat-right .exposed { justify-content: flex-end; }
+.seat-right .tile svg { transform: translate(-50%, -50%) rotate(-90deg); }
+.seat-left .meld, .seat-right .meld, .seat-left .flowers, .seat-right .flowers { flex-direction: column; gap: 0; padding: 0; }
+/* claimed-tile markers (Settings → Claimed tiles, off by default): the tile taken from a discard gets a
+   faint red outline and sits nudged toward the middle of the table */
+.show-claimed .seat-left .meld .claimed { transform: translateX(3px); }
+.show-claimed .seat-right .meld .claimed { transform: translateX(-3px); }
+.show-claimed .seat-top .meld .claimed { transform: translateY(3px); }
 .meld { display: inline-flex; gap: 1px; }
-.meld .claimed { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px rgba(200, 48, 44, .45), 0 calc(var(--w) * .08) 0 var(--edge), 0 calc(var(--w) * .12) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
+.show-claimed .meld .claimed { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px rgba(200, 48, 44, .45), 0 calc(var(--w) * .08) 0 var(--edge), 0 calc(var(--w) * .12) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
 .flowers { display: inline-flex; gap: 1px; padding-left: 4px; }
 
-.center {
-  grid-area: center; display: grid; grid-template-columns: 1fr auto 1fr; grid-template-rows: auto 1fr auto;
-  grid-template-areas: "ptop ptop ptop" "pleft compass pright" "pbottom pbottom pbottom"; gap: 12px; align-items: center; justify-items: center; min-height: 250px;
+/* The white box: everyone's discards on top, a divider, then the latest move */
+.felt { display: flex; flex-direction: column; gap: 36px; padding: 32px; border-radius: 24px; background: #fff; }
+.felt-div { margin: 0; border: 0; height: 1px; background: var(--hair); }
+
+/* Discard area: one shared space in the middle of the table, upright tiles at your hand's size,
+   in the order they were thrown */
+/* discards sit straight on the felt, a little smaller than your hand */
+.discards {
+  --dw: var(--mid); display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px 3px;
+  /* only as tall as the discards need (at least one row): the box grows a row at a time */
+  min-height: calc(var(--dw) * 1.413 + 1px);
 }
-.pool { display: grid; grid-template-columns: repeat(6, var(--sm)); gap: 3px 2px; align-content: start; min-height: calc(var(--sm) * 1.42); }
-.pool-top, .pool-bottom { grid-template-columns: repeat(12, var(--sm)); }
-.pool-top { grid-area: ptop; align-self: end; }
-.pool-left { grid-area: pleft; justify-self: end; }
-.pool-right { grid-area: pright; justify-self: start; }
-.pool-bottom { grid-area: pbottom; }
-.pool .tile { --w: var(--sm); }
-.pool .tile.fresh { animation: drop .35s var(--spring); }
-.pool .tile.last { box-shadow: 0 0 0 2px var(--text), 0 calc(var(--w) * .08) 0 var(--edge), 0 6px 14px rgba(0, 0, 0, .18); }
+.discards .tile { --w: var(--dw); }
+.discards .tile.fresh { animation: drop .35s var(--spring); }
+/* Autosort on: one tile per kind with a count badge */
+.discards.grouped { gap: 12px 8px; }
+.dstack { position: relative; display: inline-flex; }
+.dcount {
+  position: absolute; top: -6px; right: -6px; z-index: 1; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--text); color: #fff; font-size: 12px; line-height: 18px; font-weight: 600; text-align: center;
+  font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px #fff;
+}
+.dcount.bump { animation: bump .45s var(--spring); }
+@keyframes bump { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: none; } }
+/* first in the discard area: the wall, face down, with how many tiles are left to draw */
+.dstack.wall { margin-right: 8px; }
+.dstack.wall .dcount { min-width: 22px; }
 @keyframes drop { from { transform: translateY(-8px) scale(1.12); opacity: 0; } }
-.compass { grid-area: compass; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px; min-width: 112px; }
-.compass .big {
-  display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: #fff;
-  font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif; font-size: 32px; font-weight: 700; color: var(--text);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, .08);
-}
-.compass small { font-size: 12px; line-height: 16px; color: var(--muted); font-weight: 500; text-align: center; }
 
+/* narrower windows: smaller opponent tiles and tighter gaps so the middle keeps its width */
+@media (max-width: 1200px) {
+  .table { column-gap: 32px; }
+  :root { --opp: 30px; }
+}
 @media (max-width: 760px) {
-  .table { grid-template-columns: 60px minmax(0, 1fr) 60px; gap: 12px 8px; padding: 14px 10px; border-radius: 28px; }
-  .seat .backs { display: none; }
-  .seat-left .plate, .seat-right .plate { flex-direction: column; gap: 4px; padding: 6px; border-radius: 20px; text-align: center; }
-  .seat-left, .seat-right { align-items: center; justify-content: flex-start; }
-  .seat-left .exposed, .seat-right .exposed { justify-content: center; }
-  .seat .exposed .tile { --w: 14px; }
-  .pool-top, .pool-bottom { grid-template-columns: repeat(9, var(--sm)); }
-  .pool-left, .pool-right { grid-template-columns: repeat(3, var(--sm)); }
-  .center { min-height: 200px; gap: 6px; }
-  .seat-left .plate .wind, .seat-right .plate .wind { width: 22px; height: 22px; font-size: 12px; }
-  .seat .plate { font-size: 12px; }
-  .bar { min-height: 76px; }
-  .compass { min-width: 0; padding: 4px; }
-  .compass .big { width: 44px; height: 44px; font-size: 22px; }
+  /* phones: opponents' tiles never get smaller than 16px */
+  :root { --opp: 16px; --tag-size: 32px; }
+  .table { column-gap: 8px; }
+  .seat { gap: 10px; }
+  .seat-left .who, .seat-right .who { gap: 6px; }
+  .pname { font-size: 11px; line-height: 14px; }
+  .seat-left .pname, .seat-right .pname { font-size: 10px; text-align: center; }
+  .seat-left .pname .pts, .seat-right .pname .pts { display: block; margin: 0; }
+  .plate { font-size: 12px; }
+  .center { gap: 16px; }
+  .seat-top .line { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .felt { padding: 12px; gap: 14px; border-radius: 18px; }
+  .discards { gap: 3px 2px; }
+  .discards.grouped { gap: 9px 7px; }
+  .dcount { top: -5px; right: -6px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; font-size: 9px; line-height: 14px; box-shadow: 0 0 0 1.5px #fff; }
+  .bar .btn { padding: 10px 14px; font-size: 14px; line-height: 18px; }
 }
 
-/* You */
-.me { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 16px; }
-/* tall enough for the prompt line plus a row of buttons, so the hand never jumps when they appear */
-.bar { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; justify-content: center; gap: 8px; min-height: 84px; text-align: center; }
-.bar .say { width: 100%; font-size: 14px; line-height: 20px; color: var(--muted); font-weight: 500; }
+/* You: flowers / called sets, 24px, your hand, 24px, your label ("東 You"); 24px under the white box */
+.me { display: flex; flex-direction: column; align-items: center; }
+.center > .me { margin-top: -24px; }  /* the column gap is 48; you sit 24 under the box */
+.me .exposed:empty { display: none; }
+/* at least 24px between your called tiles / flowers (incl. their 3D edge) and your hand: 6px + the hand's 18px lift room */
+.me .exposed { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 6px; }
+.me .exposed .tile { --w: var(--mid); }
+.me:has(.exposed:empty) .hand { margin-top: -18px; }  /* no flowers: the hand itself sits 24px under the box */
+.me .me-plate { margin-top: calc(24px - (var(--lg) * .08 + 1px)); }
+/* The latest move, fixed height. Default: stacked and centered (prompt, 16px, the tile(s) in play, 24px, the
+   button). Compact (only when the default would push your hand below the fold): one row, prompt and tile(s)
+   on the left, the button on the right. */
+.bar {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  height: calc(20px + 16px + var(--lg) * 1.333 + 24px + 48px);
+}
+.act-left { display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 0; max-width: 100%; }
+.act-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+/* when there's only a sentence (no tile in play, no button), the empty slots collapse so it sits centered */
+.bar .inplay:empty, .act-right:empty { display: none; }
+.bar .say { font-size: 16px; line-height: 20px; color: #6c6c6c; font-weight: 500; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.bar.compact { flex-direction: row; justify-content: space-between; height: calc(20px + 16px + var(--lg) * 1.333); }
+.bar.compact .act-left { align-items: flex-start; }
+.bar.compact .say { text-align: left; }
+/* player and tile names: dark, same weight as the sentence (per the white-box style guide) */
+.bar .say b { color: var(--text); font-weight: 500; }
 .bar .say .tile { --w: 18px; vertical-align: -6px; margin: 0 2px; }
-.bar .say b { color: var(--text); font-weight: 600; }
+.bar .say.nudge { color: var(--red); white-space: normal; animation: rise .35s var(--spring); }
+.bar .inplay { display: flex; gap: 3px; height: calc(var(--lg) * 1.333); }
+.inplay-pick { display: inline-flex; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 9px; }
+.inplay-pick:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+.bar .inplay .tile { --w: var(--lg); margin-bottom: 0; }
+.bar .inplay .tile.arrive { animation: drop .35s var(--spring); }
+@media (max-width: 760px) {
+  .bar { height: auto; min-height: calc(20px + 10px + var(--lg) * 1.333 + 10px + 40px); gap: 10px; }
+  .bar.compact { height: auto; min-height: calc(20px + 10px + var(--lg) * 1.333); }
+  .act-left { gap: 10px; }
+  .bar .say { white-space: normal; font-size: 13px; line-height: 18px; }
+}
 .me-row { display: flex; align-items: flex-end; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .hand { display: flex; align-items: flex-end; justify-content: center; gap: 3px; min-height: calc(var(--lg) * 1.333 + 20px); padding-top: 18px; }
 .hand .tile { --w: var(--lg); cursor: default; transition: transform .25s var(--spring), box-shadow .2s ease; }
 .hand.live .tile { cursor: pointer; }
 @media (hover: hover) { .hand.live .tile:hover { transform: translateY(-6px); } }
 .hand .tile.sel, .hand.live .tile.sel:hover { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
-.hand .tile.drawn { margin-left: calc(var(--lg) * .35); }
 .hand .tile.new { animation: rise .45s var(--spring); }
+.hand .tile.picked { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
+/* Autosort off: drag tiles sideways to arrange them */
+.hand.manual .tile { cursor: grab; touch-action: pan-y; }
+.hand.is-dragging .tile { transition: transform .2s var(--ease); }
+.hand .tile.dragging { z-index: 2; cursor: grabbing; transition: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .22); }
 @keyframes rise { from { transform: translateY(-24px); opacity: 0; } }
 @media (max-width: 600px) {
-  :root { --lg: calc((100vw - 36px) / 14.6); }
+  /* your hand fits the middle column (between the side players' 16px columns) and stays the largest */
+  :root { --lg: calc((100vw - 104px) / 14.4); }
   .hand { gap: 1px; }
-  .me { gap: 10px; margin-top: 20px; }
+  .center > .me { margin-top: 0; }
 }
 
 /* Coach chathead */
