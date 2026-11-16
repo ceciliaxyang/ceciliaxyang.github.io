@@ -32,11 +32,14 @@
       <section class="seat seat-right" data-p="1"></section>
     </main>
 
+    <!-- phones: your part of the game (latest move + your tiles) lives in this bottom sheet -->
+    <div class="sheet" id="sheet" aria-label="Your move and your hand"><button type="button" class="sheet-grab" id="sheetGrab" aria-label="Collapse your hand" aria-expanded="true"></button><hr class="sheet-div"></div>
+
     <!-- floating actions, bottom left -->
     <div class="fab">
-      <button type="button" class="fab-btn dark" id="newBtn">New game</button>
+      <button type="button" class="fab-btn light" id="newBtn">New game</button>
       <div class="settings-wrap">
-        <button type="button" class="fab-btn light" id="settingsBtn" aria-haspopup="true" aria-expanded="false" aria-controls="settings">Settings</button>
+        <button type="button" class="fab-btn light icon" id="settingsBtn" aria-label="Settings" aria-haspopup="true" aria-expanded="false" aria-controls="settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
             <div class="settings" id="settings" role="group" aria-label="Settings" hidden>
               <div class="set-row set-static">
                 <span class="set-text"><b>Difficulty</b><small>How well the other players play</small></span>
@@ -66,19 +69,7 @@
     </div>
   </div>
 
-  <button type="button" class="coach" id="coach" aria-label="Open coach">
-    <svg class="coach-face" viewBox="0 0 64 64" aria-hidden="true">
-      <rect x="14" y="8" width="36" height="48" rx="8" fill="#fbf9f4"/>
-      <rect x="14" y="50" width="36" height="6" rx="3" fill="#ddd4c3"/>
-      <circle cx="25" cy="28" r="3" fill="#222"/>
-      <circle cx="39" cy="28" r="3" fill="#222"/>
-      <circle cx="21" cy="36" r="3" fill="#c8302c" opacity=".35"/>
-      <circle cx="43" cy="36" r="3" fill="#c8302c" opacity=".35"/>
-      <path d="M26 37 Q32 42 38 37" fill="none" stroke="#222" stroke-width="2.4" stroke-linecap="round"/>
-      <text x="32" y="20" text-anchor="middle" font-size="9" font-weight="700" fill="#c8302c" font-family="'Songti SC',serif">師</text>
-    </svg>
-    <span class="coach-badge" id="coachBadge" hidden></span>
-  </button>
+  <button type="button" class="coach fab-btn dark" id="coach" aria-label="Open coach">Coach me<span class="coach-badge" id="coachBadge" hidden></span></button>
   <button type="button" class="bubble" id="bubble" hidden></button>
 
   <aside class="pane" id="pane" aria-label="Coach" aria-hidden="true">

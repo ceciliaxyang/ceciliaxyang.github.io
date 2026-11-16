@@ -208,9 +208,53 @@ function takeBack(id) {
 
 // Default: the latest move stacked and centered. If that would push your "You" label below the bottom of the
 // window, use the compact one-row version instead (72px shorter). Checked after every render and on resize.
+const PHONE = window.matchMedia("(max-width: 600px)");
+let sheetMinH = 0;
+// a new screen size starts the steady height over
+window.addEventListener("resize", () => { sheetMinH = 0; $("sheet").style.minHeight = ""; if (PHONE.matches) placeSheet(); });
+function placeSheet() {
+  const sheet = $("sheet"), bar = $("bar"), me = $("me"), plate = $("mePlate"), felt = document.querySelector(".felt"), center = document.querySelector(".center");
+  if (PHONE.matches) {
+    if (bar.parentElement !== sheet) { sheet.prepend(bar); sheet.append(me); }
+    if (plate.parentElement !== sheet) sheet.prepend(plate);  // "You" label sits at the top of the sheet
+    // Steady height: the sheet never shrinks back between turns. If a turn needs more room (a longer
+    // prompt, extra called sets) it grows once and stays at that height, so the floating buttons don't bob.
+    if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
+    // keep the page scrollable past the sheet so nothing above it is hidden for good
+    document.documentElement.style.setProperty("--sheet-h", sheet.classList.contains("collapsed") ? "calc(28px + env(safe-area-inset-bottom))" : `${sheet.offsetHeight}px`);
+  } else if (bar.parentElement === sheet) {
+    felt.append(bar);
+    center.append(me);
+    me.append(plate);
+  }
+}
+PHONE.addEventListener("change", () => render());
+
+/* Bottom sheet grabber: tap to collapse/expand, or drag it down/up. */
+function setSheet(collapsed) {
+  const sheet = $("sheet");
+  sheet.classList.toggle("collapsed", collapsed);
+  $("sheetGrab").setAttribute("aria-expanded", String(!collapsed));
+  $("sheetGrab").setAttribute("aria-label", collapsed ? "Show your hand" : "Collapse your hand");
+  placeSheet();
+}
+{
+  const grab = $("sheetGrab");
+  let y0 = null, moved = false;
+  grab.addEventListener("pointerdown", (e) => { y0 = e.clientY; moved = false; grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener("pointermove", (e) => {
+    if (y0 === null) return;
+    const dy = e.clientY - y0;
+    if (Math.abs(dy) > 24) { moved = true; setSheet(dy > 0); y0 = null; }
+  });
+  grab.addEventListener("pointerup", () => { y0 = null; });
+  grab.addEventListener("click", () => { if (!moved) setSheet(!$("sheet").classList.contains("collapsed")); moved = false; });
+}
+
 function fitLayout() {
   const bar = $("bar"), you = $("mePlate");
   if (!bar || !you) return;
+  if (PHONE.matches) { bar.classList.remove("compact"); return; }  // phones: always stacked, in the sheet
   bar.classList.remove("compact");  // measure with the default (stacked) layout
   const fits = you.getBoundingClientRect().bottom + window.scrollY + 24 <= window.innerHeight;
   bar.classList.toggle("compact", !fits);
@@ -227,6 +271,7 @@ function render() {
   renderCoach();
   renderPane();
   renderModal();
+  placeSheet();
   fitLayout();
 }
 
@@ -414,7 +459,7 @@ function renderBar() {
     const k = kindOf(ld.id);
     const who = state.players[ld.from].name;
     const o = state.claim.options[0];
-    say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.${ld.robbing ? "" : " Continue or add tiles to call it."}`;
+    say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.${ld.robbing ? "" : `<span class="say-more"> Continue or add tiles to call it.</span>`}`;
     // the set you're forming: the discard plus every tile you've lifted, in order (tap one of yours to drop it)
     const set = [{ k, id: null }, ...callPick.map((id) => ({ k: kindOf(id), id }))].sort((a, b) => a.k - b.k || (a.id === null ? -1 : 1));
     play = set.map((t) => t.id === null
