@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mahjong Coach</title>
+<meta name="description" content="Hong Kong style mahjong against three bots, with a coach that explains when there was a better move.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 80'%3E%3Crect x='2' y='2' width='56' height='76' rx='9' fill='%23fbf9f4' stroke='%23222' stroke-width='3'/%3E%3Ctext x='30' y='57' text-anchor='middle' font-size='46' font-weight='700' fill='%23c8302c' font-family='serif'%3E%E4%B8%AD%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="head">
+      <div class="head-top">
+        <h1 class="title">Mahjong Coach</h1>
+        <div class="head-actions">
+          <button type="button" class="scope" id="guideBtn">Fan guide</button>
+          <button type="button" class="scope" id="newBtn">New game</button>
+        </div>
+      </div>
+      <div class="scopes" id="status" aria-live="polite"></div>
+    </header>
+
+    <main class="table" id="table" aria-label="Mahjong table">
+      <section class="seat seat-top" data-p="2"></section>
+      <section class="seat seat-left" data-p="3"></section>
+      <div class="center">
+        <div class="pool pool-top" data-p="2"></div>
+        <div class="pool pool-left" data-p="3"></div>
+        <div class="compass" id="compass"></div>
+        <div class="pool pool-right" data-p="1"></div>
+        <div class="pool pool-bottom" data-p="0"></div>
+      </div>
+      <section class="seat seat-right" data-p="1"></section>
+    </main>
+
+    <section class="me" id="me" aria-label="Your hand">
+      <div class="bar" id="bar"></div>
+      <div class="me-row">
+        <div class="me-plate" id="mePlate"></div>
+        <div class="exposed" id="meExposed"></div>
+      </div>
+      <div class="hand" id="hand"></div>
+    </section>
+  </div>
+
+  <button type="button" class="coach" id="coach" aria-label="Open coach">
+    <svg class="coach-face" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="14" y="8" width="36" height="48" rx="8" fill="#fbf9f4"/>
+      <rect x="14" y="50" width="36" height="6" rx="3" fill="#ddd4c3"/>
+      <circle cx="25" cy="28" r="3" fill="#222"/>
+      <circle cx="39" cy="28" r="3" fill="#222"/>
+      <circle cx="21" cy="36" r="3" fill="#c8302c" opacity=".35"/>
+      <circle cx="43" cy="36" r="3" fill="#c8302c" opacity=".35"/>
+      <path d="M26 37 Q32 42 38 37" fill="none" stroke="#222" stroke-width="2.4" stroke-linecap="round"/>
+      <text x="32" y="20" text-anchor="middle" font-size="9" font-weight="700" fill="#c8302c" font-family="'Songti SC',serif">師</text>
+    </svg>
+    <span class="coach-badge" id="coachBadge" hidden></span>
+  </button>
+  <button type="button" class="bubble" id="bubble" hidden></button>
+
+  <aside class="pane" id="pane" aria-label="Coach" aria-hidden="true">
+    <div class="pane-head">
+      <button type="button" class="icon-btn" id="paneBack" aria-label="All notes" hidden>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h2 class="pane-title">Coach</h2>
+      <button type="button" class="icon-btn" id="paneClose" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M1.5 1.5L16.5 16.5M16.5 1.5L1.5 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="pane-body" id="paneBody"></div>
+  </aside>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card" id="modalCard" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <script type="module" src="js/ui.js"></script>
+</body>
+</html>

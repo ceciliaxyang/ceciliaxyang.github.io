@@ -1,0 +1,113 @@
+// Tile names and the SVG faces drawn on each tile (traditional Chinese tile art, simplified).
+import { suitOf, numOf } from "./engine.js";
+
+const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
+const WINDS = ["東", "南", "西", "北"];
+const WIND_EN = ["East", "South", "West", "North"];
+const DRAGON_EN = ["Red", "Green", "White"];
+const BONUS = ["梅", "蘭", "菊", "竹", "春", "夏", "秋", "冬"];
+const BONUS_EN = ["Plum", "Orchid", "Chrysanthemum", "Bamboo", "Spring", "Summer", "Autumn", "Winter"];
+const SUIT_EN = ["Characters", "Dots", "Bamboo"];
+
+const RED = "#c8302c";
+const GREEN = "#23774a";
+const BLUE = "#1f4e9c";
+const INK = "#1d2433";
+const FACE = "#fbf9f4";
+const SERIF = `'Songti SC','STSong','Noto Serif SC','Source Han Serif SC','SimSun',serif`;
+
+export function tileName(k) {
+  if (k < 27) return `${numOf(k)} ${SUIT_EN[suitOf(k)]}`;
+  if (k < 31) return `${WIND_EN[k - 27]} wind`;
+  if (k < 34) return `${DRAGON_EN[k - 31]} dragon`;
+  return `${BONUS_EN[k - 34]} (${k < 38 ? "flower" : "season"} ${((k - 34) % 4) + 1})`;
+}
+
+/* Short label like "5 Dots" → used inside sentences. */
+export const shortName = tileName;
+
+function dot(x, y, r, color) {
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}"/><circle cx="${x}" cy="${y}" r="${r * 0.66}" fill="${FACE}"/><circle cx="${x}" cy="${y}" r="${r * 0.42}" fill="${color}"/><circle cx="${x}" cy="${y}" r="${r * 0.14}" fill="${FACE}"/>`;
+}
+
+const DOTS = {
+  1: () => `<circle cx="30" cy="40" r="19" fill="none" stroke="${GREEN}" stroke-width="2.5"/>` + dot(30, 40, 15, RED),
+  2: () => dot(30, 22, 11, GREEN) + dot(30, 58, 11, BLUE),
+  3: () => dot(15, 17, 9, BLUE) + dot(30, 40, 9, RED) + dot(45, 63, 9, GREEN),
+  4: () => dot(18, 22, 10, BLUE) + dot(42, 22, 10, GREEN) + dot(18, 58, 10, GREEN) + dot(42, 58, 10, BLUE),
+  5: () => dot(16, 18, 9, BLUE) + dot(44, 18, 9, GREEN) + dot(30, 40, 9, RED) + dot(16, 62, 9, GREEN) + dot(44, 62, 9, BLUE),
+  6: () => [[18, 15], [42, 15]].map(([x, y]) => dot(x, y, 8.5, GREEN)).join("") +
+    [[18, 44], [42, 44], [18, 66], [42, 66]].map(([x, y]) => dot(x, y, 8.5, RED)).join(""),
+  7: () => [[13, 12], [30, 20], [47, 28]].map(([x, y]) => dot(x, y, 7, GREEN)).join("") +
+    [[18, 48], [42, 48], [18, 68], [42, 68]].map(([x, y]) => dot(x, y, 8, RED)).join(""),
+  8: () => [13, 31, 49, 67].flatMap((y) => [dot(18, y, 8, BLUE), dot(42, y, 8, BLUE)]).join(""),
+  9: () => [[16, BLUE], [40, RED], [64, GREEN]].flatMap(([y, col]) => [14, 30, 46].map((x) => dot(x, y, 7.5, col))).join(""),
+};
+
+function stick(x, y, h, color) {
+  const w = 7;
+  return `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="3.5" fill="${color}"/>` +
+    `<rect x="${x - w / 2 - 1}" y="${y - 1.2}" width="${w + 2}" height="2.4" rx="1.2" fill="${color}"/>` +
+    `<rect x="${x - w / 2 - 1}" y="${y - h / 2}" width="${w + 2}" height="2.4" rx="1.2" fill="${color}"/>` +
+    `<rect x="${x - w / 2 - 1}" y="${y + h / 2 - 2.4}" width="${w + 2}" height="2.4" rx="1.2" fill="${color}"/>` +
+    `<line x1="${x}" y1="${y - h / 2 + 3}" x2="${x}" y2="${y + h / 2 - 3}" stroke="${FACE}" stroke-width="1" opacity=".55"/>`;
+}
+
+const BAMBOO = {
+  1: () => // the traditional "bird" one-bamboo, stylised
+    `<path d="M22 60 C 8 66, 10 76, 20 72 C 14 78, 26 80, 28 70" fill="${GREEN}"/>` +
+    `<ellipse cx="31" cy="48" rx="12" ry="16" fill="${GREEN}"/>` +
+    `<path d="M24 44 C 30 38, 40 42, 40 52 C 36 48, 30 48, 24 44 Z" fill="${BLUE}"/>` +
+    `<circle cx="34" cy="25" r="8" fill="${RED}"/><circle cx="36" cy="23" r="1.8" fill="${FACE}"/>` +
+    `<path d="M41 25 L 49 22 L 42 29 Z" fill="${INK}"/>` +
+    `<path d="M27 64 L 25 72 M 35 64 L 37 72" stroke="${RED}" stroke-width="2" stroke-linecap="round"/>`,
+  2: () => stick(30, 22, 26, GREEN) + stick(30, 58, 26, BLUE),
+  3: () => stick(30, 22, 26, BLUE) + stick(18, 58, 26, GREEN) + stick(42, 58, 26, GREEN),
+  4: () => stick(19, 22, 26, BLUE) + stick(41, 22, 26, GREEN) + stick(19, 58, 26, GREEN) + stick(41, 58, 26, BLUE),
+  5: () => stick(14, 22, 26, GREEN) + stick(46, 22, 26, BLUE) + stick(30, 40, 26, RED) + stick(14, 58, 26, BLUE) + stick(46, 58, 26, GREEN),
+  6: () => [14, 30, 46].map((x) => stick(x, 22, 26, GREEN)).join("") + [14, 30, 46].map((x) => stick(x, 58, 26, BLUE)).join(""),
+  7: () => stick(30, 14, 20, RED) + [14, 30, 46].map((x) => stick(x, 40, 20, GREEN)).join("") + [14, 30, 46].map((x) => stick(x, 65, 20, GREEN)).join(""),
+  8: () => [12, 24, 36, 48].map((x) => stick(x, 22, 26, GREEN)).join("") + [12, 24, 36, 48].map((x) => stick(x, 58, 26, BLUE)).join(""),
+  9: () => [14, 40, 66].flatMap((y) => [stick(14, y, 20, GREEN), stick(30, y, 20, RED), stick(46, y, 20, BLUE)]).join(""),
+};
+
+function text(ch, y, size, color, weight = 700) {
+  return `<text x="30" y="${y}" text-anchor="middle" font-family="${SERIF}" font-size="${size}" font-weight="${weight}" fill="${color}">${ch}</text>`;
+}
+
+export function faceSvg(k) {
+  let body;
+  if (k < 9) body = text(NUMERALS[k], 34, 27, INK) + text("萬", 70, 30, RED);
+  else if (k < 18) body = DOTS[numOf(k)]();
+  else if (k < 27) body = BAMBOO[numOf(k)]();
+  else if (k < 31) body = text(WINDS[k - 27], 56, 44, INK);
+  else if (k === 31) body = text("中", 57, 46, RED);
+  else if (k === 32) body = text("發", 57, 44, GREEN);
+  else if (k === 33)
+    body = `<rect x="12" y="13" width="36" height="54" rx="4" fill="none" stroke="${BLUE}" stroke-width="3.5"/><rect x="18" y="19" width="24" height="42" rx="2" fill="none" stroke="${BLUE}" stroke-width="1.2"/>`;
+  else {
+    const i = k - 34;
+    const col = [RED, BLUE, "#c77a12", GREEN, GREEN, RED, "#c77a12", BLUE][i];
+    body = `<text x="9" y="17" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="600" fill="${col}">${(i % 4) + 1}</text>` +
+      text(BONUS[i], 56, 38, col);
+  }
+  return `<svg viewBox="0 0 60 80" aria-hidden="true">${body}</svg>`;
+}
+
+/* A tile as an HTML string. size: "lg" (your hand), "md", "sm", "xs". */
+export function tileHtml(k, { size = "md", id = null, cls = "", button = false, title = true } = {}) {
+  const tag = button ? "button" : "span";
+  const attrs = [
+    `class="tile ${size} ${cls}"`,
+    id !== null ? `data-id="${id}"` : "",
+    title ? `title="${tileName(k)}" aria-label="${tileName(k)}"` : "",
+    button ? `type="button"` : `role="img"`,
+  ].join(" ");
+  return `<${tag} ${attrs}>${faceSvg(k)}</${tag}>`;
+}
+
+export function backHtml(size = "sm", cls = "") {
+  return `<span class="tile back ${size} ${cls}" aria-hidden="true"></span>`;
+}
+
+export { WIND_EN, WINDS };
