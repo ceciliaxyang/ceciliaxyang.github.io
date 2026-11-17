@@ -7,13 +7,13 @@ const WIND_EN = ["East", "South", "West", "North"];
 const DRAGON_EN = ["Red", "Green", "White"];
 const BONUS = ["梅", "蘭", "菊", "竹", "春", "夏", "秋", "冬"];
 const BONUS_EN = ["Plum", "Orchid", "Chrysanthemum", "Bamboo", "Spring", "Summer", "Autumn", "Winter"];
-const SUIT_EN = ["Characters", "Circles", "Bamboo"];
+const SUIT_EN = ["Character", "Circles", "Bamboo"];  // "4 Character", "4 Circles", "4 Bamboo"
 
-const RED = "#c8302c";
-const GREEN = "#23774a";
-const BLUE = "#1f4e9c";
-const INK = "#1d2433";
-const FACE = "#fbf9f4";
+const RED = "#c8141c";   // Porcelain white palette: classic Hong Kong inks on white
+const GREEN = "#00803d";
+const BLUE = "#0b3fa8";
+const INK = "#111111";
+const FACE = "#ffffff";
 // Kaiti (brush style): Apple's Kaiti TC/SC first, then the Kai fonts Windows and Android ship, then any serif.
 const SERIF = `'Kaiti TC','Kaiti SC','STKaiti','BiauKai','DFKai-SB','KaiTi','TW-Kai','AR PL UKai TW',serif`;
 
@@ -106,7 +106,7 @@ export function faceSvg(k) {
   if (k < 9)
     body += `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${numOf(k)}</text>`;
   else if (k < 27)
-    body = `<g transform="translate(4.8 10) scale(.84)">${body}</g>` + `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="#fbf9f4" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
+    body = `<g transform="translate(4.8 10) scale(.84)">${body}</g>` + `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="${FACE}" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
   return `<svg viewBox="0 0 60 80" aria-hidden="true">${body}</svg>`;
 }
 

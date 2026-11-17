@@ -16,9 +16,9 @@
   --pill: #f2f2f2;
   --pill-hover: #e8e8e8;
   --red: #c8302c;
-  --face: #fbf9f4;
-  --edge: #ddd4c3;
-  --back: #3f6f60;
+  --face: #f7f7f5;   /* Porcelain white: white faces fading to the faintest grey */
+  --edge: #dcdcd6;   /* cool grey 3D edge (with a #c2c2ba rim) */
+  --back: #0e6a4e;   /* dark green backs (#138060 highlight, #08493a edge) */
   --spring: cubic-bezier(.34, 1.56, .64, 1);
   --ease: cubic-bezier(.2, .8, .2, 1);
   /* tile widths */
@@ -157,8 +157,8 @@ span.scope { cursor: default; }
 .tile {
   --w: var(--md);
   position: relative; display: inline-block; flex-shrink: 0; width: var(--w); height: calc(var(--w) * var(--tile-r));
-  padding: 0; border: 0; border-radius: calc(var(--w) * .16); background: linear-gradient(#fffefb, var(--face));
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c7bca8, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+  padding: 0; border: 0; border-radius: calc(var(--w) * .16); background: linear-gradient(#ffffff, var(--face));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c2c2ba, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
   margin-bottom: calc(var(--w) * var(--depth) + 1px); vertical-align: top;
 }
 .tile svg { display: block; width: 100%; height: 100%; padding: 8% 6%; }
@@ -167,8 +167,8 @@ span.scope { cursor: default; }
 .tile.sm { --w: var(--sm); }
 .tile.xs { --w: var(--xs); }
 /* face-down: the same 3D depth as a face-up tile (edge + 1px rim + shadow), just in the green back colours */
-.tile.back { background: linear-gradient(#4a7d6d, var(--back)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 #2f5348, 0 calc(var(--w) * var(--depth) + 1px) 0 #24423a, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
-.tile.face-down { background: linear-gradient(#4a7d6d, var(--back)); }
+.tile.back { background: linear-gradient(#138060, var(--back)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 #08493a, 0 calc(var(--w) * var(--depth) + 1px) 0 #053628, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
+.tile.face-down { background: linear-gradient(#138060, var(--back)); }
 .tile.face-down svg { visibility: hidden; }
 
 /* Table: the side players' columns on the left and right; the middle column holds the player opposite,
@@ -186,7 +186,9 @@ span.scope { cursor: default; }
 /* your hand spans the white box edge to edge: 14 tiles and 13 3px gaps across the middle column;
    the tile in play in the white box is the same size (phones are different: the box moves into the sheet) */
 .center .hand, .center .bar { --lg: min(56px, calc((100cqw - 13 * var(--tgap)) / 14)); }  /* capped at 56px wide so the centred box fits most laptop screens */
-.center .hand.spread { align-self: stretch; justify-content: space-between; }
+/* a full hand stretches toward the box edges, but never more than 12px between tiles (it stays centred) */
+.center .hand.spread { align-self: center; width: 100%; justify-content: space-between;
+  max-width: calc(var(--n, 14) * var(--lg) + (var(--n, 14) - 1) * 12px); }
 /* labels: the seat wind in a grey circle (red while it's that player's move) and the name; the player
    opposite has the name beside the circle, the side players under it, you beside it */
 .who { display: flex; align-items: center; gap: 12px; }
@@ -245,7 +247,6 @@ span.scope { cursor: default; }
   min-height: calc(var(--dw) * (var(--tile-r) + var(--depth)) + 1px);
 }
 .discards .tile { --w: var(--dw); }
-.discards .tile.fresh { animation: drop .35s var(--spring); }
 /* Autosort on: one tile per kind with a count badge */
 
 .dstack { position: relative; display: inline-flex; }
@@ -276,7 +277,7 @@ span.scope { cursor: default; }
   .seat { gap: 10px; }
   .seat-left .who, .seat-right .who { gap: 6px; }
   .pname { font-size: 11px; line-height: 14px; }
-  .seat-left .pname, .seat-right .pname { font-size: 10px; text-align: center; }
+  .seat-left .pname, .seat-right .pname { text-align: center; }  /* same 11px as the player opposite */
   .seat-left .pname .pts, .seat-right .pname .pts { display: block; margin: 0; }
   .plate { font-size: 12px; }
   .center { gap: 16px; }
@@ -367,14 +368,21 @@ span.scope { cursor: default; }
 /* Coach chathead */
 /* Coach: for now just a floating button like New game / Settings, bottom right, with a badge for new notes */
 .coach { position: fixed; right: max(26px, env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 30; }
-.coach.fab-btn { background: #000; color: #fff; }
+.coach.fab-btn { background: #000; color: #fff; display: inline-flex; align-items: center; gap: 10px; padding: 0 22px 0 6px; }
+/* Guanyin in a round avatar at the start of the pill; with a new note she flips to the red seal */
+.coach-av { position: relative; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; perspective: 120px; }
+.coach-av svg { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; transition: transform .5s var(--spring); }
+.coach-av-seal { transform: rotateY(180deg); }
+.coach.has-note .coach-av-day { transform: rotateY(-180deg); }
+.coach.has-note .coach-av-seal { transform: none; }
 .coach.fab-btn:hover { background: #222; }
-.coach.alert { animation: nudge 1.6s var(--ease) 2; }
-.coach.alert::after {
-  content: ""; position: absolute; inset: -4px; border-radius: 100px; border: 2px solid var(--red); opacity: 0; animation: ring 1.6s ease-out 3;
+/* a new note: a gentle pulse (a slow swell and a soft red glow), no shake */
+.coach.alert { animation: pulse 1.8s ease-in-out 3; }
+@keyframes pulse {
+  0%, 100% { transform: none; box-shadow: 0 0 0 0 rgba(184, 50, 44, 0); }
+  50% { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(184, 50, 44, .22); }
 }
-@keyframes ring { 0% { transform: scale(.9); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
-@keyframes nudge { 0%, 100% { transform: none; } 10% { transform: rotate(-10deg) scale(1.08); } 20% { transform: rotate(8deg) scale(1.08); } 30% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .coach.alert { animation: none; } }
 .coach-badge {
   position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--red); color: #fff;
   font-size: 12px; line-height: 22px; font-weight: 600; box-shadow: 0 0 0 2px #fff;
@@ -447,6 +455,8 @@ span.scope { cursor: default; }
   .pane-body { padding: 4px 24px calc(32px + env(safe-area-inset-bottom)); }
   .pane-body h3 { font-size: 24px; line-height: 28px; }
   .coach { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .coach.fab-btn { padding: 0 16px 0 4px; gap: 8px; }
+  .coach-av { width: 32px; height: 32px; }
   .bubble { right: 12px; bottom: calc(12px + 40px + 10px + env(safe-area-inset-bottom)); }
 }
 
@@ -545,7 +555,7 @@ span.scope { cursor: default; }
   .page { padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(var(--sheet-h, 446px) + 17px + 40px + 16px); }
   .seat { gap: 16px; }
   .seat-top { gap: 14px; }
-  .seat-left .who, .seat-right .who { gap: 0; }
+  .seat-left .who, .seat-right .who { gap: 2px; }  /* same circle-to-name gap as the player opposite */
   .seat-top .who { flex-direction: column; gap: 2px; }
   /* collapsed: the grabber plus your wind and "You" label stay visible (36 + 32 + 16) */
   .sheet { --sheet-peek: calc(84px + env(safe-area-inset-bottom)); min-height: min(452px, 58vh); justify-content: space-between;

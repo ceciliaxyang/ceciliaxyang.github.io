@@ -4,6 +4,7 @@ import * as G from "./game.js";
 import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
 import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
+import { coachAvatarHtml } from "./coach-art.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
 
 // ?autoplay and ?sandbox are for testing: they save to their own slot so your real game is untouched.
@@ -163,7 +164,7 @@ function callPicked() {
     if (ks.length === 2 && !isSuited(k)) return say(`Winds and dragons can't make a run. Pick two ${tx(k)} for a peng.`);
     return say(`Those don't make a set with ${tx(k)}. A peng is two more ${tx(k)}${isSuited(k) ? `; a chow is two tiles that run with it, like ${runExample(k)}` : ""}.`);
   }
-  if (ld.from !== 3) return say(`That's a chow, and you can only chow the player right before you (${state.players[3].name}). From ${state.players[ld.from].name} you can only peng, kong or win.`);
+  if (ld.from !== 3) return say(`That's a chow, and you can only chow the player right before you (${state.players[3].name}). From ${state.players[ld.from].name} you can only peng (three of a kind), kong (four of a kind) or win.`);
   return claim({ type: "chow", chow: ks });
 }
 function mahjongOnDiscard() {
@@ -266,6 +267,9 @@ function fitLayout() {
 window.addEventListener("resize", () => fitLayout());
 
 function render() {
+  // where the tile(s) in the white box sit right now: a discard that leaves the box flies from there
+  const boxRects = new Map([...document.querySelectorAll("#bar [data-fly-id]")].map((e) => [+e.dataset.flyId, e.getBoundingClientRect()]));
+  freshDiscards = [];
   renderStatus();
   renderSettings();
   for (const p of [1, 2, 3]) renderSeat(p);
@@ -277,6 +281,41 @@ function render() {
   renderModal();
   placeSheet();
   fitLayout();
+  flyDiscards(boxRects);
+}
+
+/* A new discard flies into the discard pile: from the white box if it was showing there (your discard, or one
+   you just passed on), otherwise from the player who threw it. The tile in the pile stays hidden until it lands. */
+let freshDiscards = [];  // [{ id, from }] added to the pile in this render
+function flyDiscards(boxRects) {
+  if (!freshDiscards.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (const { id, from } of freshDiscards) {
+    const target = document.querySelector(`#discards [data-tile-id~="${id}"] .tile, #discards .tile[data-tile-id="${id}"]`);
+    if (!target) continue;
+    const to = target.getBoundingClientRect();
+    let src = boxRects.get(id);
+    if (!src || !src.width) {
+      const seat = from === 0 ? $("hand") : document.querySelector(`.seat[data-p="${from}"] .line`) || document.querySelector(`.seat[data-p="${from}"]`);
+      if (!seat) continue;
+      const r = seat.getBoundingClientRect();
+      if (!r.width) continue;
+      src = { left: r.left + r.width / 2 - to.width / 2, top: r.top + r.height / 2 - to.height / 2, width: to.width, height: to.height };
+    }
+    const ghost = target.cloneNode(true);
+    ghost.classList.remove("fresh", "last");
+    Object.assign(ghost.style, { position: "fixed", left: `${to.left}px`, top: `${to.top}px`, margin: "0", zIndex: 40, pointerEvents: "none" });
+    ghost.style.setProperty("--w", `${to.width}px`);  // keep the pile's tile size outside the pile
+    document.body.appendChild(ghost);
+    target.style.visibility = "hidden";
+    const dx = src.left - to.left, dy = src.top - to.top, sc = src.width / to.width;
+    ghost.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, transformOrigin: "top left" },
+      { transform: "none", transformOrigin: "top left" },
+    ], { duration: 480, easing: "cubic-bezier(.2, .8, .2, 1)" }).finished.then(() => {
+      ghost.remove();
+      target.style.visibility = "";
+    });
+  }
 }
 
 // Settings menu: each row is a switch bound to a saved preference
@@ -365,11 +404,13 @@ function renderPools() {
     state.players.forEach((pl) => pl.discards.forEach((d) => shownDiscards.add(d.id)));
   }
   const ld = state.lastDiscard;
-  const inPlay = state.phase === "claim" && ld && !ld.robbing ? ld.id : null;
+  // the discard stays in the white box only while you decide whether to call it; otherwise it goes straight to the pile
+  const inPlay = state.phase === "claim" && ld && !ld.robbing && G.claimPendingFor(state, 0) ? ld.id : null;
   const all = [];
   state.players.forEach((pl, p) => pl.discards.forEach((d, i) => {
-    if (!d.taken && d.id !== inPlay) all.push({ ...d, order: d.n ?? i * 4 + p });
+    if (!d.taken && d.id !== inPlay) all.push({ ...d, from: p, order: d.n ?? i * 4 + p });
   }));
+  for (const d of all) if (!shownDiscards.has(d.id)) freshDiscards.push({ id: d.id, from: d.from });
   all.sort((a, b) => a.order - b.order);
   const lastShown = all.length ? all[all.length - 1].id : null;
   $("discards").classList.toggle("grouped", prefs.autoSort);
@@ -381,7 +422,7 @@ function renderPools() {
     $("discards").innerHTML = wall + all.map((d) => {
       const fresh = !shownDiscards.has(d.id);
       shownDiscards.add(d.id);
-      return tileHtml(kindOf(d.id), { size: "lg", cls: `${d.id === lastShown ? "last" : ""} ${fresh ? "fresh" : ""}` });
+      return tileHtml(kindOf(d.id), { size: "lg", cls: `${d.id === lastShown ? "last" : ""}` }).replace('<span class="tile', `<span data-tile-id="${d.id}" class="tile`);
     }).join("");
     return;
   }
@@ -398,11 +439,11 @@ function renderPools() {
     const unseen = ids.filter((id) => !shownDiscards.has(id));
     ids.forEach((id) => shownDiscards.add(id));
     const isNewKind = unseen.length === ids.length;   // first of its kind: the tile drops in
-    const bumped = unseen.length && !isNewKind;        // another of a kind already out: the count pops
+    const bumped = unseen.length && !isNewKind;        // another of a kind already out: the count pops (as the tile lands)
     const n = ids.length;
-    const tile = tileHtml(k, { size: "lg", title: false, cls: `${ids.includes(lastShown) ? "last" : ""} ${isNewKind ? "fresh" : ""}` });
+    const tile = tileHtml(k, { size: "lg", title: false, cls: `${ids.includes(lastShown) ? "last" : ""}` });
     const label = `${tileName(k)}: ${n} discarded`;
-    return `<span class="dstack" title="${label}" role="img" aria-label="${label}">${tile}${n > 1 ? `<span class="dcount ${bumped ? "bump" : ""}">×${n}</span>` : ""}</span>`;
+    return `<span class="dstack" data-tile-id="${ids.join(" ")}" title="${label}" role="img" aria-label="${label}">${tile}${n > 1 ? `<span class="dcount ${bumped ? "bump" : ""}">×${n}</span>` : ""}</span>`;
   }).join("");
 }
 
@@ -442,6 +483,7 @@ function renderMe() {
   el.classList.toggle("manual", !prefs.autoSort);
   // a full hand (13 or 14 tiles) lines up with the white box's left and right edges
   el.classList.toggle("spread", ids.length >= 13);
+  el.style.setProperty("--n", ids.length);  // lets CSS cap the stretched gaps
   // not `disabled`: with Autosort off you can rearrange tiles while others play
   el.querySelectorAll(".tile").forEach((b) => { b.setAttribute("aria-disabled", String(!live && !picking)); b.setAttribute("aria-pressed", String(b.dataset.id == selected)); });
 }
@@ -449,9 +491,7 @@ function renderMe() {
 const seenInPlay = new Set();
 const arrive = (key) => { key = `${state.handNo}:${key}`; return seenInPlay.has(key) ? "" : (seenInPlay.add(key), "arrive"); };
 
-let barLast = null;  // the latest discard shown in the bar, kept up between turns
 function renderBar() {
-  if (state.phase === "over") barLast = null;  // a new hand starts with an empty bar
   const bar = $("bar");
   let say = "", play = "";
   const btns = [];
@@ -460,7 +500,7 @@ function renderBar() {
     if (selected !== null) {
       // the tile you picked shows in the tile-in-play spot, ready to go (tap it, or Discard)
       const k = kindOf(selected);
-      play = `<button type="button" class="inplay-pick" data-act="discard" aria-label="Discard ${tileName(k)}">${tileHtml(k, { size: "lg", title: false, cls: arrive(`s${selected}`) })}</button>`;
+      play = `<button type="button" class="inplay-pick" data-act="discard" aria-label="Discard ${tileName(k)}">${tileHtml(k, { size: "lg", title: false, cls: arrive(`s${selected}`) }).replace('<span class="tile', `<span data-fly-id="${selected}" class="tile`)}</button>`;
       btns.push(`<button type="button" class="btn" data-act="discard">Discard</button>`);
     }
     const o = G.actOptions(state, 0);
@@ -471,30 +511,29 @@ function renderBar() {
     const who = state.players[ld.from].name;
     const o = state.claim.options[0];
     say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.${ld.robbing ? "" : `<span class="say-more"> Continue or add tiles to call it.</span>`}`;
-    barLast = { k, say: `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.` };
     // the set you're forming: the discard plus every tile you've lifted, in order (tap one of yours to drop it)
     const set = [{ k, id: null }, ...callPick.map((id) => ({ k: kindOf(id), id }))].sort((a, b) => a.k - b.k || (a.id === null ? -1 : 1));
     play = set.map((t) => t.id === null
-      ? tileHtml(t.k, { size: "lg", cls: arrive(`d${ld.id}`) })
+      ? tileHtml(t.k, { size: "lg", cls: arrive(`d${ld.id}`) }).replace('<span class="tile', `<span data-fly-id="${ld.id}" class="tile`)
       : `<button type="button" class="inplay-pick" data-unpick="${t.id}" aria-label="Put back ${tileName(t.k)}">${tileHtml(t.k, { size: "lg", title: false, cls: `mine ${arrive(`m${ld.id}-${t.id}`)}` })}</button>`).join("");
     if (o.win) btns.push(`<button type="button" class="btn red" data-mahjong>Mahjong</button>`);
     // one button: Continue, which becomes Call once you've lifted tiles from your hand
-    btns.push(callPick.length
+    // after any call that doesn't work, Call becomes Undo: it puts the lifted tiles back in your hand
+    const undo = nudge && nudge.key === nudgeKey();
+    btns.push(undo && callPick.length
+      ? `<button type="button" class="btn" data-undo-call>Undo</button>`
+      : callPick.length
       ? `<button type="button" class="btn" data-call>Call</button>`
       : `<button type="button" class="btn" data-claim="pass">Continue</button>`);
-  } else if (state.phase === "claim") {
+  } else if (state.phase === "claim" && state.lastDiscard?.robbing) {
+    // someone adding to a kong can still be robbed: show it while the others decide
     const ld = state.lastDiscard;
-    // your own discard shows exactly like anyone else's: the prompt and the tile in play
     const k = kindOf(ld.id);
     const who = ld.from === 0 ? "You" : state.players[ld.from].name;
-    say = `<b>${who}</b> ${ld.robbing ? `${ld.from === 0 ? "are" : "is"} adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.`;
+    say = `<b>${who}</b> ${ld.from === 0 ? "are" : "is"} adding <b>${tileName(k)}</b> to a kong.`;
     play = tileHtml(k, { size: "lg", cls: arrive(`d${ld.id}`) });
-    barLast = { k, say };
-  } else if (state.phase !== "over" && barLast) {
-    // between turns: no "Player 1's turn" text; the last discard stays put (the thinking dots show whose turn it is)
-    say = barLast.say;
-    play = tileHtml(barLast.k, { size: "lg" });
   }
+  // a finished discard needs no words: it flies into the discard pile (see flyDiscards)
   const why = nudge && nudge.key === nudgeKey();
   bar.innerHTML = `<div class="act-left">
       <div class="say ${why ? "nudge" : ""}" ${why ? 'role="status"' : ""}>${why ? nudge.html : say}</div>
@@ -508,10 +547,12 @@ function renderBar() {
 function unread() { return notes.filter((n) => !n.read).length; }
 
 function renderCoach() {
-  const b = $("coachBadge");
+  const c = $("coach");
+  const av = $("coachAv");
+  if (av) av.outerHTML = coachAvatarHtml();  // first render: draw Guanyin into the pill
+  // a new note flips Guanyin to the red seal (instead of a number badge)
   const u = unread();
-  b.hidden = !u;
-  b.textContent = u;
+  c.classList.toggle("has-note", u > 0);
   $("coach").setAttribute("aria-label", u ? `Coach: ${u} new note${u > 1 ? "s" : ""}` : "Open coach");
 }
 
@@ -680,6 +721,7 @@ $("bar").addEventListener("click", (e) => {
   const un = e.target.closest("[data-unpick]");
   if (un) { callPick = callPick.filter((id) => id !== +un.dataset.unpick); nudge = null; return render(); }
   if (e.target.closest("[data-call]")) return callPicked();
+  if (e.target.closest("[data-undo-call]")) { callPick = []; nudge = null; return render(); }
   if (e.target.closest("[data-mahjong]")) return mahjongOnDiscard();
   if (e.target.closest("[data-claim=pass]")) return claim({ type: "pass" });
 });
