@@ -253,16 +253,14 @@ function setSheet(collapsed) {
 
 const DEPTH = 0.13;  // matches --depth in style.css: a tile's 3D edge as a share of its width
 function fitLayout() {
-  const bar = $("bar"), hand = $("hand"), you = $("mePlate");
-  if (!bar || !hand || !you) return;
+  const bar = $("bar"), hand = $("hand");
+  if (!bar || !hand) return;
   bar.classList.remove("compact");  // measure with the centred, stacked layout
   if (PHONE.matches) return;  // phones: always stacked, in the sheet
-  // "You" floats on the bottom row with the floating buttons; switch to the left/right row only when the
-  // stacked box would push your hand more than 30px behind that row
-  const BEHIND_OK = 30;
-  const floatTop = you.getBoundingClientRect().top;
+  // keep the centred, stacked box as long as your whole row of tiles (with its 3D edge) is inside the window;
+  // switch to the left/right row only when it would push your hand past the bottom edge
   const handBottom = Math.max(...[...hand.querySelectorAll(".tile")].map((t) => { const r = t.getBoundingClientRect(); return r.bottom + r.width * DEPTH + 1; }), 0);
-  const fits = Math.round(handBottom + window.scrollY) <= floatTop + BEHIND_OK;  // whole pixels, so 30.2px still counts as 30
+  const fits = Math.round(handBottom + window.scrollY) <= window.innerHeight;
   bar.classList.toggle("compact", !fits);
 }
 window.addEventListener("resize", () => fitLayout());
