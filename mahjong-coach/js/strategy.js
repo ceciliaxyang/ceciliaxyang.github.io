@@ -2,7 +2,7 @@
 import { kindOf, countsOf, shanten, acceptance, analyzeDiscards, isHonor, isDragon, isSuited, suitOf } from "./engine.js";
 import { seatWind, unseenFor, handCounts } from "./game.js";
 
-/* Honors that score a fan as a pung for player p. */
+/* Honors that score a fan as a peng for player p. */
 export function isValueTile(state, p, k) {
   return isDragon(k) || k - 27 === seatWind(state, p) || k - 27 === state.prevailing;
 }
@@ -159,7 +159,7 @@ export function botClaim(state, q, opts, level = "normal") {
   const pick = rec.pick;
   if (pick.type === "win") return { type: "win" };
   if (pick.type === "pass") return { type: "pass" };
-  // Easy: never chows, and only pungs/kongs a scoring tile about half the time
+  // Easy: never chows, and only pengs/kongs a scoring tile about half the time
   if (level === "easy") {
     if (pick.type === "chow") return { type: "pass" };
     return pick.value && Math.random() < 0.5 ? { type: pick.type } : { type: "pass" };

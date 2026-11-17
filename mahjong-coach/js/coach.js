@@ -5,6 +5,9 @@ import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
 import { rankDiscards, recommendClaim, isValueTile } from "./strategy.js";
 
+/* Internally a three-of-a-kind call is "pung"; on screen it is spelled "peng". */
+const callName = (type) => (type === "pung" ? "peng" : type);
+
 const t = (k, size = "xs") => tileHtml(k, { size, title: true });
 const WIND_EN = ["East", "South", "West", "North"];
 
@@ -25,7 +28,7 @@ function roleOf(k, c, unseen) {
   const n = c[k];
   if (n >= 3) return { kind: "set", text: "part of a complete set of three" };
   if (n === 2) {
-    if (isHonor(k)) return { kind: "pair", text: "a pair, which can still become a pung" };
+    if (isHonor(k)) return { kind: "pair", text: "a pair, which can still become a peng" };
     return { kind: "pair", text: "a pair, the natural candidate for your hand's eyes (the pair every hand needs)" };
   }
   if (isHonor(k)) {
@@ -112,7 +115,7 @@ export function reviewAct(before, action) {
 }
 
 function tipFor(roleBest, roleMine, state) {
-  if (roleBest.kind === "lone-honor") return "Tip: early on, let go of lone winds and dragons that don't score for you. They can only ever become a pair or pung.";
+  if (roleBest.kind === "lone-honor") return "Tip: early on, let go of lone winds and dragons that don't score for you. They can only ever become a pair or peng.";
   if (roleBest.kind === "lone-terminal") return "Tip: 1s and 9s connect on only one side. Middle tiles (3 to 7) connect on both, so they're worth more.";
   if (roleMine.kind === "seq" || roleMine.kind === "shape") return "Tip: count the tiles that would help you after each possible discard. Keep the shapes with the most ways in.";
   if (roleMine.kind === "pair") return "Tip: a hand needs exactly one pair. Keep at least one pair unless you have a better candidate.";
@@ -166,11 +169,11 @@ export function reviewClaim(before, resp) {
     const name = pick.type === "chow" ? "chow" : pick.type;
     const p = [];
     if (rec.reason === "value") {
-      p.push(`<p>A ${pick.type} of ${t(k)} is worth <b>1 fan</b> on its own${isDragon(k) ? " (every dragon pung scores)" : ` (it's ${k - 27 === seatWind(before, 0) ? "your seat wind" : "the round wind"})`}.</p>`);
+      p.push(`<p>A ${callName(pick.type)} of ${t(k)} is worth <b>1 fan</b> on its own${isDragon(k) ? " (every dragon peng scores)" : ` (it's ${k - 27 === seatWind(before, 0) ? "your seat wind" : "the round wind"})`}.</p>`);
       p.push(`<p>Claiming it ${pick.shanten < ev.base.shanten ? `also takes you from ${away(ev.base.shanten)} to <b>${away(pick.shanten)}</b>` : `keeps you ${away(pick.shanten)}`}, and it guarantees your hand can score even with other sets claimed.</p>`);
-      p.push(`<p class="tip">Tip: pungs of dragons, your seat wind and the round wind are almost always worth claiming. Their fan is what lets you win off discards.</p>`);
+      p.push(`<p class="tip">Tip: pengs of dragons, your seat wind and the round wind are almost always worth claiming. Their fan is what lets you win off discards.</p>`);
     } else {
-      p.push(`<p>${pick.type === "chow" ? `Chowing ${chowTiles(pick.chow, k)}` : `Punging ${t(k)}`} would have made you <b>${away(pick.shanten)}</b>${pick.discard !== null && pick.discard !== undefined ? ` after discarding ${t(pick.discard)}` : ""}. Without it you stayed ${away(ev.base.shanten)}.</p>`);
+      p.push(`<p>${pick.type === "chow" ? `Chowing ${chowTiles(pick.chow, k)}` : `Penging ${t(k)}`} would have made you <b>${away(pick.shanten)}</b>${pick.discard !== null && pick.discard !== undefined ? ` after discarding ${t(pick.discard)}` : ""}. Without it you stayed ${away(ev.base.shanten)}.</p>`);
       if (pick.shanten <= 0) p.push(`<p>Once you're ready, any of these wins:</p>${tileStrip(pick.tiles, unseen)}`);
       p.push(`<p class="tip">Tip: when a claim makes you ready, take it. Speed matters most at the end of a hand.</p>`);
     }
@@ -193,8 +196,8 @@ export function reviewClaim(before, resp) {
     p.push(`<p class="tip">Tip: only claim when it moves you closer to winning, or when the set itself scores (a dragon or a wind that's yours).</p>`);
     return note(before, {
       kind: "claim",
-      title: `Passing on that ${resp.type} was better`,
-      bubble: `That ${resp.type} didn't get you any closer.`,
+      title: `Passing on that ${callName(resp.type)} was better`,
+      bubble: `That ${callName(resp.type)} didn't get you any closer.`,
       html: p.join(""),
     });
   }
@@ -222,7 +225,7 @@ export function hint(state) {
     return { title: "My pick", html };
   }
   if (state.phase === "claim" && state.claim?.options[0] && !state.claim.responses[0]) {
-    if (state.claim.options[0].none) return { title: "Continue", html: `<p>You can't pung, chow or win with ${t(kindOf(state.lastDiscard.id))}. Press Continue.</p>` };
+    if (state.claim.options[0].none) return { title: "Continue", html: `<p>You can't peng, chow or win with ${t(kindOf(state.lastDiscard.id))}. Press Continue.</p>` };
     const rec = recommendClaim(state, 0, state.claim.options[0]);
     const pick = rec.pick;
     const k = rec.ev.k;
@@ -230,7 +233,7 @@ export function hint(state) {
     if (pick.type === "pass") {
       return { title: "I'd pass", html: `<p>Claiming ${t(k)} wouldn't get you closer than ${away(rec.ev.base.shanten)}${rec.ev.closed ? ", and keeping your hand concealed is worth a fan" : ""}.</p>` };
     }
-    return { title: `I'd ${pick.type}`, html: `<p>${pick.type === "chow" ? chowTiles(pick.chow, k) : t(k)} gets you to ${away(pick.shanten)}${rec.reason === "value" ? " and scores a fan" : ""}.</p>` };
+    return { title: `I'd ${callName(pick.type)}`, html: `<p>${pick.type === "chow" ? chowTiles(pick.chow, k) : t(k)} gets you to ${away(pick.shanten)}${rec.reason === "value" ? " and scores a fan" : ""}.</p>` };
   }
   return { title: "Waiting", html: `<p>It's not your move yet. I'll speak up if I see something.</p>` };
 }

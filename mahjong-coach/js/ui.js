@@ -141,7 +141,7 @@ function claim(resp) {
   update();
 }
 
-/* Calling is up to you: nothing tells you a pung, chow or kong is possible. Tap tiles in your hand to lift
+/* Calling is up to you: nothing tells you a peng, chow or kong is possible. Tap tiles in your hand to lift
    them and Continue turns into Call. If it isn't a real call, a short line says why. Mahjong only appears
    when you can actually win. */
 const nudgeKey = () => `${state.handNo}:${state.phase}:${state.current}:${state.lastDiscard?.id ?? ""}:${state.wall.length}`;
@@ -155,15 +155,15 @@ function callPicked() {
   const ks = callPick.map(kindOf).sort((a, b) => a - b);
   if (ks.length < 2) return say(`A call needs two tiles from your hand to go with ${tx(k)} (three for a kong). Tap one more.`);
   const same = ks.every((x) => x === k);
-  if (same && ks.length === 2) return o.pung ? claim({ type: "pung" }) : say(`You can't pung this tile.`);
-  if (same && ks.length === 3) return o.kong ? claim({ type: "kong" }) : say(`There are no tiles left to replace a kong with, so you can't kong now. Pick two for a pung instead.`);
+  if (same && ks.length === 2) return o.pung ? claim({ type: "pung" }) : say(`You can't peng this tile.`);
+  if (same && ks.length === 3) return o.kong ? claim({ type: "kong" }) : say(`There are no tiles left to replace a kong with, so you can't kong now. Pick two for a peng instead.`);
   const run = [...ks, k].sort((a, b) => a - b);
   const isRun = ks.length === 2 && run.every((x) => x < 27 && Math.floor(x / 9) === Math.floor(k / 9)) && run[1] === run[0] + 1 && run[2] === run[1] + 1;
   if (!isRun) {
-    if (ks.length === 2 && !isSuited(k)) return say(`Winds and dragons can't make a run. Pick two ${tx(k)} for a pung.`);
-    return say(`Those don't make a set with ${tx(k)}. A pung is two more ${tx(k)}${isSuited(k) ? `; a chow is two tiles that run with it, like ${runExample(k)}` : ""}.`);
+    if (ks.length === 2 && !isSuited(k)) return say(`Winds and dragons can't make a run. Pick two ${tx(k)} for a peng.`);
+    return say(`Those don't make a set with ${tx(k)}. A peng is two more ${tx(k)}${isSuited(k) ? `; a chow is two tiles that run with it, like ${runExample(k)}` : ""}.`);
   }
-  if (ld.from !== 3) return say(`That's a chow, and you can only chow the player right before you (${state.players[3].name}). From ${state.players[ld.from].name} you can only pung, kong or win.`);
+  if (ld.from !== 3) return say(`That's a chow, and you can only chow the player right before you (${state.players[3].name}). From ${state.players[ld.from].name} you can only peng, kong or win.`);
   return claim({ type: "chow", chow: ks });
 }
 function mahjongOnDiscard() {
@@ -221,7 +221,7 @@ function placeSheet() {
     // prompt, extra called sets) it grows once and stays at that height, so the floating buttons don't bob.
     if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
     // keep the page scrollable past the sheet so nothing above it is hidden for good
-    document.documentElement.style.setProperty("--sheet-h", sheet.classList.contains("collapsed") ? "calc(28px + env(safe-area-inset-bottom))" : `${sheet.offsetHeight}px`);
+    document.documentElement.style.setProperty("--sheet-h", sheet.classList.contains("collapsed") ? "calc(84px + env(safe-area-inset-bottom))" : `${sheet.offsetHeight}px`);
   } else if (bar.parentElement === sheet) {
     felt.append(bar);
     center.append(me);
@@ -254,9 +254,11 @@ function setSheet(collapsed) {
 function fitLayout() {
   const bar = $("bar"), you = $("mePlate");
   if (!bar || !you) return;
-  if (PHONE.matches) { bar.classList.remove("compact"); return; }  // phones: always stacked, in the sheet
-  bar.classList.remove("compact");  // measure with the default (stacked) layout
-  const fits = you.getBoundingClientRect().bottom + window.scrollY + 24 <= window.innerHeight;
+  bar.classList.remove("compact");  // measure with the centred, stacked layout
+  if (PHONE.matches) return;  // phones: always stacked, in the sheet
+  // switch to the left/right row only when the stacked box would push "You" more than 30px below the fold
+  const OVERFLOW_OK = 30;
+  const fits = you.getBoundingClientRect().bottom + window.scrollY <= window.innerHeight + OVERFLOW_OK;
   bar.classList.toggle("compact", !fits);
 }
 window.addEventListener("resize", () => fitLayout());
@@ -312,12 +314,15 @@ function plateHtml(p) {
   const pl = state.players[p];
   const sw = G.seatWind(state, p);
   const on = turnHolder() === p;
-  const thinking = on && p !== 0;
+  // a bot that's drawing or deciding shows thinking dots instead of its wind; the wind comes back once it moves
+  const thinking = p !== 0 && state.current === p && (state.phase === "draw" || state.phase === "act");
   const name = p === 0 ? "You" : pl.name;
   const pts = prefs.showScores ? `<span class="pts">${pl.score}</span>` : "";
   const title = `${name}: ${WIND_EN[sw]} seat${sw === 0 ? ", dealer" : ""}`;
   return `<div class="who ${p === 0 ? "mine" : ""}" title="${title}">
-    <div class="plate circle ${on ? "on" : ""} ${thinking ? "thinking" : ""}"><span class="wind">${WINDS[sw]}</span></div>
+    <div class="plate circle ${on ? "on" : ""} ${thinking ? "thinking" : ""}">${thinking
+      ? `<span class="dots" role="img" aria-label="${WINDS[sw]}, thinking"><i></i><i></i><i></i></span>`
+      : `<span class="wind">${WINDS[sw]}</span>`}</div>
     <span class="pname">${name}${pts}</span>
   </div>`;
 }
@@ -329,7 +334,7 @@ function meldsHtml(pl, size) {
       const hidden = m.concealed && (i === 0 || i === 3);
       return tileHtml(k, { size, cls: `${hidden ? "face-down" : ""} ${id === m.claimed ? "claimed" : ""}` });
     });
-    return `<span class="meld" title="${m.concealed ? "Concealed kong" : m.type}">${tiles.join("")}</span>`;
+    return `<span class="meld" title="${m.concealed ? "Concealed kong" : m.type === "pung" ? "peng" : m.type}">${tiles.join("")}</span>`;
   });
   const fl = pl.flowers.length ? `<span class="flowers">${pl.flowers.map((id) => tileHtml(kindOf(id), { size })).join("")}</span>` : "";
   return melds.join("") + fl;
@@ -433,6 +438,8 @@ function renderMe() {
     cls: `${id === selected ? "sel" : ""} ${callPick.includes(id) ? "picked" : ""} ${id === drawn && isNew ? "new" : ""}`,
   })).join("");
   el.classList.toggle("manual", !prefs.autoSort);
+  // a full hand (13 or 14 tiles) lines up with the white box's left and right edges
+  el.classList.toggle("spread", ids.length >= 13);
   // not `disabled`: with Autosort off you can rearrange tiles while others play
   el.querySelectorAll(".tile").forEach((b) => { b.setAttribute("aria-disabled", String(!live && !picking)); b.setAttribute("aria-pressed", String(b.dataset.id == selected)); });
 }
@@ -440,7 +447,9 @@ function renderMe() {
 const seenInPlay = new Set();
 const arrive = (key) => { key = `${state.handNo}:${key}`; return seenInPlay.has(key) ? "" : (seenInPlay.add(key), "arrive"); };
 
+let barLast = null;  // the latest discard shown in the bar, kept up between turns
 function renderBar() {
+  if (state.phase === "over") barLast = null;  // a new hand starts with an empty bar
   const bar = $("bar");
   let say = "", play = "";
   const btns = [];
@@ -460,6 +469,7 @@ function renderBar() {
     const who = state.players[ld.from].name;
     const o = state.claim.options[0];
     say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.${ld.robbing ? "" : `<span class="say-more"> Continue or add tiles to call it.</span>`}`;
+    barLast = { k, say: `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.` };
     // the set you're forming: the discard plus every tile you've lifted, in order (tap one of yours to drop it)
     const set = [{ k, id: null }, ...callPick.map((id) => ({ k: kindOf(id), id }))].sort((a, b) => a.k - b.k || (a.id === null ? -1 : 1));
     play = set.map((t) => t.id === null
@@ -477,9 +487,11 @@ function renderBar() {
     const who = ld.from === 0 ? "You" : state.players[ld.from].name;
     say = `<b>${who}</b> ${ld.robbing ? `${ld.from === 0 ? "are" : "is"} adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.`;
     play = tileHtml(k, { size: "lg", cls: arrive(`d${ld.id}`) });
-  } else if (state.phase !== "over") {
-    const p = state.current;
-    say = p === 0 ? "Drawing…" : `${state.players[p].name}'s turn`;
+    barLast = { k, say };
+  } else if (state.phase !== "over" && barLast) {
+    // between turns: no "Player 1's turn" text; the last discard stays put (the thinking dots show whose turn it is)
+    say = barLast.say;
+    play = tileHtml(barLast.k, { size: "lg" });
   }
   const why = nudge && nudge.key === nudgeKey();
   bar.innerHTML = `<div class="act-left">
@@ -628,8 +640,8 @@ function guideHtml() {
   const rows = FAN_GUIDE.map(([n, f, d]) => `<li><b>${n}</b><span>${f === 13 ? "Limit" : f + " fan"}</span><small>${d}</small></li>`).join("");
   return `<h2>How to play</h2>
     <div class="basics">
-      <p>Make a hand of <b>four sets and a pair</b> (14 tiles). A set is a <b>chow</b> (three in a row in one suit), a <b>pung</b> (three of a kind) or a <b>kong</b> (four of a kind, which earns you a replacement tile).</p>
-      <p>Each turn you draw, then discard. Anyone can claim a discard for a pung, kong or win; only the next player can claim it for a chow. A win beats a pung, and a pung beats a chow.</p>
+      <p>Make a hand of <b>four sets and a pair</b> (14 tiles). A set is a <b>chow</b> (three in a row in one suit), a <b>peng</b> (three of a kind) or a <b>kong</b> (four of a kind, which earns you a replacement tile).</p>
+      <p>Each turn you draw, then discard. Anyone can claim a discard for a peng, kong or win; only the next player can claim it for a chow. A win beats a peng, and a peng beats a chow.</p>
       <p>Flowers and seasons are set aside and replaced automatically. A winning hand needs at least <b>${state.minFan} fan</b>.</p>
       <p>Scoring: on a self-drawn win each player pays the table value; on a discard the discarder pays double. Values are 1, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128… for 0, 1, 2, 3… fan.</p>
     </div>

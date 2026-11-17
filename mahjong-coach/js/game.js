@@ -309,7 +309,7 @@ export function resolveClaims(state) {
     pl.hand = pl.hand.filter((id) => !own.includes(id));
     pl.melds.push({ type, k, tiles: [...own, ld.id], concealed: false, from: ld.from, claimed: ld.id });
     markTaken(state, ld);
-    log(state, `${pl.name} ${type === "kong" ? "konged" : "punged"} ${state.players[ld.from].name === "You" ? "your" : state.players[ld.from].name + "'s"} discard.`);
+    log(state, `${pl.name} ${type === "kong" ? "konged" : "penged"} ${state.players[ld.from].name === "You" ? "your" : state.players[ld.from].name + "'s"} discard.`);
     state.lastDiscard = null;
     state.claim = null;
     if (type === "kong") return replacementDraw(state, pungQ), true;

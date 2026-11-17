@@ -26,6 +26,7 @@
      --lg   your hand and the tile in play (always the largest)
      --mid  the discards and your own called sets / flowers (always the same as each other)
      --opp  every opponent's tiles, all three seats alike */
+  --tile-r: 1.42;  /* tile height ÷ width (was 1.333; a little taller) */
   --lg: clamp(22px, calc((100vw - 56px) / 15), 54px);
   --mid: calc(var(--lg) * .8);
   --opp: 40px;
@@ -68,7 +69,7 @@ p { text-wrap: pretty; }
 .fab-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .fab-btn.dark { background: rgba(34, 34, 34, .78); color: #fff; }
 .fab-btn.dark:hover { background: rgba(0, 0, 0, .85); }
-.fab-btn.light { background: rgba(221, 221, 221, .55); color: var(--text); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .06); }
+.fab-btn.light { background: rgba(221, 221, 221, .55); color: var(--text); }
 /* Icon-only FAB (Settings gear): a circle the same height as the pill buttons */
 .fab-btn.icon { width: 48px; padding: 0; display: inline-grid; place-items: center; }
 .fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
@@ -146,11 +147,13 @@ span.scope { cursor: default; }
 .btn.red { background: var(--red); }
 .btn.small { padding: 10px 16px; font-size: 14px; line-height: 18px; }
 .btn .tile { pointer-events: none; }
+/* the buttons in the bar (Continue, Call, Discard, Mahjong) match the Coach me floating button */
+.bar .btn { height: 48px; padding: 0 24px; font-size: 14px; line-height: 18px; }
 
 /* Tiles: ivory face, a darker bottom edge for thickness, soft drop shadow */
 .tile {
   --w: var(--md);
-  position: relative; display: inline-block; flex-shrink: 0; width: var(--w); height: calc(var(--w) * 1.333);
+  position: relative; display: inline-block; flex-shrink: 0; width: var(--w); height: calc(var(--w) * var(--tile-r));
   padding: 0; border: 0; border-radius: calc(var(--w) * .16); background: linear-gradient(#fffefb, var(--face));
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 calc(var(--w) * .08 + 1px) 0 #c7bca8, 0 calc(var(--w) * .12) calc(var(--w) * .3) rgba(0, 0, 0, .12);
   margin-bottom: calc(var(--w) * .08 + 1px); vertical-align: top;
@@ -173,9 +176,13 @@ span.scope { cursor: default; }
 .seat { display: flex; flex-direction: column; align-items: center; gap: 24px; min-width: 0; }
 .seat-top { --seat-w: var(--top-w); }
 /* side columns are exactly as wide as a sideways tile; a longer name just extends past, centered */
-.seat-left, .seat-right { --seat-w: var(--side-w); width: calc(var(--side-w) * 1.334); }
+.seat-left, .seat-right { --seat-w: var(--side-w); width: calc(var(--side-w) * var(--tile-r)); }
 .seat-left > *, .seat-right > * { flex-shrink: 0; }
-.center { display: flex; flex-direction: column; gap: 48px; min-width: 0; }
+.center { display: flex; flex-direction: column; gap: 48px; min-width: 0; container-type: inline-size; }
+/* your hand spans the white box edge to edge: 14 tiles and 13 3px gaps across the middle column;
+   the tile in play in the white box is the same size (phones are different: the box moves into the sheet) */
+.center .hand, .center .bar { --lg: calc((100cqw - 13 * 3px) / 14); }
+.center .hand.spread { align-self: stretch; justify-content: space-between; }
 /* labels: the seat wind in a grey circle (red while it's that player's move) and the name; the player
    opposite has the name beside the circle, the side players under it, you beside it */
 .who { display: flex; align-items: center; gap: 12px; }
@@ -188,6 +195,13 @@ span.scope { cursor: default; }
   transition: background .25s ease, color .25s ease;
 }
 .plate.circle { width: var(--tag-size); height: var(--tag-size); border-radius: 50%; }
+/* a bot that's thinking: three dots pulse in its wind circle until it moves */
+.plate .dots { display: inline-flex; gap: calc(var(--tag-size) * .07); }
+.plate .dots i { width: calc(var(--tag-size) * .11); height: calc(var(--tag-size) * .11); border-radius: 50%; background: currentColor; animation: think 1s ease-in-out infinite; }
+.plate .dots i:nth-child(2) { animation-delay: .15s; }
+.plate .dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes think { 0%, 80%, 100% { opacity: .35; transform: none; } 40% { opacity: 1; transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .plate .dots i { animation: none; opacity: .8; } }
 .plate.on { background: var(--turn); color: #fff; }
 /* Opponents' tiles: one line along each player's side, called sets and flowers face-up at the start, then
    the face-down hand. Side players' tiles lie sideways; the player opposite's read right-side up for you. */
@@ -197,9 +211,9 @@ span.scope { cursor: default; }
 .backs { display: flex; gap: 2px; }
 .seat-left .backs, .seat-right .backs { flex-direction: column; gap: 1px; }
 /* side seats: tiles lie sideways (wider than tall); face-down ones just swap width and height */
-.seat-left .tile, .seat-right .tile { width: calc(var(--w) * 1.333); height: var(--w); }
+.seat-left .tile, .seat-right .tile { width: calc(var(--w) * var(--tile-r)); height: var(--w); }
 .seat-left .tile svg, .seat-right .tile svg {
-  position: absolute; left: 50%; top: 50%; width: var(--w); height: calc(var(--w) * 1.333); transform: translate(-50%, -50%) rotate(90deg);
+  position: absolute; left: 50%; top: 50%; width: var(--w); height: calc(var(--w) * var(--tile-r)); transform: translate(-50%, -50%) rotate(90deg);
 }
 .seat-right .tile svg { transform: translate(-50%, -50%) rotate(-90deg); }
 .seat-left .meld, .seat-right .meld, .seat-left .flowers, .seat-right .flowers { flex-direction: column; gap: 0; padding: 0; }
@@ -213,8 +227,10 @@ span.scope { cursor: default; }
 .flowers { display: inline-flex; gap: 1px; padding-left: 4px; }
 
 /* The white box: everyone's discards on top, a divider, then the latest move */
-.felt { display: flex; flex-direction: column; gap: 36px; padding: 32px; border-radius: 24px; background: #fff; }
-.felt-div { margin: 0; border: 0; height: 1px; background: var(--hair); }
+/* Figma 2345:23097: the discards sit on the page; only the latest move gets the white box */
+/* Desktop rhythm: 32px between the top player's tiles, the discards, the white box and your called tiles; 24px to your hand */
+.felt { display: flex; flex-direction: column; gap: 32px; padding: 0; margin-top: -16px; }  /* 48px column gap - 16 = 32 under the top player */
+.felt-div { display: none; }
 
 /* Discard area: one shared space in the middle of the table, upright tiles at your hand's size,
    in the order they were thrown */
@@ -222,7 +238,7 @@ span.scope { cursor: default; }
 .discards {
   --dw: var(--mid); display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px 3px;
   /* only as tall as the discards need (at least one row): the box grows a row at a time */
-  min-height: calc(var(--dw) * 1.413 + 1px);
+  min-height: calc(var(--dw) * (var(--tile-r) + .08) + 1px);
 }
 .discards .tile { --w: var(--dw); }
 .discards .tile.fresh { animation: drop .35s var(--spring); }
@@ -230,17 +246,18 @@ span.scope { cursor: default; }
 .discards.grouped { gap: 12px 8px; }
 .dstack { position: relative; display: inline-flex; }
 .dcount {
-  position: absolute; top: -6px; right: -6px; z-index: 1; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  /* sits on the tile, bottom centre (same as phones) */
+  position: absolute; bottom: calc(var(--dw) * .08 + 1px + 4px); left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 1; height: 16px; padding: 0 5px; border-radius: 8px;
   /* frosted dark material, like the dark floating buttons */
   background: rgba(34, 34, 34, .62); -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
-  color: #fff; font-size: 12px; line-height: 18px; font-weight: 600; text-align: center;
+  color: #fff; font-size: 10px; line-height: 16px; font-weight: 600; text-align: center;
   font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .12);
 }
 .dcount.bump { animation: bump .45s var(--spring); }
 @keyframes bump { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: none; } }
 /* first in the discard area: the wall, face down, with how many tiles are left to draw */
-.dstack.wall { margin-right: 8px; }
-.dstack.wall .dcount { min-width: 22px; }
+.dstack.wall { margin-right: 0; }  /* same gap after the wall as between discards */
+
 @keyframes drop { from { transform: translateY(-8px) scale(1.12); opacity: 0; } }
 
 /* narrower windows: smaller opponent tiles and tighter gaps so the middle keeps its width */
@@ -260,19 +277,21 @@ span.scope { cursor: default; }
   .plate { font-size: 12px; }
   .center { gap: 16px; }
   .seat-top .line { flex-wrap: wrap; justify-content: center; gap: 6px; }
-  .felt { padding: 12px; gap: 14px; border-radius: 18px; }
+  .felt { padding: 12px 0 0; gap: 24px; margin-top: 0; }
+  .bar { padding: 24px 20px; border-radius: 28px; }
+  .center > .me { margin-top: 8px; }
   .discards { gap: 3px 2px; }
   .discards.grouped { gap: 9px 7px; }
-  .dcount { top: -5px; right: -6px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; font-size: 9px; line-height: 14px; }
-  .bar .btn { padding: 10px 14px; font-size: 14px; line-height: 18px; }
+  .dcount { height: 14px; padding: 0 4px; border-radius: 7px; font-size: 9px; line-height: 14px; }
+  .bar .btn { height: 48px; padding: 0 24px; font-size: 14px; line-height: 18px; }
 }
 
 /* You: flowers / called sets, 24px, your hand, 24px, your label ("東 You"); 24px under the white box */
 .me { display: flex; flex-direction: column; align-items: center; }
-.center > .me { margin-top: -24px; }  /* the column gap is 48; you sit 24 under the box */
+.center > .me { margin-top: -16px; }  /* the column gap is 48; your called tiles / hand sit 32 under the box */
 .me .exposed:empty { display: none; }
 /* at least 24px between your called tiles / flowers (incl. their 3D edge) and your hand: 6px + the hand's 18px lift room */
-.me .exposed { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 6px; }
+.me .exposed { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 6px; }  /* + the hand's 18px lift room = 24px */
 .me .exposed .tile { --w: var(--mid); }
 .me:has(.exposed:empty) .hand { margin-top: -18px; }  /* no flowers: the hand itself sits 24px under the box */
 .me .me-plate { margin-top: calc(24px - (var(--lg) * .08 + 1px)); }
@@ -281,33 +300,34 @@ span.scope { cursor: default; }
    on the left, the button on the right. */
 .bar {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
-  height: calc(20px + 16px + var(--lg) * 1.333 + 24px + 48px);
+  height: calc(40px + 20px + 16px + var(--lg) * var(--tile-r) + 24px + 48px + 40px);  /* includes the 40px padding */
+  padding: 40px 32px; border-radius: 40px; background: #fff;
 }
 .act-left { display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 0; max-width: 100%; }
 .act-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 /* when there's only a sentence (no tile in play, no button), the empty slots collapse so it sits centered */
 .bar .inplay:empty, .act-right:empty { display: none; }
 .bar .say { font-size: 16px; line-height: 20px; color: #6c6c6c; font-weight: 500; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.bar.compact { flex-direction: row; justify-content: space-between; height: calc(20px + 16px + var(--lg) * 1.333); }
+.bar.compact { flex-direction: row; justify-content: space-between; height: calc(20px + 16px + var(--lg) * var(--tile-r) + 48px); padding: 24px 32px; }
 .bar.compact .act-left { align-items: flex-start; }
 .bar.compact .say { text-align: left; }
 /* player and tile names: dark, same weight as the sentence (per the white-box style guide) */
 .bar .say b { color: var(--text); font-weight: 500; }
 .bar .say .tile { --w: 18px; vertical-align: -6px; margin: 0 2px; }
 .bar .say.nudge { color: var(--red); white-space: normal; animation: rise .35s var(--spring); }
-.bar .inplay { display: flex; gap: 3px; height: calc(var(--lg) * 1.333); }
+.bar .inplay { display: flex; gap: 3px; height: calc(var(--lg) * var(--tile-r)); }
 .inplay-pick { display: inline-flex; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 9px; }
 .inplay-pick:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
 .bar .inplay .tile { --w: var(--lg); margin-bottom: 0; }
 .bar .inplay .tile.arrive { animation: drop .35s var(--spring); }
 @media (max-width: 760px) {
-  .bar { height: auto; min-height: calc(20px + 10px + var(--lg) * 1.333 + 10px + 40px); gap: 10px; }
-  .bar.compact { height: auto; min-height: calc(20px + 10px + var(--lg) * 1.333); }
+  .bar { height: auto; min-height: calc(20px + 10px + var(--lg) * var(--tile-r) + 10px + 40px); gap: 10px; }
+  .bar.compact { height: auto; min-height: calc(20px + 10px + var(--lg) * var(--tile-r)); }
   .act-left { gap: 10px; }
   .bar .say { white-space: normal; font-size: 13px; line-height: 18px; }
 }
 .me-row { display: flex; align-items: flex-end; justify-content: center; gap: 16px; flex-wrap: wrap; }
-.hand { display: flex; align-items: flex-end; justify-content: center; gap: 3px; min-height: calc(var(--lg) * 1.333 + 20px); padding-top: 18px; }
+.hand { display: flex; align-items: flex-end; justify-content: center; gap: 3px; min-height: calc(var(--lg) * var(--tile-r) + 20px); padding-top: 18px; }
 .hand .tile { --w: var(--lg); cursor: default; transition: transform .25s var(--spring), box-shadow .2s ease; }
 .hand.live .tile { cursor: pointer; }
 @media (hover: hover) { .hand.live .tile:hover { transform: translateY(-6px); } }
@@ -473,7 +493,7 @@ span.scope { cursor: default; }
     box-shadow: 0 -8px 24px rgba(0, 0, 0, .10), 0 -2px 16px rgba(0, 0, 0, .04), 0 0 0 1px rgba(0, 0, 0, .02);
   }
   .sheet-div { order: 1; margin: 0; border: 0; height: 1px; background: var(--hair); }
-  .sheet > .bar { order: 0; height: auto; min-height: 0; gap: 24px; }
+  .sheet > .bar { order: 0; height: auto; min-height: 0; gap: 24px; padding: 0; border-radius: 0; background: none; }
   .sheet > .me { order: 2; margin: 0; }
   .sheet > .me-plate { order: -1; margin: 0; align-self: center; }
   /* grabber: tap or drag down to tuck the sheet away, leaving just the grabber above the buttons */
@@ -481,25 +501,27 @@ span.scope { cursor: default; }
   .sheet-grab { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 96px; height: 24px; padding: 0; border: 0; background: none; cursor: grab; }
   .sheet-grab::before { content: ""; display: block; width: 36px; height: 5px; margin: 8px auto 0; border-radius: 3px; background: #d0d0d0; }
   .sheet.collapsed { transform: translateY(calc(100% - var(--sheet-peek))); }
-  .sheet.collapsed > :not(.sheet-grab) { visibility: hidden; transition: visibility 0s .35s; }
+  .sheet.collapsed > :not(.sheet-grab):not(.me-plate) { visibility: hidden; transition: visibility 0s .35s; }
   .sheet .act-left { gap: 16px; }
   .sheet .bar .say { font-size: 16px; line-height: 20px; white-space: normal; }
   .sheet .bar .say .say-more { display: block; }
-  .sheet .bar .inplay { height: 72px; }
+  .sheet .bar .inplay { height: calc(54px * var(--tile-r)); }
   .sheet .bar .inplay .tile { --w: 54px; }
   /* your hand runs almost edge to edge: 14 tiles across the screen with 8px either side */
   /* discards match your hand's tile size */
   .discards { --dw: calc((100vw - 16px - 13 * 2px) / 14); }
   .discards.grouped { gap: 4px 2px; }
   /* count badge: small pill sitting on the tile, bottom centre */
-  .dcount { top: auto; bottom: 4px; left: 0; right: 0; margin: 0 auto; width: fit-content; min-width: 0; height: 12px; padding: 0 3px;
+  .dcount { top: auto; bottom: calc(var(--dw) * .08 + 1px + 3px); left: 0; right: 0; margin: 0 auto; width: fit-content; min-width: 0; height: 12px; padding: 0 3px;
     border-radius: 6px; font-size: 8px; line-height: 12px; box-shadow: none; }
-  .dstack.wall .dcount { min-width: 0; }
+
   /* called tiles and flowers match your hand's tile size */
+  .sheet .me .exposed { margin-bottom: 6px; }
   .sheet .me .exposed .tile { --w: calc((100vw - 16px - 13 * 2px) / 14); }
   .sheet .hand { --lg: calc((100vw - 16px - 13 * 2px) / 14); gap: 2px; margin: 0 -16px; }
-  .sheet .bar .btn { padding: 14px 24px; font-size: 16px; line-height: 20px; }
+  .sheet .bar .btn { height: 40px; padding: 0 16px; font-size: 13px; line-height: 18px; }
   .sheet .me .exposed:empty + .hand { margin-top: -18px; }
+
 
   /* Figma 2333:21510: no divider, more air above "You", and the floating buttons ride 17px above the sheet */
   .page { padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(var(--sheet-h, 446px) + 17px + 40px + 16px); }
@@ -507,7 +529,8 @@ span.scope { cursor: default; }
   .seat-top { gap: 14px; }
   .seat-left .who, .seat-right .who { gap: 0; }
   .seat-top .who { flex-direction: column; gap: 2px; }
-  .sheet { --sheet-peek: calc(28px + env(safe-area-inset-bottom)); min-height: min(452px, 58vh); justify-content: space-between;
+  /* collapsed: the grabber plus your wind and "You" label stay visible (36 + 32 + 16) */
+  .sheet { --sheet-peek: calc(84px + env(safe-area-inset-bottom)); min-height: min(452px, 58vh); justify-content: space-between;
     padding: 36px 24px calc(24px + env(safe-area-inset-bottom)); }
   .sheet-div { display: none; }
   .sheet > .me { margin-top: 16px; }

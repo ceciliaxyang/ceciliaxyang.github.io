@@ -20,11 +20,11 @@ Then open http://localhost:3000/mahjong-coach/
 
 - 144 tiles: three suits, winds, dragons, plus flowers and seasons (set aside and replaced automatically).
 - Four sets and a pair wins. Seven pairs and thirteen orphans count too.
-- Pung, kong or win can be claimed from anyone's discard; chow only from the player before you.
-  Priority: win > pung/kong > chow.
-- The game never suggests a pung, chow or kong. After each discard you press **Continue** (or Space).
+- Peng, kong or win can be claimed from anyone's discard; chow only from the player before you.
+  Priority: win > peng/kong > chow.
+- The game never suggests a peng, chow or kong. After each discard you press **Continue** (or Space).
   To call, tap tiles in your hand: they lift and Continue becomes **Call**. The game works out whether
-  it's a pung, chow or kong and explains if it isn't a valid call. **Mahjong** appears only when you can win.
+  it's a peng, chow or kong and explains if it isn't a valid call. **Mahjong** appears only when you can win.
 - **Difficulty** (Settings): Easy bots make looser discards, play no defense and call less; Normal (default)
   play efficient, fast hands with basic defense; Hard defend earlier, keep scoring pairs and take every call
   that speeds them up. In 800-hand simulations a Normal-strength player wins ~45% of hands against Easy
@@ -41,7 +41,7 @@ Then open http://localhost:3000/mahjong-coach/
   discard had clearly more ways in (at least 4 more, and 25% or more).
 - **Defence**: when an opponent shows three sets and you're 2+ from ready, it flags discards
   that aren't safe against them.
-- **Claims**: passing on a scoring pung (dragons, your seat wind, the round wind), passing on a
+- **Claims**: passing on a scoring peng (dragons, your seat wind, the round wind), passing on a
   claim that makes you ready, and claiming when it doesn't get you any closer (opening your hand
   for nothing).
 - **Missed wins**: self-drawn or off a discard.

@@ -199,25 +199,25 @@ export function decompose(counts, open) {
 export const LIMIT = 13;
 export const FAN_GUIDE = [
   ["Self-drawn win", 1, "Win on a tile you drew yourself."],
-  ["Concealed hand", 1, "No chows, pungs or kongs claimed from discards."],
+  ["Concealed hand", 1, "No chows, pengs or kongs claimed from discards."],
   ["No flowers", 1, "You drew no flower or season tiles."],
   ["Seat flower", 1, "Each flower or season whose number matches your seat (East 1, South 2, West 3, North 4)."],
-  ["Dragon pung", 1, "Each pung or kong of Red, Green or White dragons."],
-  ["Seat wind pung", 1, "Pung or kong of your own seat's wind."],
-  ["Round wind pung", 1, "Pung or kong of the round's wind."],
+  ["Dragon peng", 1, "Each peng or kong of Red, Green or White dragons."],
+  ["Seat wind peng", 1, "Peng or kong of your own seat's wind."],
+  ["Round wind peng", 1, "Peng or kong of the round's wind."],
   ["All chows", 1, "Four sequences and a pair."],
   ["Last tile", 1, "Win by drawing the last tile of the wall."],
   ["Win on a replacement", 1, "Win on the tile drawn after a kong or flower."],
   ["Robbing a kong", 1, "Win on the tile someone adds to make a kong."],
-  ["All pungs", 3, "Four pungs or kongs and a pair."],
+  ["All pengs", 3, "Four pengs or kongs and a pair."],
   ["Mixed one suit", 3, "One suit plus honors."],
   ["Seven pairs", 4, "Seven different pairs, fully concealed."],
-  ["Small three dragons", 5, "Two dragon pungs and a pair of the third dragon."],
-  ["Small four winds", 6, "Three wind pungs and a pair of the fourth wind."],
+  ["Small three dragons", 5, "Two dragon pengs and a pair of the third dragon."],
+  ["Small four winds", 6, "Three wind pengs and a pair of the fourth wind."],
   ["Pure one suit", 7, "Every tile from a single suit, no honors."],
-  ["Big three dragons", 8, "Pungs of all three dragons."],
+  ["Big three dragons", 8, "Pengs of all three dragons."],
   ["All honors", LIMIT, "Only winds and dragons. Limit hand."],
-  ["Big four winds", LIMIT, "Pungs of all four winds. Limit hand."],
+  ["Big four winds", LIMIT, "Pengs of all four winds. Limit hand."],
   ["Thirteen orphans", LIMIT, "One of every 1, 9, wind and dragon, plus a pair of any of them. Limit hand."],
 ];
 
@@ -270,17 +270,17 @@ export function scoreWin(ctx) {
         const pairWind = isWind(arr.pair);
         if (dragons.length === 3) items.push(["Big three dragons", 8]);
         else if (dragons.length === 2 && pairDragon) items.push(["Small three dragons", 5]);
-        else dragons.forEach((s) => items.push([DRAGON_NAMES[s.k - 31] + " dragon pung", 1]));
+        else dragons.forEach((s) => items.push([DRAGON_NAMES[s.k - 31] + " dragon peng", 1]));
         if (winds.length === 4) { items.push(["Big four winds", LIMIT]); limit = true; }
         else if (winds.length === 3 && pairWind) items.push(["Small four winds", 6]);
         else {
           winds.forEach((s) => {
-            if (s.k - 27 === ctx.seatWind) items.push(["Seat wind pung (" + WIND_NAMES[s.k - 27] + ")", 1]);
-            if (s.k - 27 === ctx.prevailing) items.push(["Round wind pung (" + WIND_NAMES[s.k - 27] + ")", 1]);
+            if (s.k - 27 === ctx.seatWind) items.push(["Seat wind peng (" + WIND_NAMES[s.k - 27] + ")", 1]);
+            if (s.k - 27 === ctx.prevailing) items.push(["Round wind peng (" + WIND_NAMES[s.k - 27] + ")", 1]);
           });
         }
         if (sets.length === 4 && sets.every((s) => s.type === "chow")) items.push(["All chows", 1]);
-        if (pungs.length === 4) items.push(["All pungs", 3]);
+        if (pungs.length === 4) items.push(["All pengs", 3]);
       }
       const suits = new Set(tiles.filter(isSuited).map(suitOf));
       const honors = tiles.some(isHonor);
