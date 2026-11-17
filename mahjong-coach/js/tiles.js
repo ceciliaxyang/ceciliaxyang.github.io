@@ -14,7 +14,8 @@ const GREEN = "#23774a";
 const BLUE = "#1f4e9c";
 const INK = "#1d2433";
 const FACE = "#fbf9f4";
-const SERIF = `'Songti SC','STSong','Noto Serif SC','Source Han Serif SC','SimSun',serif`;
+// Kaiti (brush style): Apple's Kaiti TC/SC first, then the Kai fonts Windows and Android ship, then any serif.
+const SERIF = `'Kaiti TC','Kaiti SC','STKaiti','BiauKai','DFKai-SB','KaiTi','TW-Kai','AR PL UKai TW',serif`;
 
 export function tileName(k) {
   if (k < 27) return `${numOf(k)} ${SUIT_EN[suitOf(k)]}`;
@@ -87,7 +88,7 @@ function flowerMark(cx, cy, col) {
 
 export function faceSvg(k) {
   let body;
-  if (k < 9) body = text(NUMERALS[k], 34, 27, INK) + text("萬", 70, 30, RED);
+  if (k < 9) body = text(NUMERALS[k], 50, 34, INK);  // Characters: just the numeral (no 萬), with a corner number below
   else if (k < 18) body = DOTS[numOf(k)]();
   else if (k < 27) body = BAMBOO[numOf(k)]();
   else if (k < 31) body = text(WINDS[k - 27], 56, 44, INK);
@@ -102,7 +103,9 @@ export function faceSvg(k) {
       text(BONUS[i], 56, 38, col) + flowerMark(49, 69, col);
   }
   // Small corner number on circles and bamboo, haloed in the tile's ivory so it reads over the pattern.
-  if (k >= 9 && k < 27)
+  if (k < 9)
+    body += `<text x="56" y="76" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${numOf(k)}</text>`;
+  else if (k < 27)
     body = `<g transform="translate(4.8 4.8) scale(.84)">${body}</g>` + `<text x="56" y="76" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="#fbf9f4" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
   return `<svg viewBox="0 0 60 80" aria-hidden="true">${body}</svg>`;
 }
