@@ -564,6 +564,18 @@ span.scope { cursor: default; }
     padding: 36px 24px calc(24px + env(safe-area-inset-bottom)); }
   .sheet-div { display: none; }
   .sheet > .me { margin-top: 16px; }
+  /* Figma 2350:25132: the players' labels leave the seats and sit together in the sheet as a compass */
+  .seat .who { display: none; }
+  .compass { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .compass-ring { position: relative; width: 88px; height: 80px; }
+  .compass .plate { position: absolute; width: 32px; height: 32px; font-size: 12px; }
+  .compass .c-l { left: 0; top: 24px; } .compass .c-t { left: 28px; top: 0; }
+  .compass .c-r { left: 56px; top: 24px; } .compass .c-b { left: 28px; top: 48px; }
+  .compass .pname { font-size: 11px; line-height: 14px; }
+  /* collapsed: the grabber and the compass stay visible (36 + 102 + 12) */
+  .sheet { --sheet-peek: calc(150px + env(safe-area-inset-bottom)); }
+  /* first visit: no sheet at all until the deal slides it up (past its shadow too) */
+  .sheet.away, .sheet.away.collapsed { transform: translateY(calc(100% + 32px)); }
   .fab, .coach { bottom: calc(var(--sheet-h, 446px) + 17px); transition: bottom .35s var(--ease); }
   .fab { left: max(10px, env(safe-area-inset-left)); }
   .coach { right: max(10px, env(safe-area-inset-right)); }
@@ -571,7 +583,9 @@ span.scope { cursor: default; }
 }
 
 /* New-game transition (deal-anim.js): labels and buttons fade, real tiles hide under flying stand-ins */
-.deal-layer { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
+/* the pile sits underneath everything (sheet, buttons); tiles only rise above while they fly to their places */
+.deal-layer { position: fixed; inset: 0; z-index: 5; overflow: hidden; }
+.deal-layer.flying { z-index: 60; }
 .deal-layer .tile { position: absolute; left: 0; top: 0; margin: 0; --w: 40px; transform-origin: center; will-change: transform; }
 /* a tile seen edge-on mid-flip: its thickness, white face layer then green back layer (reversed when turning face up) */
 .deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
@@ -582,3 +596,5 @@ body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount {
 }
 body.dealing-hide #table .tile, body.dealing-hide #sheet .tile { visibility: hidden; }
 body.dealing .bar { background: transparent; transition: background .25s ease; }  /* the white box steps aside */
+/* first visit: "Start new game" sits under the face-down pile */
+.deal-layer .deal-start { position: absolute; left: 50%; transform: translateX(-50%); }

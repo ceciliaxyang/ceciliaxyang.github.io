@@ -76,31 +76,56 @@ function text(ch, y, size, color, weight = 700) {
   return `<text x="30" y="${y}" text-anchor="middle" font-family="${SERIF}" font-size="${size}" font-weight="${weight}" fill="${color}">${ch}</text>`;
 }
 
-/* Small five-petal flower in the corner of every bonus tile (flowers and seasons), so they read as
-   bonus tiles at a glance. */
-function flowerMark(cx, cy, col) {
-  const petals = [0, 72, 144, 216, 288].map((deg) => {
-    const a = ((deg - 90) * Math.PI) / 180;
-    return `<circle cx="${(cx + Math.cos(a) * 3.6).toFixed(2)}" cy="${(cy + Math.sin(a) * 3.6).toFixed(2)}" r="2.7" fill="${col}"/>`;
-  }).join("");
-  return `<g opacity=".9">${petals}<circle cx="${cx}" cy="${cy}" r="1.9" fill="${FACE}"/></g>`;
+/* Flower and season tiles, after a real bonus tile: the number top left, a small character top right, and a
+   painted flower filling the face (a curling stem with leaves, a big blossom in the tile's colour, leaves below). */
+function leaf(x1, y1, x2, y2, w, col) {
+  // a pointed leaf from (x1,y1) to (x2,y2), w wide at its middle
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+  const nx = (-dy / len) * w, ny = (dx / len) * w;
+  const f = (v) => v.toFixed(1);
+  return `<path d="M${f(x1)} ${f(y1)} Q${f(mx + nx)} ${f(my + ny)} ${f(x2)} ${f(y2)} Q${f(mx - nx)} ${f(my - ny)} ${f(x1)} ${f(y1)}Z" fill="${col}"/>`;
 }
+function flowerArt(col) {
+  const petal = col === GREEN ? RED : col;  // green tiles keep a red blossom so it stands out from the leaves
+  const cx = 30, cy = 55;
+  const petals = [0, 60, 120, 180, 240, 300].map((deg) => {
+    const a = ((deg - 90) * Math.PI) / 180;
+    return `<circle cx="${(cx + Math.cos(a) * 5.4).toFixed(1)}" cy="${(cy + Math.sin(a) * 5.4).toFixed(1)}" r="4.6" fill="${petal}"/>`;
+  }).join("");
+  return (
+    // curling stem with small leaves along it
+    `<path d="M24 22 C 32 22, 38 30, 34 39 C 32 43, 30 45, 30 49" fill="none" stroke="${GREEN}" stroke-width="1.8" stroke-linecap="round"/>` +
+    leaf(35, 30, 41, 27, 1.8, GREEN) + leaf(35, 36, 41, 37, 1.8, GREEN) + leaf(32, 42, 27, 39, 1.6, GREEN) +
+    // side leaves under the blossom
+    leaf(29, 50, 14, 47, 3, GREEN) + leaf(31, 50, 46, 46, 3, GREEN) +
+    // the blossom: six petals, a pale ring and a dot at its heart
+    petals + `<circle cx="${cx}" cy="${cy}" r="4.4" fill="${FACE}"/><circle cx="${cx}" cy="${cy}" r="2.2" fill="${petal}"/>` +
+    // leaves along the bottom
+    leaf(30, 70, 12, 66, 3, GREEN) + leaf(30, 70, 48, 65, 3, GREEN) + leaf(30, 70, 24, 62, 2.2, GREEN) + leaf(30, 70, 37, 62, 2.2, GREEN)
+  );
+}
+
+/* Every Chinese character on a tile (numerals, winds, dragons) uses the same Kaiti size and baseline. Flowers and
+   seasons are the exception: a small character in the corner, with the painted flower filling the tile. */
+const CHAR_SIZE = 42;
+const CHAR_Y = 56;
 
 export function faceSvg(k) {
   let body;
-  if (k < 9) body = text(NUMERALS[k], 50, 34, INK);  // Characters: just the numeral (no 萬), with a corner number below
+  if (k < 9) body = text(NUMERALS[k], CHAR_Y, CHAR_SIZE, INK);  // Characters: just the numeral (no 萬), with a corner number
   else if (k < 18) body = DOTS[numOf(k)]();
   else if (k < 27) body = BAMBOO[numOf(k)]();
-  else if (k < 31) body = text(WINDS[k - 27], 56, 44, INK);
-  else if (k === 31) body = text("中", 57, 46, RED);
-  else if (k === 32) body = text("發", 57, 44, GREEN);
+  else if (k < 31) body = text(WINDS[k - 27], CHAR_Y, CHAR_SIZE, INK);
+  else if (k === 31) body = text("中", CHAR_Y, CHAR_SIZE, RED);
+  else if (k === 32) body = text("發", CHAR_Y, CHAR_SIZE, GREEN);
   else if (k === 33)
     body = `<rect x="12" y="13" width="36" height="54" rx="4" fill="none" stroke="${BLUE}" stroke-width="3.5"/><rect x="18" y="19" width="24" height="42" rx="2" fill="none" stroke="${BLUE}" stroke-width="1.2"/>`;
   else {
     const i = k - 34;
     const col = [RED, BLUE, "#c77a12", GREEN, GREEN, RED, "#c77a12", BLUE][i];
-    body = `<text x="9" y="17" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="600" fill="${col}">${(i % 4) + 1}</text>` +
-      text(BONUS[i], 56, 38, col) + flowerMark(49, 69, col);
+    body = `<text x="7" y="20" font-family="-apple-system,system-ui,sans-serif" font-size="15" font-weight="700" fill="${INK}">${(i % 4) + 1}</text>` +
+      `<text x="45" y="21" text-anchor="middle" font-family="${SERIF}" font-size="15" font-weight="700" fill="${col}">${BONUS[i]}</text>` +
+      flowerArt(col);
   }
   // Small corner number (upper right) on circles and bamboo, haloed in the tile's ivory so it reads over the pattern; the pattern shifts down a little to make room.
   if (k < 9)

@@ -5,7 +5,8 @@ import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
 import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
 import { coachAvatarHtml } from "./coach-art.js";
-import { dealAnimation } from "./deal-anim.js";
+import { dealAnimation, introDeal } from "./deal-anim.js";
+import { setSoundEnabled } from "./sound.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
 
 // ?autoplay and ?sandbox are for testing: they save to their own slot so your real game is untouched.
@@ -15,10 +16,13 @@ const KEY = TEST ? "mahjong-coach:test" : "mahjong-coach:v1";
 const $ = (id) => document.getElementById(id);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
+const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
 let state = load() || G.createGame();
 G.refreshNames(state);
 let notes = [];            // coach notes this session; `snapshot` = state before your move
 let selected = null;       // tile id raised in your hand
+let dealing = false;       // the shuffle-and-deal animation is playing: nothing else moves
+let announce = null;       // a bot just called a peng / chow / kong: shown in the white box until you press Continue
 let epoch = 0;             // bumps to cancel pending bot timers (take-back, new game)
 let pane = { open: false, view: "list", id: null, hint: null };
 let bubbleTimer = 0;
@@ -26,7 +30,7 @@ let lastDrawn = null;
 let nudge = null;          // { id, html }: why a call you tried isn't possible (cleared on the next discard)
 let callPick = [];         // tiles you've tapped from your hand to call the discard with
 const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
-const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", ...loadPrefs() };
+const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, ...loadPrefs() };
 // Your own tile order when Autosort is off (tile ids, left to right). Saved per browser.
 const ORDER = TEST ? "mahjong-coach:test-order" : "mahjong-coach:order";
 let myOrder = (() => { try { return JSON.parse(localStorage.getItem(ORDER)) || []; } catch { return []; } })();
@@ -61,7 +65,7 @@ function delay() {
 }
 
 function schedule() {
-  if (dealing) return;  // nothing moves while a new game is being dealt
+  if (dealing || announce) return;  // nothing moves while a hand is dealt, or until you've seen another player's call
   const my = ++epoch;
   const d = delay();
   if (d === null) return;
@@ -102,7 +106,7 @@ function tick() {
     else G.discard(state, p, a.id);
   } else if (ph === "claim") {
     botsRespond();
-    if (!G.claimPendingFor(state, 0)) G.resolveClaims(state);
+    if (!G.claimPendingFor(state, 0)) resolveClaims();
   }
   update();
 }
@@ -130,6 +134,20 @@ function act(action) {
   update();
 }
 
+/* Resolve the open claim; if another player called a set, keep it on screen until you press Continue. */
+function resolveClaims() {
+  const before = state.players.map((pl) => pl.melds.length);
+  const from = state.lastDiscard?.from;
+  G.resolveClaims(state);
+  if (AUTO) return;
+  for (const q of [1, 2, 3]) {
+    if (state.players[q].melds.length > before[q]) {
+      const m = state.players[q].melds[state.players[q].melds.length - 1];
+      announce = { q, type: m.type, k: kindOf(m.claimed), from, tiles: m.tiles.map(kindOf) };
+    }
+  }
+}
+
 function claim(resp) {
   if (!G.claimPendingFor(state, 0)) return;
   const before = clone(state);
@@ -138,7 +156,7 @@ function claim(resp) {
   callPick = [];
   G.respond(state, 0, resp);
   botsRespond();
-  G.resolveClaims(state);
+  resolveClaims();
   pane.hint = null;
   addNote(n, before);
   update();
@@ -196,6 +214,7 @@ function addNote(n, before) {
 }
 
 function takeBack(id) {
+  announce = null;
   const i = notes.findIndex((x) => x.id === id);
   if (i < 0) return;
   const n = notes[i];
@@ -224,7 +243,7 @@ function placeSheet() {
     // prompt, extra called sets) it grows once and stays at that height, so the floating buttons don't bob.
     if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
     // keep the page scrollable past the sheet so nothing above it is hidden for good
-    document.documentElement.style.setProperty("--sheet-h", sheet.classList.contains("collapsed") ? "calc(84px + env(safe-area-inset-bottom))" : `${sheet.offsetHeight}px`);
+    document.documentElement.style.setProperty("--sheet-h", sheet.classList.contains("collapsed") ? "calc(150px + env(safe-area-inset-bottom))" : `${sheet.offsetHeight}px`);
   } else if (bar.parentElement === sheet) {
     felt.append(bar);
     center.append(me);
@@ -325,6 +344,8 @@ function renderSettings() {
   $("sortBtn").setAttribute("aria-checked", String(prefs.autoSort));
   $("scoresBtn").setAttribute("aria-checked", String(prefs.showScores));
   $("claimedBtn").setAttribute("aria-checked", String(prefs.showClaimed));
+  $("soundBtn").setAttribute("aria-checked", String(prefs.sound));
+  setSoundEnabled(prefs.sound);
   document.body.classList.toggle("show-claimed", prefs.showClaimed);
   document.querySelectorAll("[data-diff]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.diff === prefs.difficulty)));
 }
@@ -368,6 +389,23 @@ function plateHtml(p) {
       : `<span class="wind">${WINDS[sw]}</span>`}</div>
     <span class="pname">${name}${pts}</span>
   </div>`;
+}
+
+/* Phones (Figma 2350:25132): all four players together at the top of the bottom sheet, as a compass of wind
+   circles placed where each player sits: you at the bottom, the player opposite on top, the others either side. */
+function compassHtml() {
+  const pos = ["b", "r", "t", "l"];
+  const circles = [0, 1, 2, 3].map((p) => {
+    const pl = state.players[p], sw = G.seatWind(state, p);
+    const on = turnHolder() === p;
+    const thinking = p !== 0 && state.current === p && (state.phase === "draw" || state.phase === "act");
+    const name = p === 0 ? "You" : pl.name;
+    const title = `${name}: ${WIND_EN[sw]} seat${sw === 0 ? ", dealer" : ""}${prefs.showScores ? `, ${pl.score} points` : ""}`;
+    return `<span class="plate circle c-${pos[p]} ${on ? "on" : ""} ${thinking ? "thinking" : ""}" title="${title}" role="img" aria-label="${title}">${thinking
+      ? `<span class="dots"><i></i><i></i><i></i></span>` : `<span class="wind">${WINDS[sw]}</span>`}</span>`;
+  }).join("");
+  const pts = prefs.showScores ? `<span class="pts">${state.players[0].score}</span>` : "";
+  return `<div class="compass"><div class="compass-ring">${circles}</div><span class="pname">You${pts}</span></div>`;
 }
 
 function meldsHtml(pl, size) {
@@ -464,7 +502,7 @@ function handOrder(hand) {
 
 function renderMe() {
   const pl = state.players[0];
-  $("mePlate").innerHTML = plateHtml(0);
+  $("mePlate").innerHTML = PHONE.matches ? compassHtml() : plateHtml(0);
   $("meExposed").innerHTML = meldsHtml(pl, "md");
   const live = myTurn();
   const hand = pl.hand.slice();
@@ -497,7 +535,15 @@ function renderBar() {
   const bar = $("bar");
   let say = "", play = "";
   const btns = [];
-  if (myTurn()) {
+  if (announce) {
+    const a = announce;
+    const who = state.players[a.q].name;
+    const fromWho = a.from === 0 ? "your discard" : `${state.players[a.from].name}'s discard`;
+    const what = a.type === "pung" ? "peng" : a.type;
+    say = `<b>${who}</b> called a <b>${what}</b> of <b>${tileName(a.k)}</b> from ${fromWho}.`;
+    play = a.tiles.map((k) => tileHtml(k, { size: "lg" })).join("");
+    btns.push(`<button type="button" class="btn" data-ann-ok>Continue</button>`);
+  } else if (myTurn()) {
     say = state.afterClaim ? "Now discard a tile." : selected !== null ? "Press Discard, or tap the tile again to put it back." : "Your turn. Tap a tile to pick your discard.";
     if (selected !== null) {
       // the tile you picked shows in the tile-in-play spot, ready to go (tap it, or Discard)
@@ -506,13 +552,18 @@ function renderBar() {
       btns.push(`<button type="button" class="btn" data-act="discard">Discard</button>`);
     }
     const o = G.actOptions(state, 0);
-    if (o.tsumo && o.tsumo.legal) btns.unshift(`<button type="button" class="btn red" data-act="mahjong">Mahjong</button>`);
+    if (o.tsumo && o.tsumo.legal) {
+      // a winning hand: say so instead of asking for a discard
+      if (selected === null) say = "You got Mahjong!";
+      btns.unshift(`<button type="button" class="btn red" data-act="mahjong">Mahjong</button>`);
+    }
   } else if (G.claimPendingFor(state, 0)) {
     const ld = state.lastDiscard;
     const k = kindOf(ld.id);
     const who = state.players[ld.from].name;
     const o = state.claim.options[0];
     say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.${ld.robbing ? "" : `<span class="say-more"> Continue or add tiles to call it.</span>`}`;
+    if (o.win) say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.<span class="say-more"> You got Mahjong!</span>`;
     // the set you're forming: the discard plus every tile you've lifted, in order (tap one of yours to drop it)
     const set = [{ k, id: null }, ...callPick.map((id) => ({ k: kindOf(id), id }))].sort((a, b) => a.k - b.k || (a.id === null ? -1 : 1));
     play = set.map((t) => t.id === null
@@ -627,6 +678,7 @@ let confirmTimer = null;
 function renderModal() {
   const m = $("modal");
   const card = $("modalCard");
+  if (dealing) { m.hidden = true; return; }  // the results card steps away while the next hand is dealt
   if (guideOpen) {
     m.hidden = false;
     card.innerHTML = guideHtml();
@@ -672,7 +724,7 @@ function resultHtml() {
   return `<h2>${head}</h2><p class="lede">${lede}</p>${body}<div class="scores">${scores}</div>${coachLine}
     <div class="btns">
       ${handNotes ? `<button type="button" class="btn light" data-open-coach>Review notes</button>` : ""}
-      <button type="button" class="btn" data-next>Next hand</button>
+      <button type="button" class="btn" data-next>Start new hand</button>
     </div>`;
 }
 
@@ -708,6 +760,7 @@ $("hand").addEventListener("click", (e) => {
 });
 
 $("bar").addEventListener("click", (e) => {
+  if (announce && e.target.closest("[data-ann-ok]")) { announce = null; return update(); }
   const a = e.target.closest("[data-act]");
   if (a && myTurn()) {
     if (a.dataset.act === "discard" && selected !== null) act({ type: "discard", id: selected });
@@ -744,14 +797,7 @@ $("paneBody").addEventListener("click", (e) => {
 $("modal").addEventListener("click", (e) => {
   if (e.target.closest("[data-close-guide]") || (guideOpen && e.target === $("modal"))) { guideOpen = false; render(); return; }
   if (e.target.closest("[data-open-coach]")) { openList(); return; }
-  if (e.target.closest("[data-next]")) {
-    const roundDone = G.nextHand(state);
-    selected = null;
-    if (roundDone) {
-      showBubble({ id: 0, bubble: `On to the ${WIND_EN[state.prevailing]} round.` });
-    }
-    update();
-  }
+  if (e.target.closest("[data-next]")) startNextHand();
 });
 
 $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(); });
@@ -823,6 +869,11 @@ document.querySelectorAll("[data-diff]").forEach((b) => b.addEventListener("clic
   savePrefs();
   render();
 }));
+$("soundBtn").addEventListener("click", () => {
+  prefs.sound = !prefs.sound;
+  savePrefs();
+  render();
+});
 $("claimedBtn").addEventListener("click", () => {
   prefs.showClaimed = !prefs.showClaimed;
   savePrefs();
@@ -850,13 +901,43 @@ $("newBtn").addEventListener("click", (e) => {
   if (confirmNew) newGame(); else if (!dealing) setConfirmNew(true);
 });
 document.addEventListener("click", (e) => { if (confirmNew && !e.target.closest("#newBtn")) setConfirmNew(false); });
+/* Phones: tuck the bottom sheet away while the pile gathers (so the animation sits in the middle of the
+   screen), and open it again just as the tiles are dealt into your hand. */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function dealHooks() {
+  if (!PHONE.matches) return {};
+  return {
+    beforePile: async () => { setSheet(true); await sleep(380); },
+    beforeDeal: async () => { setSheet(false); await sleep(380); },
+  };
+}
+
+/* Start new hand (from the results card): the card goes away, then the same shuffle-and-deal plays into the next hand. */
+async function startNextHand() {
+  if (dealing) return;
+  dealing = true;
+  epoch++;
+  announce = null;
+  selected = null;
+  $("modal").hidden = true;
+  let roundDone = false;
+  await dealAnimation(() => {
+    roundDone = G.nextHand(state);
+    render();
+    save();
+  }, dealHooks());
+  dealing = false;
+  if (roundDone) showBubble({ id: 0, bubble: `On to the ${WIND_EN[state.prevailing]} round.` });
+  update();
+}
+
 /* A new game plays the shuffle-and-deal transition first (see deal-anim.js); the bots wait until it's done. */
-let dealing = false;
 async function newGame() {
   if (dealing) return;
   dealing = true;
   setConfirmNew(false);
   epoch++;  // cancel any bot move still pending from the old game
+  announce = null;
   guideOpen = false;
   nudge = null;
   selected = null;
@@ -867,12 +948,15 @@ async function newGame() {
     notes = [];
     render();
     save();
-  });
+  }, dealHooks());
   dealing = false;
   update();
 }
 
 document.addEventListener("keydown", (e) => {
+  if (e.key === " " && !e.repeat && announce && !guideOpen && !confirmNew && !e.target.closest?.("input, textarea, .settings")) {
+    e.preventDefault(); announce = null; update(); return;
+  }
   if (e.key === " " && !e.repeat && G.claimPendingFor(state, 0) && !guideOpen && !confirmNew && !e.target.closest?.("input, textarea, .settings")) {
     e.preventDefault();
     if (callPick.length) callPicked(); else claim({ type: "pass" });
@@ -888,4 +972,19 @@ document.addEventListener("keydown", (e) => {
 
 if (TEST) window.__mc = { tick, get state() { return state; }, get notes() { return notes; } };
 
-update();
+if (firstVisit && !AUTO) {
+  // First visit: the tiles wait face down in the middle until you press "Start new game", then get dealt.
+  // Phones: the bottom sheet starts fully off screen and only slides up as the tiles are dealt.
+  dealing = true;
+  const sh = $("sheet");
+  sh.style.transition = "none";  // start off screen without sliding there
+  sh.classList.add("away");
+  render();
+  requestAnimationFrame(() => requestAnimationFrame(() => { sh.style.transition = ""; }));
+  const hooks = dealHooks();
+  if (hooks.beforeDeal) hooks.beforeDeal = async () => { $("sheet").classList.remove("away"); setSheet(false); await sleep(380); };
+  if (hooks.beforePile) hooks.beforePile = async () => {};  // already out of the way
+  introDeal(() => render(), hooks).then(() => { dealing = false; update(); });
+} else {
+  update();
+}

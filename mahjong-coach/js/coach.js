@@ -28,8 +28,9 @@ function roleOf(k, c, unseen) {
   const n = c[k];
   if (n >= 3) return { kind: "set", text: "part of a complete set of three" };
   if (n === 2) {
-    if (isHonor(k)) return { kind: "pair", text: "a pair, which can still become a peng" };
-    return { kind: "pair", text: "a pair, the natural candidate for your hand's eyes (the pair every hand needs)" };
+    const dead = unseen[k] === 0;  // both other copies are already discarded or called
+    if (isHonor(k)) return { kind: "pair", text: dead ? "a pair, but both other copies are already discarded or called, so it can only ever be your pair" : "a pair, which can still become a peng" };
+    return { kind: "pair", text: `a pair, the natural candidate for your hand's eyes (the pair every hand needs)${dead ? ". Both other copies are already discarded or called, so it can't become a peng" : ""}` };
   }
   if (isHonor(k)) {
     const left = unseen[k];
@@ -49,7 +50,15 @@ function roleOf(k, c, unseen) {
   }
   const adj = near.filter((x) => Math.abs(x - k) === 1);
   if (adj.length >= 2) return { kind: "seq", text: `in the middle of a run (${near.map((x) => numOf(x)).join(", ")} nearby), so it's holding a sequence together` };
-  return { kind: "shape", text: `connected to the ${near.map((x) => numOf(x)).join(" and ")} next to it, a partial sequence that's waiting on one tile` };
+  // what the partial sequence is waiting for, counting only copies that aren't already discarded or called
+  const x = near[0], lo = Math.min(k, x), hi = Math.max(k, x);
+  const waits = (hi - lo === 2 ? [lo + 1] : [lo - 1, hi + 1]).filter((w) => w >= 0 && w < 27 && suitOf(w) === suitOf(k));
+  const left = waits.reduce((n, w) => n + unseen[w], 0);
+  const gone = waits.length * 4 - left - waits.reduce((n, w) => n + (c[w] || 0), 0);
+  const deadNote = left === 0
+    ? `, but every ${waits.map((w) => numOf(w)).join(" and ")} it needs is already discarded or called, so it can't grow`
+    : left <= 2 && gone > 0 ? `, but only ${left} of the tiles it needs ${left === 1 ? "is" : "are"} left (${gone} already discarded or called)` : "";
+  return { kind: "shape", text: `connected to the ${near.map((x) => numOf(x)).join(" and ")} next to it, a partial sequence that's waiting on one tile${deadNote}` };
 }
 
 let noteSeq = 0;

@@ -3,6 +3,8 @@
 // move every tile goes to its player or onto the wall, and your own tiles turn face up. The real table is hidden
 // underneath until the last tile lands. Skipped entirely for people who prefer reduced motion.
 
+import { clack, shuffleRattle } from "./sound.js";
+
 const GHOST_W = 40;  // every flying tile is drawn at this width and scaled to fit where it is or goes
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -52,7 +54,8 @@ async function flip(g, html, back, delay = 0) {
     { transform: `${up} scaleX(.48)` },
     { transform: `${up} scaleX(.56)` },
   ], { duration: 60, easing: "linear", fill: "forwards" }).finished;
-  // 3. over the top and down onto the other face, settling with a little bounce
+  // 3. over the top and down onto the other face, settling with a little bounce (and a soft clack as it lands)
+  clack(0.17, 0.18 + Math.random() * 0.12);
   g.el.className = back ? "tile back" : "tile";
   g.el.innerHTML = back ? "" : html;
   await g.el.animate([
@@ -121,49 +124,39 @@ function dealOrder() {
   return order;
 }
 
-/* Play the whole transition. `startNew` swaps in the new game and renders it (hidden underneath). */
-export async function dealAnimation(startNew) {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { startNew(); return; }
-  const body = document.body;
-  const layer = document.createElement("div");
-  layer.className = "deal-layer";
-  body.appendChild(layer);
-
-  // 1. buttons and labels fade away; the real tiles hand over to stand-ins
-  body.classList.add("dealing");
-  let ghosts = visibleTiles().map((t) => {
-    const back = t.classList.contains("back") || t.classList.contains("face-down");
-    return { g: makeGhost(layer, place(t), t.innerHTML, back), back };
-  });
-  body.classList.add("dealing-hide");
-  await wait(280);
-
-  // 2. every tile slides into the middle in a "mid-shuffle swirl": scattered at every angle across an
-  //    oval, like hands mixing the tiles, but never touching (each spot is tried at random and kept only
-  //    if it clears every tile already placed)
-  const all = ghosts.map((x) => x.g);
-  const c = document.querySelector(".felt")?.getBoundingClientRect() ?? { left: 0, top: 0, width: innerWidth, height: innerHeight };
-  const cx = c.left + c.width / 2, cy = Math.min(c.top + c.height / 2, innerHeight * 0.42);
-  const n = all.length;
+/* Where the pile goes: the middle of the table, sized so n tiles fit as a swirl without touching. */
+function pileLayout(n) {
+  // phones: centred in the screen (the sheet is tucked away); larger screens: the middle of the table
+  const phone = matchMedia("(max-width: 600px)").matches;
+  const c = phone ? { left: 0, top: 0, width: innerWidth, height: innerHeight }
+    : document.querySelector(".felt")?.getBoundingClientRect() ?? { left: 0, top: 0, width: innerWidth, height: innerHeight };
+  const cx = c.left + c.width / 2, cy = phone ? innerHeight * 0.46 : Math.min(c.top + c.height / 2, innerHeight * 0.42);
   const maxW = Math.min(c.width || innerWidth, innerWidth - 32) * 0.9, maxH = innerHeight * 0.5;
   const rx = Math.min(maxW / 2, 260), ry = Math.min(rx * 0.74, maxH / 2);
   const w = Math.min(GHOST_W, Math.sqrt((Math.PI * rx * ry) / (n * 1.5 * 2.6)));
   const slots = swirl(n, w, rx, ry).map((t) => ({ x: cx + t.x, y: cy + t.y, rot: t.rot, s: w / GHOST_W }));
   slots.sort((a, b) => a.y - b.y);  // dealing takes tiles from the far side of the pile first
-  const order = [...all.keys()].sort(() => Math.random() - 0.5);  // tiles land in a random spot of the pile
-  await Promise.all(order.map((gi, i) => move(all[gi], slots[i], 600, Math.min(i * 8, 420))));
+  return { cx, cy, ry, w, slots };
+}
 
-  // 3. the whole pile flips face down, a wave across it
-  await Promise.all(ghosts.map((x, i) => (x.back ? null : flip(x.g, "", true, Math.min(order.indexOf(i) * 6, 360)))));
-  ghosts = order.map((gi) => all[gi]);  // deal from the pile, top row first
-  await wait(150);
+function newLayer() {
+  const layer = document.createElement("div");
+  layer.className = "deal-layer";
+  document.body.appendChild(layer);
+  return layer;
+}
 
-  // 4. the new game appears underneath (still hidden); in one move every tile goes to its place: each
-  //    player's hand, and everything left over onto the wall (the face-down stack with the count)
+/* The new game appears underneath (still hidden); in one move every tile goes to its place (each player's
+   hand, everything left over onto the wall), your tiles turn face up, then the real table takes over. */
+async function dealFromPile(layer, ghosts, pile, startNew, hooks) {
+  const body = document.body;
   startNew();
   await frame();
+  if (hooks.beforeDeal) await hooks.beforeDeal();  // phones: the sheet opens now, ready to receive your tiles
+  layer.classList.add("flying");  // tiles in flight pass over the sheet and buttons
+  shuffleRattle(0.6, 24);  // tiles landing in front of each player
   const targets = dealOrder();
-  while (ghosts.length < targets.length) ghosts.push(makeGhost(layer, { x: cx, y: cy, w, rot: 0 }, "", true));
+  while (ghosts.length < targets.length) ghosts.push(makeGhost(layer, { x: pile.cx, y: pile.cy, w: pile.w, rot: 0 }, "", true));
   const spare = ghosts.splice(targets.length);
   const wallTile = document.querySelector("#discards .dstack.wall .tile");
   const wallAt = wallTile ? place(wallTile) : null;
@@ -176,11 +169,70 @@ export async function dealAnimation(startNew) {
       ? move(g, { x: wallAt.x, y: wallAt.y, rot: wallAt.rot, s: wallAt.w / GHOST_W }, 560, Math.random() * 90)
       : Promise.resolve()).then(() => g.el.remove())),
   ]);
-
-  // 5. your tiles turn face up, then the real table takes over again
   const mine = new Set([...document.querySelectorAll("#hand .tile, #meExposed .tile")]);
   await Promise.all(targets.map((t, i) => (mine.has(t) && !t.classList.contains("back") ? flip(ghosts[i], t.innerHTML, false, i % 14 * 25) : null)));
   body.classList.remove("dealing-hide");
   layer.remove();
   body.classList.remove("dealing");
+}
+
+/* New game: clear the table, gather every tile into the swirl, flip it face down, then deal. */
+export async function dealAnimation(startNew, hooks = {}) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { startNew(); return; }
+  const body = document.body;
+  if (hooks.beforePile) await hooks.beforePile();  // phones: tuck the sheet away first
+  const layer = newLayer();
+
+  // 1. buttons and labels fade away; the real tiles hand over to stand-ins
+  body.classList.add("dealing");
+  const ghosts = visibleTiles().map((t) => {
+    const back = t.classList.contains("back") || t.classList.contains("face-down");
+    return { g: makeGhost(layer, place(t), t.innerHTML, back), back };
+  });
+  body.classList.add("dealing-hide");
+  await wait(280);
+
+  // 2. every tile slides into the middle in a "mid-shuffle swirl": scattered at every angle across an
+  //    oval, like hands mixing the tiles, but never touching
+  const all = ghosts.map((x) => x.g);
+  const pile = pileLayout(all.length);
+  const order = [...all.keys()].sort(() => Math.random() - 0.5);  // tiles land in a random spot of the pile
+  shuffleRattle(1.05, Math.min(60, all.length));  // the clatter of tiles being swept together and mixed
+  await Promise.all(order.map((gi, i) => move(all[gi], pile.slots[i], 600, Math.min(i * 8, 420))));
+
+  // 3. the whole pile flips face down, a wave across it
+  await Promise.all(ghosts.map((x, i) => (x.back ? null : flip(x.g, "", true, Math.min(order.indexOf(i) * 6, 360)))));
+  await wait(150);
+
+  // 4–5. deal
+  await dealFromPile(layer, order.map((gi) => all[gi]), pile, startNew, hooks);
+}
+
+/* First visit: the table starts as the face-down swirl with a "Start new game" button under it. Pressing it
+   deals the game (`startNew` renders it underneath). Resolves once the real table is showing. */
+export async function introDeal(startNew, hooks = {}) {
+  const body = document.body;
+  body.classList.add("dealing", "dealing-hide");
+  if (hooks.beforePile) await hooks.beforePile();
+  const layer = newLayer();
+  const pile = pileLayout(60);
+  const ghosts = pile.slots.map((p) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, "", true));
+  ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn deal-start";
+  btn.textContent = "Start new game";
+  btn.style.top = `${pile.cy + pile.ry + 36}px`;
+  layer.appendChild(btn);
+  btn.focus({ preventScroll: true });
+  await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
+  btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    startNew();
+    if (hooks.beforeDeal) await hooks.beforeDeal();
+    layer.remove();
+    body.classList.remove("dealing", "dealing-hide");
+    return;
+  }
+  await dealFromPile(layer, ghosts, pile, startNew, hooks);
 }
