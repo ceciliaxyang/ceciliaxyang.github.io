@@ -262,8 +262,17 @@ export function hint(state) {
     const opts = actOptions(state, 0);
     if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: state.points === false ? `<p>Your hand is complete. Tap <b>Win</b>.</p>` : `<p>Your hand is worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
     const ranked = rankDiscards(state, 0);
-    const top = ranked.list.slice(0, 3);
-    const best = top[0];
+    // Near-ties (same distance from winning, within a couple of useful tiles) follow beginner habits instead of
+    // the last useful tile: lone winds and dragons go first, then lone 1s and 9s, and never your only pair.
+    const c = ranked.counts;
+    const pairCount = c.filter((n) => n >= 2).length;
+    const habit = (r) => (c[r.k] === 2 && pairCount === 1 ? 3 : r.tier);
+    const top0 = ranked.list[0];
+    const tol = Math.max(2, Math.round(top0.ukeire * 0.1));
+    const near = ranked.list.filter((r) => r.shanten === top0.shanten && r.score >= top0.score - tol)
+      .sort((a, b) => habit(a) - habit(b) || b.score - a.score);
+    const best = near[0];
+    const top = [best, ...ranked.list.filter((r) => r !== best)].slice(0, 3);
     const role = roleOf(best.k, ranked.counts, ranked.unseen);
     const rows = top.map((r) => `<li>${t(r.k)}<span>${awayShort(r.shanten)}</span><span>${helps(r.ukeire)}</span></li>`).join("");
     // single winds or dragons the coach is keeping because they can earn points: say so, since beginners expect
@@ -274,15 +283,19 @@ export function hint(state) {
       ? `<p><b>Why not ${kept.map((k) => t(k)).join(" or ")}?</b> ${kept.map((k) => `Three ${t(k)} earn ${pts(k)} point${pts(k) > 1 ? "s" : ""}.`).join(" ")} You need points to win, so keep ${kept.length > 1 ? "them" : "it"} for now.</p>`
       : "";
     // moves exactly as good as the best one all go in the card; the tie-breaker decides which is named first
-    const equal = ranked.list.filter((r) => r.score === best.score).map((r) => r.k);
+    const equal = near.filter((r) => habit(r) === habit(best) && r.score === best.score).map((r) => r.k);
     const lead = equal.length > 1
       ? `<p>These are equally good. I'd start with ${t(best.k)}. It's ${role.text}.</p>`
       : `<p>It's ${role.text}.</p>`;
-    let html = `${lead}${keptHtml}`
+    // the numbers slightly favoured breaking your only pair: say why the coach didn't
+    const pairNote = top0 !== best && habit(top0) === 3
+      ? `<p><b>Why not ${t(top0.k)}?</b> It's about as good, but it's your only pair. Every winning hand needs one, so keep it.</p>`
+      : "";
+    let html = `${lead}${pairNote}${keptHtml}`
       + `<p>Your top choices (how far from winning, and how many useful tiles are left):</p><ul class="hint-list">${rows}</ul>`;
     if (ranked.threats.length) html += `<p class="tip">Heads up: ${ranked.threats.map((q) => state.players[q].name).join(" and ")} may be close to winning. Tiles they threw away are safe.</p>`;
     if (opts.kongs.length) html += `<p class="tip">You have four ${opts.kongs.map((x) => t(x.k)).join("")}. Set them down as a <i>kong</i> to get an extra tile.</p>`;
-    return { title: "Here's what I'd do", pick: { k: best.k, ks: equal, label: "Throw away" }, html };
+    return { title: "Here's what I'd do", pick: { k: best.k, ks: equal, label: equal.length > 1 ? "Throw one away" : "Throw away" }, html };
   }
   if (state.phase === "claim" && state.claim?.options[0] && !state.claim.responses[0]) {
     if (state.claim.options[0].none) {

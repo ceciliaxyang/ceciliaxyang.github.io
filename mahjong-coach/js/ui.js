@@ -690,7 +690,7 @@ function renderPane() {
   const h = pane.hint || (yourMove ? Coach.hint(state) : null);
   // one tile, or every equally good tile side by side, each with its name under it
   const ks = h?.pick ? (h.pick.ks || (h.pick.k !== undefined ? [h.pick.k] : [])) : [];
-  const pickTiles = ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join(`<span class="pick-or">or</span>`)}</div>` : "";
+  const pickTiles = ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join("")}</div>` : "";
   const pickCard = h?.pick ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${h.pick.label}</span>${pickTiles}</div></div>` : "";
   const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions"><button type="button" class="btn" data-close>Got it</button></div>` : "";
   // the Notes section only appears once the coach has written a note
