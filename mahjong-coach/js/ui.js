@@ -4,7 +4,7 @@ import * as G from "./game.js";
 import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
 import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
-import { coachAvatarHtml, coachPortraitHtml } from "./coach-art.js";
+import { coachTileHtml, coachPortraitHtml } from "./coach-art.js";
 import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
@@ -626,7 +626,7 @@ function unread() { return notes.filter((n) => !n.read).length; }
 function renderCoach() {
   const c = $("coach");
   const av = $("coachAv");
-  if (av) av.outerHTML = coachAvatarHtml();  // first render: draw Guanyin into the pill
+  if (av) av.outerHTML = coachTileHtml();  // first render: draw the floating Guanyin tile
   // a new note flips Guanyin to the red seal (instead of a number badge)
   const u = unread();
   c.classList.toggle("has-note", u > 0);
@@ -651,11 +651,13 @@ function openNote(id) {
   pane = { ...pane, open: true, view: "note", id };
   hideBubble();
   render();
+  $("paneBody").scrollTop = 0;  // always open at the top
 }
 function openList() {
   pane = { ...pane, open: true, view: "list", id: null };
   hideBubble();
   render();
+  $("paneBody").scrollTop = 0;  // always open at the top
 }
 function closePane() { pane.open = false; render(); }
 
@@ -1013,6 +1015,13 @@ document.addEventListener("keydown", (e) => {
     else if (guideOpen) { guideOpen = false; render(); }
     else if (pane.open) closePane();
   }
+});
+
+// Desktop: the coach is a popover, so a click anywhere outside it (other than the coach tile or its bubble) closes it
+document.addEventListener("pointerdown", (e) => {
+  if (!pane.open || PHONE.matches) return;
+  if (e.target.closest("#pane, #coach, #bubble")) return;
+  closePane();
 });
 
 if (TEST) window.__mc = { tick, get state() { return state; }, get notes() { return notes; } };

@@ -87,7 +87,18 @@ function guanyinSvg(cls, viewBox, haloR = 33, haloY = 30, haloK = 1) {
   return `<svg class="${cls}" viewBox="${viewBox}" aria-hidden="true">${defs}<circle class="gy-halo" cx="40" cy="${haloY}" r="${haloR}" fill="url(#gyHalo${id})"/>${FIGURE.replace("url(#gyShade)", `url(#gyShade${id})`)}</svg>`;
 }
 
-/* The Coach pill's figure. The halo (hidden normally) lights up when the pill has the `has-note` class. */
+/* The Coach button: a small porcelain tile, floating, with Guanyin painted on its face as a bust. Its parts:
+   a gold glow behind it (shown with an insight or on hover), a soft shadow on the table below, then the tile
+   itself (two edge layers for its thickness, and the face). Sizes and motion are in the CSS (.coach-tile). */
+export function coachTileHtml() {
+  // the "Coach" label sits on the tile's face, over the bottom of her robe (it's also the button's name)
+  return `<span class="coach-tile">
+    <span class="ct-glow"></span><span class="ct-shadow"></span>
+    <span class="ct-body"><span class="ct-rim"></span><span class="ct-edge"></span><span class="ct-face">${guanyinSvg("gy", "12 6 56 68", 0)}</span><span class="ct-label">Coach</span></span>
+  </span>`;
+}
+
+/* The earlier pill figure (no longer used by the button). */
 export function coachAvatarHtml() {
   // "barely there": a small, faint warmth behind her. The view box starts higher (y 0, not 6) so she sits
   // lower in the pill and the glow stops short of its top edge.
