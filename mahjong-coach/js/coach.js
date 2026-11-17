@@ -1,7 +1,7 @@
 // The coach: compares each of your decisions with the best move it can find and, when yours
 // was clearly worse, writes a note explaining why. Notes are plain objects rendered by ui.js.
-// Voice: written for a first-time player. No jargon without saying what it means in the same breath
-// ("points", not "fan"; "tiles away from winning", not "shanten" or "ready"; "a group of three", not "a meld").
+// Voice: written for a first-time player. Short, plain sentences, one idea each ("You need two more X to
+// claim a peng."). No jargon without saying what it means ("points", not "fan"; "tiles away from winning").
 import { kindOf, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
 import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
@@ -30,17 +30,17 @@ function tileStrip(kinds, unseen) {
 /* What job a tile was doing in hand c (14-tile shape including it). */
 function roleOf(k, c, unseen) {
   const n = c[k];
-  if (n >= 3) return { kind: "set", text: "part of a finished group of three" };
+  if (n >= 3) return { kind: "set", text: "already part of a group of three" };
   if (n === 2) {
     const dead = unseen[k] === 0;  // both other copies are already discarded or called
-    if (isHonor(k)) return { kind: "pair", text: dead ? "a pair. The other two copies are already gone, so it can stay a pair but never grow to three" : "a pair, which could still grow into three of a kind" };
-    return { kind: "pair", text: `a pair, and every winning hand needs exactly one pair${dead ? ". The other two copies are already gone, so it can't grow to three" : ""}` };
+    if (isHonor(k)) return { kind: "pair", text: dead ? "a pair that can't become three (the others are gone)" : "a pair that could become three of a kind" };
+    return { kind: "pair", text: `a pair, and every winning hand needs one${dead ? " (the others are gone)" : ""}` };
   }
   if (isHonor(k)) {
     const left = unseen[k];
     return {
       kind: "lone-honor",
-      text: `a single ${isDragon(k) ? "dragon" : "wind"}. Winds and dragons can't make runs like 3-4-5, only matching sets, so it helps only if you get ${left === 0 ? "another copy, and there are none left" : `another copy (${left} left)`}`,
+      text: `a single ${isDragon(k) ? "dragon" : "wind"}. It can't be part of a run${left === 0 ? ", and no copies are left" : ""}`,
     };
   }
   const near = [];
@@ -49,20 +49,19 @@ function roleOf(k, c, unseen) {
     if (x >= 0 && x < 27 && suitOf(x) === suitOf(k) && c[x]) near.push(x);
   }
   if (!near.length) {
-    if (isTerminal(k)) return { kind: "lone-terminal", text: `a lone ${numOf(k)}. A 1 or 9 can only join a run from one side (like ${numOf(k) === 1 ? "1-2-3" : "7-8-9"}), so it's one of the hardest tiles to use` };
-    return { kind: "lone", text: "on its own, with no nearby tiles of the same suit" };
+    if (isTerminal(k)) return { kind: "lone-terminal", text: `a lone ${numOf(k)}. It fits only one run (${numOf(k) === 1 ? "1-2-3" : "7-8-9"})` };
+    return { kind: "lone", text: "on its own, with nothing nearby" };
   }
   const adj = near.filter((x) => Math.abs(x - k) === 1);
-  if (adj.length >= 2) return { kind: "seq", text: `in the middle of a run with the ${near.map((x) => numOf(x)).join(" and ")}, holding it together` };
+  if (adj.length >= 2) return { kind: "seq", text: `the middle of a run (${near.map((x) => numOf(x)).join(" and ")} on each side)` };
   // what the partial sequence is waiting for, counting only copies that aren't already discarded or called
   const x = near[0], lo = Math.min(k, x), hi = Math.max(k, x);
   const waits = (hi - lo === 2 ? [lo + 1] : [lo - 1, hi + 1]).filter((w) => w >= 0 && w < 27 && suitOf(w) === suitOf(k));
   const left = waits.reduce((n, w) => n + unseen[w], 0);
   const gone = waits.length * 4 - left - waits.reduce((n, w) => n + (c[w] || 0), 0);
-  const deadNote = left === 0
-    ? `. But every ${waits.map((w) => numOf(w)).join(" and ")} it needs has already been thrown away or taken, so it can't finish`
-    : left <= 2 && gone > 0 ? `. But only ${left} of the ${waits.map((w) => numOf(w)).join(" or ")} it needs ${left === 1 ? "is" : "are"} left (${gone} already thrown away or taken)` : "";
-  return { kind: "shape", text: `half of a run with the ${near.map((x) => numOf(x)).join(" and ")}, one tile short of three in a row (it needs a ${waits.map((w) => numOf(w)).join(" or ")})${deadNote}` };
+  const deadNote = left === 0 ? ", but those are all gone"
+    : left <= 2 && gone > 0 ? `, and only ${left} ${left === 1 ? "is" : "are"} left` : "";
+  return { kind: "shape", text: `next to your ${near.map((x) => numOf(x)).join(" and ")}. It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run${deadNote}` };
 }
 
 let noteSeq = 0;
@@ -99,33 +98,29 @@ export function reviewAct(before, action) {
   const p = [];
   if (unsafe && !worseShape && !fewer) {
     const q = ranked.threats.map((x) => before.players[x].name).join(" and ");
-    p.push(`<p>${q} already ${ranked.threats.length > 1 ? "have" : "has"} three groups face up on the table, so ${ranked.threats.length > 1 ? "they're" : "they're"} probably close to winning. You're still ${away(mine.shanten)}, so you're unlikely to win first.</p>`);
-    p.push(`<p>If you throw the exact tile they need, they win with it and you pay. ${t(best.k)} was safer: ${best.danger === 0 ? "they threw one away themselves, and you can't win on a tile you've thrown away" : "it's much less likely to be the tile they need"}. ${t(k)} ${mine.danger >= 5 ? "is a middle number, and middle numbers finish lots of hands" : "could easily be the one they need"}.</p>`);
-    p.push(`<p class="tip">Tip: when someone has three groups showing and you're far from winning, play it safe. Throw away tiles they've already thrown away.</p>`);
+    p.push(`<p>${q} ${ranked.threats.length > 1 ? "have" : "has"} three groups showing, so ${ranked.threats.length > 1 ? "they" : "they"} may be close to winning. You're still ${away(mine.shanten)}.</p>`);
+    p.push(`<p>If you throw the tile they need, they win. ${t(best.k)} was safer: ${best.danger === 0 ? "they already threw one away, so it can't win for them" : "it's less likely to be what they need"}. ${t(k)} ${mine.danger >= 5 ? "is a middle number, and those are often what people need" : "could be what they need"}.</p>`);
+    p.push(`<p class="tip">Tip: when someone looks close to winning, throw tiles they've already thrown.</p>`);
     return note(before, {
       kind: "defense",
       title: `${tileName(best.k)} was the safer tile to throw away`,
-      bubble: `Careful: ${before.players[ranked.threats[0]].name} looks close to winning.`,
+      bubble: `Careful: ${before.players[ranked.threats[0]].name} may be close to winning.`,
       compare: { mine: { k, label: "You threw" }, best: { k: best.k, label: "Safer" } },
       html: p.join(""),
     });
   }
-  p.push(`<p>Throwing away ${t(k)} left you <b>${away(mine.shanten)}</b>.</p>`);
-  // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so just give the count
-  if (best.tiles.length <= 8) {
-    p.push(`<p>Throwing away ${t(best.k)} instead would have left you <b>${away(best.shanten)}</b>${worseShape ? "" : `, with more chances to get there`}. These are the tiles you'd be hoping to pick up next (the number is how many are still out there):</p>`);
-    p.push(tileStrip(best.tiles, unseen));
-  } else {
-    p.push(`<p>Throwing away ${t(best.k)} instead would have left you <b>${away(best.shanten)}</b>${worseShape ? "" : `, with more chances to get there`}.</p>`);
-  }
-  if (!worseShape) p.push(`<p>There are <b>${best.ukeire}</b> tiles still out there that would move you closer, compared with <b>${mine.ukeire}</b> after the one you threw.</p>`);
-  p.push(`<p><b>Why:</b> ${t(best.k)} was ${roleBest.text}. Your ${t(k)} was ${roleMine.text}.</p>`);
-  if (worseShape) p.push(`<p>Breaking that up moved you a step further from winning.</p>`);
+  p.push(`<p>Throwing ${t(k)} left you <b>${away(mine.shanten)}</b>.</p>`);
+  p.push(worseShape
+    ? `<p>Throwing ${t(best.k)} would have left you <b>${away(best.shanten)}</b>.</p>`
+    : `<p>Throwing ${t(best.k)} keeps you just as close, with more useful tiles left: <b>${best.ukeire}</b> instead of <b>${mine.ukeire}</b>.</p>`);
+  // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so leave it out
+  if (best.tiles.length <= 8) p.push(`<p>Then you'd hope to pick up one of these (the number is how many are left):</p>${tileStrip(best.tiles, unseen)}`);
+  p.push(`<p><b>Why:</b> ${t(best.k)} is ${roleBest.text}. Your ${t(k)} was ${roleMine.text}.</p>`);
   p.push(`<p class="tip">${tipFor(roleBest, roleMine, before)}</p>`);
   return note(before, {
     kind: "discard",
     title: `${tileName(best.k)} was the better tile to throw away`,
-    bubble: worseShape ? `That one moved you further from winning. Tap to see why.` : `Another tile was a better one to let go. Tap to see why.`,
+    bubble: worseShape ? `That moved you further from winning. Tap to see why.` : `There was a better tile to throw. Tap to see why.`,
     compare: worseShape
       ? { mine: { k, label: "You threw", sub: awayShort(mine.shanten) }, best: { k: best.k, label: "Better", sub: awayShort(best.shanten) } }
       : { mine: { k, label: "You threw", sub: helps(mine.ukeire) }, best: { k: best.k, label: "Better", sub: helps(best.ukeire) } },
@@ -134,11 +129,11 @@ export function reviewAct(before, action) {
 }
 
 function tipFor(roleBest, roleMine, state) {
-  if (roleBest.kind === "lone-honor") return "Tip: early in a hand, throw away single winds and dragons first. They can only become a pair or three of a kind, never a run.";
-  if (roleBest.kind === "lone-terminal") return "Tip: 1s and 9s can only join a run from one side. Middle numbers (3 to 7) fit from both sides, so keep those.";
-  if (roleMine.kind === "seq" || roleMine.kind === "shape") return "Tip: keep tiles that sit next to each other in the same suit (like 4 and 5). They're well on the way to a run.";
-  if (roleMine.kind === "pair") return "Tip: a winning hand is four groups of three plus one pair. Hold on to at least one pair.";
-  return "Tip: a winning hand is four groups of three plus one pair. Each turn, let go of the tile that's doing the least to get you there.";
+  if (roleBest.kind === "lone-honor") return "Tip: throw single winds and dragons early. They can't make runs.";
+  if (roleBest.kind === "lone-terminal") return "Tip: 1s and 9s are hard to use. Middle numbers (3 to 7) fit more runs.";
+  if (roleMine.kind === "seq" || roleMine.kind === "shape") return "Tip: keep tiles that sit next to each other, like 4 and 5.";
+  if (roleMine.kind === "pair") return "Tip: a winning hand is four groups of three plus one pair. Keep a pair.";
+  return "Tip: a winning hand is four groups of three plus one pair. Throw the tile that helps least.";
 }
 
 function missedWinNote(state, win, selfDraw) {
@@ -150,9 +145,9 @@ function missedWinNote(state, win, selfDraw) {
       title: "You had a winning hand",
       bubble: "Wait, you could have won there!",
       html: [
-        `<p>Your hand was complete. ${selfDraw ? "You could have won with the tile you just picked up." : "You could have taken that thrown-away tile and won."}</p>`,
-        arr && !arr.special ? `<p>It made four groups of three plus a pair:</p>${arrangementHtml(state, arr, selfDraw)}` : "",
-        `<p class="tip">Tip: the Win button lights up whenever your hand is complete. Check for it before you throw a tile away.</p>`,
+        `<p>Your hand was complete. ${selfDraw ? "You could have won with the tile you picked up." : "You could have won with that thrown tile."}</p>`,
+        arr && !arr.special ? `<p>Your four groups and a pair:</p>${arrangementHtml(state, arr, selfDraw)}` : "",
+        `<p class="tip">Tip: check the Win button before you throw a tile.</p>`,
       ].join(""),
     });
   }
@@ -160,10 +155,10 @@ function missedWinNote(state, win, selfDraw) {
   const why = (n) => (FAN_GUIDE.find(([g]) => g === n || (n.endsWith("dragon peng") && g === "Dragon peng")) || [])[2];
   const items = win.items.map(([n, f]) => `<li><span>${n}${why(n) ? `<small>${why(n)}</small>` : ""}</span><span>${f} pt${f === 1 ? "" : "s"}</span></li>`).join("");
   const html = [
-    `<p>Your hand was a winner, worth <b>${win.fan} point${win.fan === 1 ? "" : "s"}</b> (in mahjong, points are called <i>fan</i>). ${selfDraw ? "You could have won with the tile you just picked up." : "You could have taken that thrown-away tile and won."}</p>`,
-    arr && !arr.special ? `<p>It made four groups of three plus a pair:</p>${arrangementHtml(state, arr, selfDraw)}` : "",
-    `<p>Where the points came from:</p><ul class="fan-list">${items}</ul>`,
-    `<p class="tip">Tip: the Win button lights up whenever your hand can win (you need at least ${state.minFan} point${state.minFan === 1 ? "" : "s"}). Check for it before you throw a tile away.</p>`,
+    `<p>Your hand could win. It was worth <b>${win.fan} point${win.fan === 1 ? "" : "s"}</b> (points are called <i>fan</i>). ${selfDraw ? "You could have won with the tile you picked up." : "You could have won with that thrown tile."}</p>`,
+    arr && !arr.special ? `<p>Your four groups and a pair:</p>${arrangementHtml(state, arr, selfDraw)}` : "",
+    `<p>Your points:</p><ul class="fan-list">${items}</ul>`,
+    `<p class="tip">Tip: the Win button lights up when your hand can win. Check it before you throw a tile.</p>`,
   ].join("");
   return note(state, {
     kind: "win",
@@ -202,13 +197,13 @@ export function reviewClaim(before, resp) {
   if (resp.type === "pass") {
     const p = [];
     if (rec.reason === "value") {
-      p.push(`<p>Three ${t(k)} in a row (a <i>peng</i>) is worth <b>1 point</b> by itself${isDragon(k) ? ": three of any dragon always scores" : `, because ${k - 27 === seatWind(before, 0) ? "it's your own wind (the one shown in your circle)" : "it's this round's wind"}`}. You need points to be allowed to win.</p>`);
-      p.push(`<p>Taking it ${pick.shanten < ev.base.shanten ? `would also have moved you from ${away(ev.base.shanten)} to <b>${away(pick.shanten)}</b>` : `would have kept you ${away(pick.shanten)}`}.</p>`);
-      p.push(`<p class="tip">Tip: when someone throws away a dragon, or your own wind, and you already have two, take it. Those sets give you points.</p>`);
+      p.push(`<p>Three ${t(k)} (a <i>peng</i>) earns <b>1 point</b>${isDragon(k) ? ". Dragons always score" : `, because ${k - 27 === seatWind(before, 0) ? "it's your wind" : "it's this round's wind"}`}. You need points to win.</p>`);
+      p.push(`<p>Taking it ${pick.shanten < ev.base.shanten ? `would also have moved you to <b>${away(pick.shanten)}</b>` : `would have kept you ${away(pick.shanten)}`}.</p>`);
+      p.push(`<p class="tip">Tip: if you have two dragons, or two of your wind, take the third.</p>`);
     } else {
-      p.push(`<p>Taking that tile to make ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)} (a <i>chow</i>)` : `three ${t(k)} (a <i>peng</i>)`} would have left you <b>${away(pick.shanten)}</b>${pick.discard !== null && pick.discard !== undefined ? ` after throwing away ${t(pick.discard)}` : ""}. Without it you stayed ${away(ev.base.shanten)}.</p>`);
-      if (pick.shanten <= 0) p.push(`<p>Then any of these would have won it for you (the number is how many are still out there):</p>${tileStrip(pick.tiles, unseen)}`);
-      p.push(`<p class="tip">Tip: if taking a thrown-away tile puts you 1 tile away from winning, take it.</p>`);
+      p.push(`<p>Taking it to make ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)} (a <i>chow</i>)` : `three ${t(k)} (a <i>peng</i>)`} would have left you <b>${away(pick.shanten)}</b>. Without it you stayed ${away(ev.base.shanten)}.</p>`);
+      if (pick.shanten <= 0) p.push(`<p>Then any of these would win (the number is how many are left):</p>${tileStrip(pick.tiles, unseen)}`);
+      p.push(`<p class="tip">Tip: if taking a tile gets you 1 away from winning, take it.</p>`);
     }
     return note(before, {
       kind: "claim",
@@ -223,16 +218,16 @@ export function reviewClaim(before, resp) {
     const mine = ev.choices.find((ch) => ch.type === resp.type && (resp.type !== "chow" || String(ch.chow) === String(resp.chow)));
     if (!mine) return null;
     const p = [];
-    p.push(`<p>Taking ${resp.type === "chow" ? chowTiles(resp.chow, k) : t(k)} left you <b>${away(mine.shanten)}</b>. ${mine.shanten > ev.base.shanten ? `Before, you were <b>${away(ev.base.shanten)}</b>, so it moved you further away.` : `That's no closer than before.`}</p>`);
-    if (ev.closed && before.points !== false) p.push(`<p>It also put tiles face up on the table. A hand where you never take anyone's thrown-away tile earns <b>1 extra point</b>, and now everyone can see what you're collecting.</p>`);
-    if (!mine.fanPath && before.points !== false) p.push(`<p>And nothing in your hand earns points yet. You need points to win, so this makes winning harder.</p>`);
+    p.push(`<p>Taking ${resp.type === "chow" ? chowTiles(resp.chow, k) : t(k)} left you <b>${away(mine.shanten)}</b>. ${mine.shanten > ev.base.shanten ? `Before, you were ${away(ev.base.shanten)}.` : `That's no closer than before.`}</p>`);
+    if (ev.closed && before.points !== false) p.push(`<p>It also showed your tiles to everyone, and you lost the <b>1 point</b> for never taking a tile.</p>`);
+    if (!mine.fanPath && before.points !== false) p.push(`<p>Nothing in your hand earns points yet, so winning is now harder.</p>`);
     p.push(before.points === false
-      ? `<p class="tip">Tip: only take someone's thrown-away tile if it gets you closer to winning.</p>`
-      : `<p class="tip">Tip: only take someone's thrown-away tile if it gets you closer to winning, or if it's a dragon or your own wind (those earn points).</p>`);
+      ? `<p class="tip">Tip: only take a tile if it gets you closer to winning.</p>`
+      : `<p class="tip">Tip: only take a tile if it gets you closer to winning, or if it's a dragon or your own wind.</p>`);
     return note(before, {
       kind: "claim",
       title: `Letting that ${tileName(k)} go was better`,
-      bubble: `Taking that tile didn't get you any closer to winning.`,
+      bubble: `Taking that tile didn't help. Tap to see why.`,
       html: p.join(""),
     });
   }
@@ -245,10 +240,27 @@ function chowTiles(ch, k) {
 
 /* ---------- On-demand hint ---------- */
 
+/* Why you can't take someone's thrown-away tile, in one short sentence, starting with the call you'd most
+   likely try. Plain and direct: "You need two more X to claim a peng." */
+function whyCantClaim(state, k) {
+  const c = handCounts(state.players[0]);
+  const from = state.lastDiscard.from;
+  const left = state.players[3].name;
+  // a run you could make with it, if it had come from the right player
+  const run = isSuited(k) && [[-2, -1], [-1, 1], [1, 2]].some(([a, b]) => {
+    const x = k + a, y = k + b;
+    return x >= 0 && y < 27 && suitOf(x) === suitOf(k) && suitOf(y) === suitOf(k) && c[x] && c[y];
+  });
+  if (run && from !== 3) return `You can only make a run (a <i>chow</i>) with tiles from ${left}, the player before you.`;
+  const need = c[k] === 1 ? "one more" : "two more";
+  if (from === 3 && isSuited(k)) return `You need ${need} ${t(k)} to claim a <i>peng</i>, or two tiles next to it to make a run.`;
+  return `You need ${need} ${t(k)} to claim a <i>peng</i>.`;
+}
+
 export function hint(state) {
   if (state.phase === "act" && state.current === 0) {
     const opts = actOptions(state, 0);
-    if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: state.points === false ? `<p>Your hand is complete. Tap <b>Win</b>.</p>` : `<p>Your hand is a winner, worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
+    if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: state.points === false ? `<p>Your hand is complete. Tap <b>Win</b>.</p>` : `<p>Your hand is worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
     const ranked = rankDiscards(state, 0);
     const top = ranked.list.slice(0, 3);
     const best = top[0];
@@ -257,27 +269,34 @@ export function hint(state) {
     // single winds or dragons the coach is keeping because they can earn points: say so, since beginners expect
     // lone honors to go first
     const kept = ranked.list.filter((r) => r.k !== best.k && isHonor(r.k) && ranked.counts[r.k] === 1 && isValueTile(state, 0, r.k)).map((r) => r.k);
-    const why = (k) => isDragon(k) ? "three of any dragon always earn a point"
-      : `it's ${k - 27 === seatWind(state, 0) && k - 27 === state.prevailing ? "your own wind and this round's wind (three of them earn 2 points)" : k - 27 === seatWind(state, 0) ? "your own wind (three of them earn a point)" : "this round's wind (three of them earn a point)"}`;
+    const pts = (k) => (!isDragon(k) && k - 27 === seatWind(state, 0) && k - 27 === state.prevailing ? 2 : 1);
     const keptHtml = kept.length && !isHonor(best.k)
-      ? `<p><b>Why not ${kept.map((k) => t(k)).join(" or ")}?</b> ${kept.map((k) => `${tileName(k)}: ${why(k)}`).join(". ")}. You need at least ${state.minFan} point${state.minFan === 1 ? "" : "s"} to win, so hold on to ${kept.length > 1 ? "them" : "it"} for now in case another copy comes.</p>`
+      ? `<p><b>Why not ${kept.map((k) => t(k)).join(" or ")}?</b> ${kept.map((k) => `Three ${t(k)} earn ${pts(k)} point${pts(k) > 1 ? "s" : ""}.`).join(" ")} You need points to win, so keep ${kept.length > 1 ? "them" : "it"} for now.</p>`
       : "";
-    let html = `<p>It's ${role.text}.</p>${keptHtml}`
-      + `<p>Your best choices, with how far each leaves you from winning and how many tiles out there could help next:</p><ul class="hint-list">${rows}</ul>`;
-    if (ranked.threats.length) html += `<p class="tip">Heads up: ${ranked.threats.map((q) => state.players[q].name).join(" and ")} ${ranked.threats.length > 1 ? "have" : "has"} three groups face up and may be close to winning. Tiles they've thrown away themselves are safe to throw.</p>`;
-    if (opts.kongs.length) html += `<p class="tip">You have four ${opts.kongs.map((x) => t(x.k)).join("")}. You can set them down as a <i>kong</i> and pick up an extra tile.</p>`;
-    return { title: "Here's what I'd do", pick: { k: best.k, label: "Throw away" }, html };
+    // moves exactly as good as the best one all go in the card; the tie-breaker decides which is named first
+    const equal = ranked.list.filter((r) => r.score === best.score).map((r) => r.k);
+    const lead = equal.length > 1
+      ? `<p>These are equally good. I'd start with ${t(best.k)}. It's ${role.text}.</p>`
+      : `<p>It's ${role.text}.</p>`;
+    let html = `${lead}${keptHtml}`
+      + `<p>Your top choices (how far from winning, and how many useful tiles are left):</p><ul class="hint-list">${rows}</ul>`;
+    if (ranked.threats.length) html += `<p class="tip">Heads up: ${ranked.threats.map((q) => state.players[q].name).join(" and ")} may be close to winning. Tiles they threw away are safe.</p>`;
+    if (opts.kongs.length) html += `<p class="tip">You have four ${opts.kongs.map((x) => t(x.k)).join("")}. Set them down as a <i>kong</i> to get an extra tile.</p>`;
+    return { title: "Here's what I'd do", pick: { k: best.k, ks: equal, label: "Throw away" }, html };
   }
   if (state.phase === "claim" && state.claim?.options[0] && !state.claim.responses[0]) {
-    if (state.claim.options[0].none) return { title: "Here's what I'd do", pick: { k: kindOf(state.lastDiscard.id), label: "Let it go" }, html: `<p>It doesn't help your hand, so press Continue.</p>` };
+    if (state.claim.options[0].none) {
+      const k = kindOf(state.lastDiscard.id);
+      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>${whyCantClaim(state, k)} Press Continue.</p>` };
+    }
     const rec = recommendClaim(state, 0, state.claim.options[0]);
     const pick = rec.pick;
     const k = rec.ev.k;
-    if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>That ${t(k)} finishes your hand. Take it and win.</p>` };
+    if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>This finishes your hand. Take it and win.</p>` };
     if (pick.type === "pass") {
-      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking ${t(k)} wouldn't get you any closer than ${away(rec.ev.base.shanten)}${rec.ev.closed && state.points !== false ? ". Also, never taking anyone's tile earns you 1 extra point" : ""}.</p>` };
+      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still be ${away(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
     }
-    return { title: "Here's what I'd do", pick: { k, label: "Take it" }, html: `<p>Making ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)}` : `three ${t(k)}`} leaves you ${away(pick.shanten)}${rec.reason === "value" ? ", and it earns a point" : ""}.</p>` };
+    return { title: "Here's what I'd do", pick: { k, label: "Take it" }, html: `<p>Making ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)}` : `three ${t(k)}`} gets you to ${away(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
   }
   return { title: "Waiting", html: `<p>It's not your turn yet. I'll speak up if I spot something.</p>` };
 }
