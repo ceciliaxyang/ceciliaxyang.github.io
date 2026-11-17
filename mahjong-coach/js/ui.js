@@ -647,7 +647,7 @@ function hideBubble() { $("bubble").hidden = true; }
 function openNote(id) {
   const n = notes.find((x) => x.id === id);
   if (!n) return openList();
-  n.read = true;
+  notes.forEach((x) => { x.read = true; });  // only the latest tip matters: older ones won't come back
   pane = { ...pane, open: true, view: "note", id };
   hideBubble();
   render();
@@ -663,7 +663,6 @@ function renderPane() {
   const el = $("pane");
   el.classList.toggle("open", pane.open);
   el.setAttribute("aria-hidden", String(!pane.open));
-  $("paneBack").hidden = pane.view !== "note";
   if (!pane.open) return;
   // the panel's header shows Guanyin in place of the word "Coach"
   const pav = $("paneAv");
@@ -684,22 +683,17 @@ function renderPane() {
       </div>`;
     return;
   }
+  // One level only: the panel shows either the tip the coach just raised (the note view above) or, when you
+  // ask, "Here's what I'd do". Notes aren't kept in a list.
   const yourMove = myTurn() || G.claimPendingFor(state, 0);
-  const list = notes.slice().reverse().map((n) => `<li><button type="button" class="note-row" data-note="${n.id}">
-      <span class="dot ${n.read ? "read" : ""}"></span><span><b>${n.title}</b><small>Hand ${n.handNo}</small></span></button></li>`).join("");
-  // On your move the coach's pick is always shown (no need to ask), laid out like a note (Figma 2354:26272):
-  // a headline, one card with the move, the reasons, then Got it. Otherwise: the portrait and the notes.
   const h = pane.hint || (yourMove ? Coach.hint(state) : null);
   // one tile, or every equally good tile side by side, each with its name under it
   const ks = h?.pick ? (h.pick.ks || (h.pick.k !== undefined ? [h.pick.k] : [])) : [];
   const pickTiles = ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join("")}</div>` : "";
   const pickCard = h?.pick ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${h.pick.label}</span>${pickTiles}</div></div>` : "";
   const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions"><button type="button" class="btn" data-close>Got it</button></div>` : "";
-  // the Notes section only appears once the coach has written a note
-  const notesHtml = notes.length ? `<p class="section-label">Notes</p><ul class="notes">${list}</ul>` : "";
-  // nothing to suggest and no notes: one quiet line so the panel isn't empty
-  const idle = !h && !notes.length ? `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>` : "";
-  body.innerHTML = `${h ? suggestion : ""}${notesHtml}${idle}`;
+  // not your move: one quiet line so the panel isn't empty
+  body.innerHTML = h ? suggestion : `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>`;
 }
 
 /* ---------------- modals ---------------- */
@@ -753,11 +747,8 @@ function resultHtml() {
   const delta = r.delta || [0, 0, 0, 0];
   const scores = state.players.map((pl, i) => `<div class="score-cell"><b>${pl.name}</b>${prefs.showScores ? `<span>${pl.score}</span>` : ""}
     <em class="${delta[i] > 0 ? "up" : delta[i] < 0 ? "down" : ""}">${delta[i] > 0 ? "+" : ""}${delta[i] || "–"}</em></div>`).join("");
-  const handNotes = notes.filter((n) => n.handNo === state.handNo).length;
-  const coachLine = handNotes ? `<p class="lede" style="margin:20px 0 0">Your coach left ${handNotes} note${handNotes > 1 ? "s" : ""} this hand.</p>` : "";
-  return `<h2>${head}</h2><p class="lede">${lede}</p>${body}${prefs.showScores ? `<div class="scores">${scores}</div>` : ""}${coachLine}
+  return `<h2>${head}</h2><p class="lede">${lede}</p>${body}${prefs.showScores ? `<div class="scores">${scores}</div>` : ""}
     <div class="btns">
-      ${handNotes ? `<button type="button" class="btn light" data-open-coach>Review notes</button>` : ""}
       <button type="button" class="btn" data-next>Start new hand</button>
     </div>`;
 }
@@ -821,13 +812,10 @@ $("coach").addEventListener("click", () => {
 });
 $("bubble").addEventListener("click", () => openNote(+$("bubble").dataset.id));
 $("paneClose").addEventListener("click", closePane);
-$("paneBack").addEventListener("click", openList);
 $("paneBody").addEventListener("click", (e) => {
   const u = e.target.closest("[data-undo]");
   if (u) return takeBack(+u.dataset.undo);
   if (e.target.closest("[data-close]")) return closePane();
-  const nr = e.target.closest("[data-note]");
-  if (nr) return openNote(+nr.dataset.note);
   if (e.target.closest("[data-hint]")) { pane.hint = Coach.hint(state); render(); }
 });
 
