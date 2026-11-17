@@ -23,10 +23,11 @@ export function refreshNames(state) {
 export const DEAD_WALL = 14;
 export const liveTiles = (state) => Math.max(0, state.wall.length - DEAD_WALL);
 
-export function createGame({ minFan = 1, noFlowers = true } = {}) {
+export function createGame({ minFan = 1, noFlowers = true, points = false } = {}) {
   const state = {
     version: 1,
     minFan,
+    points,  // playing with points: a win needs at least minFan points. Off: any complete hand wins
     noFlowers,  // play without the 8 flower and season tiles
     players: NAMES.map((name, i) => ({ name, human: i === 0, score: 0, hand: [], melds: [], flowers: [], discards: [] })),
     dealer: 0,
@@ -148,7 +149,7 @@ export function winCheck(state, p, extraKind = null, { selfDraw = false, robbing
     robbing,
   });
   if (!res) return null;
-  return { ...res, legal: res.fan >= state.minFan };
+  return { ...res, legal: state.points === false || res.fan >= state.minFan };
 }
 
 export function actOptions(state, p) {

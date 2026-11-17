@@ -3,7 +3,9 @@ import { kindOf, countsOf, shanten, acceptance, analyzeDiscards, isHonor, isDrag
 import { seatWind, unseenFor, handCounts } from "./game.js";
 
 /* Honors that score a fan as a peng for player p. */
+/* Playing without points (Scores off), no tile is worth more than another: only speed matters. */
 export function isValueTile(state, p, k) {
+  if (state.points === false) return false;
   return isDragon(k) || k - 27 === seatWind(state, p) || k - 27 === state.prevailing;
 }
 
@@ -39,6 +41,7 @@ export function danger(state, p, k, threatList = threats(state, p)) {
 
 /* Could this hand still score a fan if it is open (no concealed-hand fan)? */
 export function hasFanPath(state, p, { extraMeldKind = null, removeKinds = [] } = {}) {
+  if (state.points === false) return true;  // without points any complete hand wins
   const pl = state.players[p];
   if (!pl.flowers.length && !state.noFlowers) return true; // "No flowers" is a fan (only when flowers are in the game)
   if (pl.flowers.some((f) => (kindOf(f) - 34) % 4 === seatWind(state, p))) return true;
@@ -95,7 +98,8 @@ export function evaluateClaims(state, q, opts) {
   const open = pl.melds.length;
   const unseen = unseenFor(state, q);
   const base = acceptance(c.slice(), open, unseen);
-  const closed = pl.melds.every((m) => m.concealed);
+  // staying concealed only matters for its point; without points it's no reason to pass
+  const closed = state.points !== false && pl.melds.every((m) => m.concealed);
   const out = { k, base, closed, choices: [] };
 
   const after = (remove, extraOpen) => {

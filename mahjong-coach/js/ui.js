@@ -20,7 +20,8 @@ const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
 // noFlowers: play without the flower and season tiles (on by default; applies from the next hand dealt)
 const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, ...loadPrefs() };
 const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
-let state = load() || G.createGame({ noFlowers: prefs.noFlowers });
+let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
+state.points = prefs.showScores;  // Scores on = playing with points (a win needs points); off = any complete hand wins
 G.refreshNames(state);
 let notes = [];            // coach notes this session; `snapshot` = state before your move
 let selected = null;       // tile id raised in your hand
@@ -739,16 +740,17 @@ function resultHtml() {
     const w = state.players[r.winner];
     head = r.winner === 0 ? "You won!" : `${w.name} won`;
     const how = r.selfDraw ? "Self-drawn" : `Off ${r.from === 0 ? "your" : state.players[r.from].name + "'s"} discard`;
-    lede = `${how} · ${r.fan} fan · ${r.selfDraw ? `${r.points} from each player` : `${r.points * 2} from ${r.from === 0 ? "you" : state.players[r.from].name}`}`;
-    body = handGroups(r.winner, r.arrangement) +
-      `<ul class="fan-list">${r.items.map(([n, f]) => `<li><span>${n}</span><span>${f}</span></li>`).join("")}<li class="total"><span>Total${r.fan === 13 ? " (limit)" : ""}</span><span>${r.fan} fan</span></li></ul>`;
+    // playing without points: just how the hand was won and its groups, no fan or payments
+    lede = !prefs.showScores ? how : `${how} · ${r.fan} fan · ${r.selfDraw ? `${r.points} from each player` : `${r.points * 2} from ${r.from === 0 ? "you" : state.players[r.from].name}`}`;
+    body = handGroups(r.winner, r.arrangement) + (!prefs.showScores ? "" :
+      `<ul class="fan-list">${r.items.map(([n, f]) => `<li><span>${n}</span><span>${f}</span></li>`).join("")}<li class="total"><span>Total${r.fan === 13 ? " (limit)" : ""}</span><span>${r.fan} fan</span></li></ul>`);
   }
   const delta = r.delta || [0, 0, 0, 0];
   const scores = state.players.map((pl, i) => `<div class="score-cell"><b>${pl.name}</b>${prefs.showScores ? `<span>${pl.score}</span>` : ""}
     <em class="${delta[i] > 0 ? "up" : delta[i] < 0 ? "down" : ""}">${delta[i] > 0 ? "+" : ""}${delta[i] || "–"}</em></div>`).join("");
   const handNotes = notes.filter((n) => n.handNo === state.handNo).length;
   const coachLine = handNotes ? `<p class="lede" style="margin:20px 0 0">Your coach left ${handNotes} note${handNotes > 1 ? "s" : ""} this hand.</p>` : "";
-  return `<h2>${head}</h2><p class="lede">${lede}</p>${body}<div class="scores">${scores}</div>${coachLine}
+  return `<h2>${head}</h2><p class="lede">${lede}</p>${body}${prefs.showScores ? `<div class="scores">${scores}</div>` : ""}${coachLine}
     <div class="btns">
       ${handNotes ? `<button type="button" class="btn light" data-open-coach>Review notes</button>` : ""}
       <button type="button" class="btn" data-next>Start new hand</button>
@@ -915,7 +917,9 @@ $("flowersBtn").addEventListener("click", () => {
 });
 $("scoresBtn").addEventListener("click", () => {
   prefs.showScores = !prefs.showScores;
+  state.points = prefs.showScores;  // the rule follows straight away: the Win button and the coach update now
   savePrefs();
+  save();
   render();
 });
 $("guideBtn").addEventListener("click", () => { toggleSettings(false); guideOpen = true; render(); });
@@ -991,7 +995,7 @@ async function newGame() {
   closePane();
   render();
   await dealAnimation(() => {
-    state = G.createGame({ noFlowers: prefs.noFlowers });
+    state = G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
     notes = [];
     render();
     save();

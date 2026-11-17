@@ -143,6 +143,19 @@ function tipFor(roleBest, roleMine, state) {
 
 function missedWinNote(state, win, selfDraw) {
   const arr = win.arrangement;
+  if (state.points === false) {
+    // playing without points: just the winning shape, no scoring
+    return note(state, {
+      kind: "win",
+      title: "You had a winning hand",
+      bubble: "Wait, you could have won there!",
+      html: [
+        `<p>Your hand was complete. ${selfDraw ? "You could have won with the tile you just picked up." : "You could have taken that thrown-away tile and won."}</p>`,
+        arr && !arr.special ? `<p>It made four groups of three plus a pair:</p>${arrangementHtml(state, arr, selfDraw)}` : "",
+        `<p class="tip">Tip: the Win button lights up whenever your hand is complete. Check for it before you throw a tile away.</p>`,
+      ].join(""),
+    });
+  }
   // each scoring line with a one-line plain explanation (from the scoring guide) under its name
   const why = (n) => (FAN_GUIDE.find(([g]) => g === n || (n.endsWith("dragon peng") && g === "Dragon peng")) || [])[2];
   const items = win.items.map(([n, f]) => `<li><span>${n}${why(n) ? `<small>${why(n)}</small>` : ""}</span><span>${f} pt${f === 1 ? "" : "s"}</span></li>`).join("");
@@ -211,9 +224,11 @@ export function reviewClaim(before, resp) {
     if (!mine) return null;
     const p = [];
     p.push(`<p>Taking ${resp.type === "chow" ? chowTiles(resp.chow, k) : t(k)} left you <b>${away(mine.shanten)}</b>. ${mine.shanten > ev.base.shanten ? `Before, you were <b>${away(ev.base.shanten)}</b>, so it moved you further away.` : `That's no closer than before.`}</p>`);
-    if (ev.closed) p.push(`<p>It also put tiles face up on the table. A hand where you never take anyone's thrown-away tile earns <b>1 extra point</b>, and now everyone can see what you're collecting.</p>`);
-    if (!mine.fanPath) p.push(`<p>And nothing in your hand earns points yet. You need points to win, so this makes winning harder.</p>`);
-    p.push(`<p class="tip">Tip: only take someone's thrown-away tile if it gets you closer to winning, or if it's a dragon or your own wind (those earn points).</p>`);
+    if (ev.closed && before.points !== false) p.push(`<p>It also put tiles face up on the table. A hand where you never take anyone's thrown-away tile earns <b>1 extra point</b>, and now everyone can see what you're collecting.</p>`);
+    if (!mine.fanPath && before.points !== false) p.push(`<p>And nothing in your hand earns points yet. You need points to win, so this makes winning harder.</p>`);
+    p.push(before.points === false
+      ? `<p class="tip">Tip: only take someone's thrown-away tile if it gets you closer to winning.</p>`
+      : `<p class="tip">Tip: only take someone's thrown-away tile if it gets you closer to winning, or if it's a dragon or your own wind (those earn points).</p>`);
     return note(before, {
       kind: "claim",
       title: `Letting that ${tileName(k)} go was better`,
@@ -233,13 +248,21 @@ function chowTiles(ch, k) {
 export function hint(state) {
   if (state.phase === "act" && state.current === 0) {
     const opts = actOptions(state, 0);
-    if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: `<p>Your hand is a winner, worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
+    if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: state.points === false ? `<p>Your hand is complete. Tap <b>Win</b>.</p>` : `<p>Your hand is a winner, worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
     const ranked = rankDiscards(state, 0);
     const top = ranked.list.slice(0, 3);
     const best = top[0];
     const role = roleOf(best.k, ranked.counts, ranked.unseen);
     const rows = top.map((r) => `<li>${t(r.k)}<span>${awayShort(r.shanten)}</span><span>${helps(r.ukeire)}</span></li>`).join("");
-    let html = `<p>It's ${role.text}.</p>`
+    // single winds or dragons the coach is keeping because they can earn points: say so, since beginners expect
+    // lone honors to go first
+    const kept = ranked.list.filter((r) => r.k !== best.k && isHonor(r.k) && ranked.counts[r.k] === 1 && isValueTile(state, 0, r.k)).map((r) => r.k);
+    const why = (k) => isDragon(k) ? "three of any dragon always earn a point"
+      : `it's ${k - 27 === seatWind(state, 0) && k - 27 === state.prevailing ? "your own wind and this round's wind (three of them earn 2 points)" : k - 27 === seatWind(state, 0) ? "your own wind (three of them earn a point)" : "this round's wind (three of them earn a point)"}`;
+    const keptHtml = kept.length && !isHonor(best.k)
+      ? `<p><b>Why not ${kept.map((k) => t(k)).join(" or ")}?</b> ${kept.map((k) => `${tileName(k)}: ${why(k)}`).join(". ")}. You need at least ${state.minFan} point${state.minFan === 1 ? "" : "s"} to win, so hold on to ${kept.length > 1 ? "them" : "it"} for now in case another copy comes.</p>`
+      : "";
+    let html = `<p>It's ${role.text}.</p>${keptHtml}`
       + `<p>Your best choices, with how far each leaves you from winning and how many tiles out there could help next:</p><ul class="hint-list">${rows}</ul>`;
     if (ranked.threats.length) html += `<p class="tip">Heads up: ${ranked.threats.map((q) => state.players[q].name).join(" and ")} ${ranked.threats.length > 1 ? "have" : "has"} three groups face up and may be close to winning. Tiles they've thrown away themselves are safe to throw.</p>`;
     if (opts.kongs.length) html += `<p class="tip">You have four ${opts.kongs.map((x) => t(x.k)).join("")}. You can set them down as a <i>kong</i> and pick up an extra tile.</p>`;
@@ -252,7 +275,7 @@ export function hint(state) {
     const k = rec.ev.k;
     if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>That ${t(k)} finishes your hand. Take it and win.</p>` };
     if (pick.type === "pass") {
-      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking ${t(k)} wouldn't get you any closer than ${away(rec.ev.base.shanten)}${rec.ev.closed ? ". Also, never taking anyone's tile earns you 1 extra point" : ""}.</p>` };
+      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking ${t(k)} wouldn't get you any closer than ${away(rec.ev.base.shanten)}${rec.ev.closed && state.points !== false ? ". Also, never taking anyone's tile earns you 1 extra point" : ""}.</p>` };
     }
     return { title: "Here's what I'd do", pick: { k, label: "Take it" }, html: `<p>Making ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)}` : `three ${t(k)}`} leaves you ${away(pick.shanten)}${rec.reason === "value" ? ", and it earns a point" : ""}.</p>` };
   }
