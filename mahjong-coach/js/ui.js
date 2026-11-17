@@ -5,6 +5,7 @@ import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
 import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
 import { coachAvatarHtml } from "./coach-art.js";
+import { dealAnimation } from "./deal-anim.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
 
 // ?autoplay and ?sandbox are for testing: they save to their own slot so your real game is untouched.
@@ -60,6 +61,7 @@ function delay() {
 }
 
 function schedule() {
+  if (dealing) return;  // nothing moves while a new game is being dealt
   const my = ++epoch;
   const d = delay();
   if (d === null) return;
@@ -619,17 +621,12 @@ function renderPane() {
 /* ---------------- modals ---------------- */
 
 let guideOpen = false;
-let confirmNew = false;     // in-page "start a new game?" card (native confirm() is blocked in some browsers)
+let confirmNew = false;     // New game was tapped once: the button now says Confirm (a second tap starts over)
+let confirmTimer = null;
 
 function renderModal() {
   const m = $("modal");
   const card = $("modalCard");
-  if (confirmNew) {
-    m.hidden = false;
-    card.innerHTML = `<h2>Start a new game?</h2><p class="lede">Scores go back to zero and this hand is lost.</p>
-      <div class="btns"><button type="button" class="btn light" data-new-cancel>Keep playing</button><button type="button" class="btn" data-new-ok>New game</button></div>`;
-    return;
-  }
   if (guideOpen) {
     m.hidden = false;
     card.innerHTML = guideHtml();
@@ -745,11 +742,6 @@ $("paneBody").addEventListener("click", (e) => {
 });
 
 $("modal").addEventListener("click", (e) => {
-  if (confirmNew) {
-    if (e.target.closest("[data-new-ok]")) return newGame();
-    if (e.target.closest("[data-new-cancel]") || e.target === $("modal")) { confirmNew = false; render(); }
-    return;
-  }
   if (e.target.closest("[data-close-guide]") || (guideOpen && e.target === $("modal"))) { guideOpen = false; render(); return; }
   if (e.target.closest("[data-open-coach]")) { openList(); return; }
   if (e.target.closest("[data-next]")) {
@@ -842,15 +834,41 @@ $("scoresBtn").addEventListener("click", () => {
   render();
 });
 $("guideBtn").addEventListener("click", () => { toggleSettings(false); guideOpen = true; render(); });
-$("newBtn").addEventListener("click", () => { confirmNew = true; render(); });
-function newGame() {
-  confirmNew = false;
+/* New game asks once, in place: the first tap turns it into "Confirm new game", the second starts over.
+   Tapping anywhere else, pressing Escape or waiting 4 seconds puts it back. */
+function setConfirmNew(on) {
+  confirmNew = on;
+  clearTimeout(confirmTimer);
+  const b = $("newBtn");
+  b.textContent = on ? "Confirm new game" : "New game";
+  b.classList.toggle("confirm", on);
+  b.setAttribute("aria-label", on ? "Confirm: start a new game (scores reset)" : "New game");
+  if (on) confirmTimer = setTimeout(() => setConfirmNew(false), 4000);
+}
+$("newBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (confirmNew) newGame(); else if (!dealing) setConfirmNew(true);
+});
+document.addEventListener("click", (e) => { if (confirmNew && !e.target.closest("#newBtn")) setConfirmNew(false); });
+/* A new game plays the shuffle-and-deal transition first (see deal-anim.js); the bots wait until it's done. */
+let dealing = false;
+async function newGame() {
+  if (dealing) return;
+  dealing = true;
+  setConfirmNew(false);
+  epoch++;  // cancel any bot move still pending from the old game
   guideOpen = false;
   nudge = null;
-  state = G.createGame();
-  notes = [];
   selected = null;
   closePane();
+  render();
+  await dealAnimation(() => {
+    state = G.createGame();
+    notes = [];
+    render();
+    save();
+  });
+  dealing = false;
   update();
 }
 
@@ -862,7 +880,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Escape") {
     if (!$("settings").hidden) { toggleSettings(false); $("settingsBtn").focus(); }
-    else if (confirmNew) { confirmNew = false; render(); }
+    else if (confirmNew) setConfirmNew(false);
     else if (guideOpen) { guideOpen = false; render(); }
     else if (pane.open) closePane();
   }

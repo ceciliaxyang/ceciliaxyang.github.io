@@ -75,6 +75,8 @@ p { text-wrap: pretty; }
 .fab-btn.light { background: rgba(221, 221, 221, .55); color: var(--text); }
 /* Icon-only FAB (Settings gear): a circle the same height as the pill buttons */
 .fab-btn.icon { width: 48px; padding: 0; display: inline-grid; place-items: center; }
+/* New game, armed: it turns black (like Coach) and reads Confirm until you tap again (or anywhere else) */
+.fab-btn.light.confirm, .fab-btn.light.confirm:hover { background: #000; color: #fff; }
 .fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
 @media (max-width: 600px) {
   .fab { left: max(12px, env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); }
@@ -567,3 +569,16 @@ span.scope { cursor: default; }
   .coach { right: max(10px, env(safe-area-inset-right)); }
   .bubble { right: 10px; bottom: calc(var(--sheet-h, 446px) + 17px + 40px + 10px); }
 }
+
+/* New-game transition (deal-anim.js): labels and buttons fade, real tiles hide under flying stand-ins */
+.deal-layer { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
+.deal-layer .tile { position: absolute; left: 0; top: 0; margin: 0; --w: 40px; transform-origin: center; will-change: transform; }
+/* a tile seen edge-on mid-flip: its thickness, white face layer then green back layer (reversed when turning face up) */
+.deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+.deal-layer .tile.flip-side.rev { background: linear-gradient(to left, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); }
+body.dealing .fab, body.dealing .coach, body.dealing .bubble, body.dealing .who, body.dealing #bar > *,
+body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount {
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
+}
+body.dealing-hide #table .tile, body.dealing-hide #sheet .tile { visibility: hidden; }
+body.dealing .bar { background: transparent; transition: background .25s ease; }  /* the white box steps aside */
