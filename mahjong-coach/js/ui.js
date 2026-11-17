@@ -566,9 +566,9 @@ function renderBar() {
   } else if (myTurn()) {
     say = state.afterClaim ? "Now discard a tile." : selected !== null ? "Press Discard, or tap the tile again to put it back." : "Your turn. Tap a tile to pick your discard.";
     if (selected !== null) {
-      // the tile you picked shows in the tile-in-play spot, ready to go (tap it, or Discard)
+      // the tile you picked shows in the tile-in-play spot. Only Discard throws it; tapping the tile puts it back
       const k = kindOf(selected);
-      play = `<button type="button" class="inplay-pick" data-act="discard" aria-label="Discard ${tileName(k)}">${tileHtml(k, { size: "lg", title: false, cls: arrive(`s${selected}`) }).replace('<span class="tile', `<span data-fly-id="${selected}" class="tile`)}</button>`;
+      play = `<button type="button" class="inplay-pick" data-act="putback" aria-label="Put ${tileName(k)} back in your hand">${tileHtml(k, { size: "lg", title: false, cls: arrive(`s${selected}`) }).replace('<span class="tile', `<span data-fly-id="${selected}" class="tile`)}</button>`;
       btns.push(`<button type="button" class="btn" data-act="discard">Discard</button>`);
     }
     const o = G.actOptions(state, 0);
@@ -796,6 +796,7 @@ $("bar").addEventListener("click", (e) => {
   const a = e.target.closest("[data-act]");
   if (a && myTurn()) {
     if (a.dataset.act === "discard" && selected !== null) act({ type: "discard", id: selected });
+    if (a.dataset.act === "putback") { selected = null; render(); }
     if (a.dataset.act === "mahjong") mahjongOnTurn();
     return;
   }
