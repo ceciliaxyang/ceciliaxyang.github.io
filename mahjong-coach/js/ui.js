@@ -251,14 +251,18 @@ function setSheet(collapsed) {
   grab.addEventListener("click", () => { if (!moved) setSheet(!$("sheet").classList.contains("collapsed")); moved = false; });
 }
 
+const DEPTH = 0.13;  // matches --depth in style.css: a tile's 3D edge as a share of its width
 function fitLayout() {
-  const bar = $("bar"), you = $("mePlate");
-  if (!bar || !you) return;
+  const bar = $("bar"), hand = $("hand"), you = $("mePlate");
+  if (!bar || !hand || !you) return;
   bar.classList.remove("compact");  // measure with the centred, stacked layout
   if (PHONE.matches) return;  // phones: always stacked, in the sheet
-  // switch to the left/right row only when the stacked box would push "You" more than 30px below the fold
-  const OVERFLOW_OK = 30;
-  const fits = you.getBoundingClientRect().bottom + window.scrollY <= window.innerHeight + OVERFLOW_OK;
+  // "You" floats on the bottom row with the floating buttons; switch to the left/right row only when the
+  // stacked box would push your hand more than 30px behind that row
+  const BEHIND_OK = 30;
+  const floatTop = you.getBoundingClientRect().top;
+  const handBottom = Math.max(...[...hand.querySelectorAll(".tile")].map((t) => { const r = t.getBoundingClientRect(); return r.bottom + r.width * DEPTH + 1; }), 0);
+  const fits = Math.round(handBottom + window.scrollY) <= floatTop + BEHIND_OK;  // whole pixels, so 30.2px still counts as 30
   bar.classList.toggle("compact", !fits);
 }
 window.addEventListener("resize", () => fitLayout());

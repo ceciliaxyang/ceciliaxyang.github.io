@@ -102,11 +102,11 @@ export function faceSvg(k) {
     body = `<text x="9" y="17" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="600" fill="${col}">${(i % 4) + 1}</text>` +
       text(BONUS[i], 56, 38, col) + flowerMark(49, 69, col);
   }
-  // Small corner number on circles and bamboo, haloed in the tile's ivory so it reads over the pattern.
+  // Small corner number (upper right) on circles and bamboo, haloed in the tile's ivory so it reads over the pattern; the pattern shifts down a little to make room.
   if (k < 9)
-    body += `<text x="56" y="76" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${numOf(k)}</text>`;
+    body += `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${numOf(k)}</text>`;
   else if (k < 27)
-    body = `<g transform="translate(4.8 4.8) scale(.84)">${body}</g>` + `<text x="56" y="76" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="#fbf9f4" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
+    body = `<g transform="translate(4.8 10) scale(.84)">${body}</g>` + `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="#fbf9f4" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
   return `<svg viewBox="0 0 60 80" aria-hidden="true">${body}</svg>`;
 }
 

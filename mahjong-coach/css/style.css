@@ -26,7 +26,10 @@
      --lg   your hand and the tile in play (always the largest)
      --mid  the discards and your own called sets / flowers (always the same as each other)
      --opp  every opponent's tiles, all three seats alike */
-  --tile-r: 1.42;  /* tile height ÷ width (was 1.333; a little taller) */
+  --tgap: 3px;   /* between tiles, everywhere (2px on phones) */
+  --ggap: 12px;  /* between groups of tiles: called sets, flowers, rows of discards (8px on phones) */
+  --depth: .13;  /* a tile's 3D edge, as a share of its width (+ a 1px rim); was .08 */
+  --tile-r: 1.5;  /* tile height ÷ width: 2:3, closer to a real tile standing up (was 1.333, then 1.42) */
   --lg: clamp(22px, calc((100vw - 56px) / 15), 54px);
   --mid: calc(var(--lg) * .8);
   --opp: 40px;
@@ -155,15 +158,16 @@ span.scope { cursor: default; }
   --w: var(--md);
   position: relative; display: inline-block; flex-shrink: 0; width: var(--w); height: calc(var(--w) * var(--tile-r));
   padding: 0; border: 0; border-radius: calc(var(--w) * .16); background: linear-gradient(#fffefb, var(--face));
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 calc(var(--w) * .08 + 1px) 0 #c7bca8, 0 calc(var(--w) * .12) calc(var(--w) * .3) rgba(0, 0, 0, .12);
-  margin-bottom: calc(var(--w) * .08 + 1px); vertical-align: top;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c7bca8, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+  margin-bottom: calc(var(--w) * var(--depth) + 1px); vertical-align: top;
 }
 .tile svg { display: block; width: 100%; height: 100%; padding: 8% 6%; }
 .tile.lg { --w: var(--lg); }
 .tile.md { --w: var(--md); }
 .tile.sm { --w: var(--sm); }
 .tile.xs { --w: var(--xs); }
-.tile.back { background: linear-gradient(#4a7d6d, var(--back)); box-shadow: 0 calc(var(--w) * .08) 0 #2f5348, 0 calc(var(--w) * .12) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
+/* face-down: the same 3D depth as a face-up tile (edge + 1px rim + shadow), just in the green back colours */
+.tile.back { background: linear-gradient(#4a7d6d, var(--back)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 #2f5348, 0 calc(var(--w) * var(--depth) + 1px) 0 #24423a, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
 .tile.face-down { background: linear-gradient(#4a7d6d, var(--back)); }
 .tile.face-down svg { visibility: hidden; }
 
@@ -181,7 +185,7 @@ span.scope { cursor: default; }
 .center { display: flex; flex-direction: column; gap: 48px; min-width: 0; container-type: inline-size; }
 /* your hand spans the white box edge to edge: 14 tiles and 13 3px gaps across the middle column;
    the tile in play in the white box is the same size (phones are different: the box moves into the sheet) */
-.center .hand, .center .bar { --lg: calc((100cqw - 13 * 3px) / 14); }
+.center .hand, .center .bar { --lg: min(56px, calc((100cqw - 13 * var(--tgap)) / 14)); }  /* capped at 56px wide so the centred box fits most laptop screens */
 .center .hand.spread { align-self: stretch; justify-content: space-between; }
 /* labels: the seat wind in a grey circle (red while it's that player's move) and the name; the player
    opposite has the name beside the circle, the side players under it, you beside it */
@@ -206,25 +210,25 @@ span.scope { cursor: default; }
 /* Opponents' tiles: one line along each player's side, called sets and flowers face-up at the start, then
    the face-down hand. Side players' tiles lie sideways; the player opposite's read right-side up for you. */
 .seat .tile { --w: var(--seat-w); }
-.line { display: flex; align-items: flex-end; gap: 12px; }
-.seat-left .line, .seat-right .line { flex-direction: column; align-items: stretch; gap: 8px; }
-.backs { display: flex; gap: 2px; }
-.seat-left .backs, .seat-right .backs { flex-direction: column; gap: 1px; }
+.line { display: flex; align-items: flex-end; gap: var(--ggap); }
+.seat-left .line, .seat-right .line { flex-direction: column; align-items: stretch; gap: var(--ggap); }
+.backs { display: flex; gap: var(--tgap); }
+.seat-left .backs, .seat-right .backs { flex-direction: column; gap: var(--tgap); }
 /* side seats: tiles lie sideways (wider than tall); face-down ones just swap width and height */
 .seat-left .tile, .seat-right .tile { width: calc(var(--w) * var(--tile-r)); height: var(--w); }
 .seat-left .tile svg, .seat-right .tile svg {
   position: absolute; left: 50%; top: 50%; width: var(--w); height: calc(var(--w) * var(--tile-r)); transform: translate(-50%, -50%) rotate(90deg);
 }
 .seat-right .tile svg { transform: translate(-50%, -50%) rotate(-90deg); }
-.seat-left .meld, .seat-right .meld, .seat-left .flowers, .seat-right .flowers { flex-direction: column; gap: 0; padding: 0; }
+.seat-left .meld, .seat-right .meld, .seat-left .flowers, .seat-right .flowers { flex-direction: column; gap: var(--tgap); padding: 0; }
 /* claimed-tile markers (Settings → Claimed tiles, off by default): the tile taken from a discard gets a
    faint red outline and sits nudged toward the middle of the table */
 .show-claimed .seat-left .meld .claimed { transform: translateX(3px); }
 .show-claimed .seat-right .meld .claimed { transform: translateX(-3px); }
 .show-claimed .seat-top .meld .claimed { transform: translateY(3px); }
-.meld { display: inline-flex; gap: 1px; }
-.show-claimed .meld .claimed { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px rgba(200, 48, 44, .45), 0 calc(var(--w) * .08) 0 var(--edge), 0 calc(var(--w) * .12) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
-.flowers { display: inline-flex; gap: 1px; padding-left: 4px; }
+.meld { display: inline-flex; gap: var(--tgap); }
+.show-claimed .meld .claimed { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px rgba(200, 48, 44, .45), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
+.flowers { display: inline-flex; gap: var(--tgap); }
 
 /* The white box: everyone's discards on top, a divider, then the latest move */
 /* Figma 2345:23097: the discards sit on the page; only the latest move gets the white box */
@@ -236,18 +240,18 @@ span.scope { cursor: default; }
    in the order they were thrown */
 /* discards sit straight on the felt, a little smaller than your hand */
 .discards {
-  --dw: var(--mid); display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px 3px;
+  --dw: var(--mid); display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--ggap) var(--tgap);
   /* only as tall as the discards need (at least one row): the box grows a row at a time */
-  min-height: calc(var(--dw) * (var(--tile-r) + .08) + 1px);
+  min-height: calc(var(--dw) * (var(--tile-r) + var(--depth)) + 1px);
 }
 .discards .tile { --w: var(--dw); }
 .discards .tile.fresh { animation: drop .35s var(--spring); }
 /* Autosort on: one tile per kind with a count badge */
-.discards.grouped { gap: 12px 8px; }
+
 .dstack { position: relative; display: inline-flex; }
 .dcount {
   /* sits on the tile, bottom centre (same as phones) */
-  position: absolute; bottom: calc(var(--dw) * .08 + 1px + 4px); left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 1; height: 16px; padding: 0 5px; border-radius: 8px;
+  position: absolute; bottom: calc(var(--dw) * var(--depth) + 1px + 4px); left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 1; height: 16px; padding: 0 5px; border-radius: 8px;
   /* frosted dark material, like the dark floating buttons */
   background: rgba(34, 34, 34, .62); -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
   color: #fff; font-size: 10px; line-height: 16px; font-weight: 600; text-align: center;
@@ -276,12 +280,10 @@ span.scope { cursor: default; }
   .seat-left .pname .pts, .seat-right .pname .pts { display: block; margin: 0; }
   .plate { font-size: 12px; }
   .center { gap: 16px; }
-  .seat-top .line { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .seat-top .line { flex-wrap: wrap; justify-content: center; }
   .felt { padding: 12px 0 0; gap: 24px; margin-top: 0; }
   .bar { padding: 24px 20px; border-radius: 28px; }
   .center > .me { margin-top: 8px; }
-  .discards { gap: 3px 2px; }
-  .discards.grouped { gap: 9px 7px; }
   .dcount { height: 14px; padding: 0 4px; border-radius: 7px; font-size: 9px; line-height: 14px; }
   .bar .btn { height: 48px; padding: 0 24px; font-size: 14px; line-height: 18px; }
 }
@@ -291,10 +293,27 @@ span.scope { cursor: default; }
 .center > .me { margin-top: -16px; }  /* the column gap is 48; your called tiles / hand sit 32 under the box */
 .me .exposed:empty { display: none; }
 /* at least 24px between your called tiles / flowers (incl. their 3D edge) and your hand: 6px + the hand's 18px lift room */
-.me .exposed { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 6px; }  /* + the hand's 18px lift room = 24px */
+.me .exposed { display: flex; gap: var(--ggap); align-items: flex-end; margin-bottom: 6px; }  /* + the hand's 18px lift room = 24px */
 .me .exposed .tile { --w: var(--mid); }
 .me:has(.exposed:empty) .hand { margin-top: -18px; }  /* no flowers: the hand itself sits 24px under the box */
-.me .me-plate { margin-top: calc(24px - (var(--lg) * .08 + 1px)); }
+.me .me-plate { margin-top: calc(24px - (var(--lg) * var(--depth) + 1px)); }
+/* Desktop: "You" floats at the bottom centre, on the same line as New game / Settings / Coach me;
+   one pill on the same grey material as New game, red on your turn */
+@media (min-width: 601px) {
+  .me .me-plate {
+    position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 30; transform: translateX(-50%); margin: 0;
+    height: 48px; padding: 0 24px; display: flex; align-items: center;
+    border-radius: 100px; background: rgba(221, 221, 221, .55); color: var(--text);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    transition: background .25s ease, color .25s ease;
+  }
+  /* one pill: the wind and "You" sit on it with no circle of their own */
+  .me .me-plate .who { gap: 8px; }
+  .me .me-plate .plate { width: auto; height: auto; background: none; color: inherit; font-size: 14px; }
+  .me .me-plate .pname { font-size: 14px; line-height: 18px; color: inherit; }
+  /* your turn: the whole pill turns red */
+  .me .me-plate:has(.plate.on) { background: var(--turn); color: #fff; }
+}
 /* The latest move, fixed height. Default: stacked and centered (prompt, 16px, the tile(s) in play, 24px, the
    button). Compact (only when the default would push your hand below the fold): one row, prompt and tile(s)
    on the left, the button on the right. */
@@ -315,7 +334,7 @@ span.scope { cursor: default; }
 .bar .say b { color: var(--text); font-weight: 500; }
 .bar .say .tile { --w: 18px; vertical-align: -6px; margin: 0 2px; }
 .bar .say.nudge { color: var(--red); white-space: normal; animation: rise .35s var(--spring); }
-.bar .inplay { display: flex; gap: 3px; height: calc(var(--lg) * var(--tile-r)); }
+.bar .inplay { display: flex; gap: var(--tgap); height: calc(var(--lg) * var(--tile-r)); }
 .inplay-pick { display: inline-flex; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 9px; }
 .inplay-pick:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
 .bar .inplay .tile { --w: var(--lg); margin-bottom: 0; }
@@ -327,22 +346,21 @@ span.scope { cursor: default; }
   .bar .say { white-space: normal; font-size: 13px; line-height: 18px; }
 }
 .me-row { display: flex; align-items: flex-end; justify-content: center; gap: 16px; flex-wrap: wrap; }
-.hand { display: flex; align-items: flex-end; justify-content: center; gap: 3px; min-height: calc(var(--lg) * var(--tile-r) + 20px); padding-top: 18px; }
+.hand { display: flex; align-items: flex-end; justify-content: center; gap: var(--tgap); min-height: calc(var(--lg) * var(--tile-r) + 20px); padding-top: 18px; }
 .hand .tile { --w: var(--lg); cursor: default; transition: transform .25s var(--spring), box-shadow .2s ease; }
 .hand.live .tile { cursor: pointer; }
 @media (hover: hover) { .hand.live .tile:hover { transform: translateY(-6px); } }
-.hand .tile.sel, .hand.live .tile.sel:hover { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
+.hand .tile.sel, .hand.live .tile.sel:hover { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
 .hand .tile.new { animation: rise .45s var(--spring); }
-.hand .tile.picked { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
+.hand .tile.picked { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
 /* Autosort off: drag tiles sideways to arrange them */
 .hand.manual .tile { cursor: grab; touch-action: pan-y; }
 .hand.is-dragging .tile { transition: transform .2s var(--ease); }
-.hand .tile.dragging { z-index: 2; cursor: grabbing; transition: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * .08) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .22); }
+.hand .tile.dragging { z-index: 2; cursor: grabbing; transition: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .22); }
 @keyframes rise { from { transform: translateY(-24px); opacity: 0; } }
 @media (max-width: 600px) {
   /* your hand fits the middle column (between the side players' 16px columns) and stays the largest */
   :root { --lg: calc((100vw - 104px) / 14.4); }
-  .hand { gap: 1px; }
   .center > .me { margin-top: 0; }
 }
 
@@ -399,7 +417,7 @@ span.scope { cursor: default; }
 .strip-item { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .strip-item small { font-size: 11px; color: var(--muted); font-weight: 500; }
 .groups { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
-.group { display: inline-flex; gap: 1px; }
+.group { display: inline-flex; gap: var(--tgap); }
 .fan-list { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--hair); }
 .fan-list li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: 14px; line-height: 20px; }
 .fan-list li span:last-child { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
@@ -480,6 +498,7 @@ span.scope { cursor: default; }
    to the bottom; opponents and the discards stay on the grey page above it. Wider screens never show it. */
 .sheet { display: none; }
 @media (max-width: 600px) {
+  :root { --tgap: 2px; --ggap: 8px; }
   .page { padding-bottom: calc(var(--sheet-h, 480px) + 16px); }
   .felt { background: none; padding: 12px 12px 0; }
   .felt-div { display: none; }
@@ -509,16 +528,15 @@ span.scope { cursor: default; }
   .sheet .bar .inplay .tile { --w: 54px; }
   /* your hand runs almost edge to edge: 14 tiles across the screen with 8px either side */
   /* discards match your hand's tile size */
-  .discards { --dw: calc((100vw - 16px - 13 * 2px) / 14); }
-  .discards.grouped { gap: 4px 2px; }
+  .discards { --dw: calc((100vw - 16px - 13 * var(--tgap)) / 14); }
   /* count badge: small pill sitting on the tile, bottom centre */
-  .dcount { top: auto; bottom: calc(var(--dw) * .08 + 1px + 3px); left: 0; right: 0; margin: 0 auto; width: fit-content; min-width: 0; height: 12px; padding: 0 3px;
+  .dcount { top: auto; bottom: calc(var(--dw) * var(--depth) + 1px + 3px); left: 0; right: 0; margin: 0 auto; width: fit-content; min-width: 0; height: 12px; padding: 0 3px;
     border-radius: 6px; font-size: 8px; line-height: 12px; box-shadow: none; }
 
   /* called tiles and flowers match your hand's tile size */
   .sheet .me .exposed { margin-bottom: 6px; }
-  .sheet .me .exposed .tile { --w: calc((100vw - 16px - 13 * 2px) / 14); }
-  .sheet .hand { --lg: calc((100vw - 16px - 13 * 2px) / 14); gap: 2px; margin: 0 -16px; }
+  .sheet .me .exposed .tile { --w: calc((100vw - 16px - 13 * var(--tgap)) / 14); }
+  .sheet .hand { --lg: calc((100vw - 16px - 13 * var(--tgap)) / 14); margin: 0 -16px; }
   .sheet .bar .btn { height: 40px; padding: 0 16px; font-size: 13px; line-height: 18px; }
   .sheet .me .exposed:empty + .hand { margin-top: -18px; }
 
