@@ -46,3 +46,9 @@ function draw(c, cls) {
 export function coachAvatarHtml() {
   return `<span class="coach-av">${draw(EVERYDAY, "coach-av-day")}${draw(SEAL, "coach-av-seal")}</span>`;
 }
+
+/* A large portrait for the top of the coach panel: the everyday look on a soft grey disc (her robe runs
+   off its lower edge, like a bust). */
+export function coachPortraitHtml() {
+  return `<div class="coach-portrait" aria-hidden="true">${draw(EVERYDAY, "")}</div>`;
+}

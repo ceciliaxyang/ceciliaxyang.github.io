@@ -4,7 +4,7 @@ import * as G from "./game.js";
 import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
 import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
-import { coachAvatarHtml } from "./coach-art.js";
+import { coachAvatarHtml, coachPortraitHtml } from "./coach-art.js";
 import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
@@ -16,8 +16,11 @@ const KEY = TEST ? "mahjong-coach:test" : "mahjong-coach:v1";
 const $ = (id) => document.getElementById(id);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
+const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
+// noFlowers: play without the flower and season tiles (on by default; applies from the next hand dealt)
+const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, ...loadPrefs() };
 const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
-let state = load() || G.createGame();
+let state = load() || G.createGame({ noFlowers: prefs.noFlowers });
 G.refreshNames(state);
 let notes = [];            // coach notes this session; `snapshot` = state before your move
 let selected = null;       // tile id raised in your hand
@@ -29,8 +32,6 @@ let bubbleTimer = 0;
 let lastDrawn = null;
 let nudge = null;          // { id, html }: why a call you tried isn't possible (cleared on the next discard)
 let callPick = [];         // tiles you've tapped from your hand to call the discard with
-const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
-const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, ...loadPrefs() };
 // Your own tile order when Autosort is off (tile ids, left to right). Saved per browser.
 const ORDER = TEST ? "mahjong-coach:test-order" : "mahjong-coach:order";
 let myOrder = (() => { try { return JSON.parse(localStorage.getItem(ORDER)) || []; } catch { return []; } })();
@@ -96,7 +97,7 @@ function autoMove() {
 function tick() {
   const ph = state.phase;
   if (AUTO && (myTurn() || G.claimPendingFor(state, 0))) return autoMove();
-  if (AUTO && ph === "over") { G.nextHand(state); return update(); }
+  if (AUTO && ph === "over") { (state.noFlowers = prefs.noFlowers, G.nextHand(state)); return update(); }
   if (ph === "draw") G.drawTurn(state);
   else if (ph === "act" && state.current !== 0) {
     const p = state.current;
@@ -358,6 +359,7 @@ function flyDiscards(boxRects) {
 function renderSettings() {
   $("sortBtn").setAttribute("aria-checked", String(prefs.autoSort));
   $("scoresBtn").setAttribute("aria-checked", String(prefs.showScores));
+  $("flowersBtn").setAttribute("aria-checked", String(prefs.noFlowers));
   $("claimedBtn").setAttribute("aria-checked", String(prefs.showClaimed));
   $("soundBtn").setAttribute("aria-checked", String(prefs.sound));
   setSoundEnabled(prefs.sound);
@@ -419,8 +421,10 @@ function compassHtml() {
     return `<span class="plate circle c-${pos[p]} ${on ? "on" : ""} ${thinking ? "thinking" : ""}" title="${title}" role="img" aria-label="${title}">${thinking
       ? `<span class="dots"><i></i><i></i><i></i></span>` : `<span class="wind">${WINDS[sw]}</span>`}</span>`;
   }).join("");
-  const pts = prefs.showScores ? `<span class="pts">${state.players[0].score}</span>` : "";
-  return `<div class="compass"><div class="compass-ring">${circles}</div><span class="pname">You${pts}</span></div>`;
+  // the label names whoever's turn it is (you when nobody's: between hands)
+  const who = turnHolder() ?? 0;
+  const pts = prefs.showScores ? `<span class="pts">${state.players[who].score}</span>` : "";
+  return `<div class="compass"><div class="compass-ring">${circles}</div><span class="pname">${who === 0 ? "You" : state.players[who].name}${pts}</span></div>`;
 }
 
 function meldsHtml(pl, size) {
@@ -603,6 +607,8 @@ function renderBar() {
   }
   // a finished discard needs no words: it flies into the discard pile (see flyDiscards)
   const why = nudge && nudge.key === nudgeKey();
+  // just words, no tile or button: the compact box centres them instead of setting them to the left
+  bar.classList.toggle("solo", !play && !btns.length);
   bar.innerHTML = `<div class="act-left">
       <div class="say ${why ? "nudge" : ""}" ${why ? 'role="status"' : ""}>${why ? nudge.html : say}</div>
       <div class="inplay">${play}</div>
@@ -656,6 +662,9 @@ function renderPane() {
   el.setAttribute("aria-hidden", String(!pane.open));
   $("paneBack").hidden = pane.view !== "note";
   if (!pane.open) return;
+  // the panel's header shows Guanyin in place of the word "Coach"
+  const pav = $("paneAv");
+  if (pav && !pav.firstChild) pav.outerHTML = coachPortraitHtml().replace('class="coach-portrait"', 'id="paneAv" class="coach-portrait head"');
   const body = $("paneBody");
   if (pane.view === "note") {
     const n = notes.find((x) => x.id === pane.id);
@@ -675,13 +684,16 @@ function renderPane() {
   const yourMove = myTurn() || G.claimPendingFor(state, 0);
   const list = notes.slice().reverse().map((n) => `<li><button type="button" class="note-row" data-note="${n.id}">
       <span class="dot ${n.read ? "read" : ""}"></span><span><b>${n.title}</b><small>Hand ${n.handNo}</small></span></button></li>`).join("");
-  const hintBox = pane.hint ? `<div class="hint-box"><h4>${pane.hint.title}</h4>${pane.hint.html}</div>` : "";
-  body.innerHTML = `<h3>Hi, I'm your coach</h3>
-    <p>Play your game. When there was a clearly better move, I'll nudge you here and explain why. You can take the move back and try again.</p>
-    <button type="button" class="btn ${yourMove ? "" : "light"}" data-hint ${yourMove ? "" : "disabled"}>${yourMove ? "What would you do?" : "Ask me on your turn"}</button>
-    ${hintBox}
-    <p class="section-label">Notes</p>
-    ${notes.length ? `<ul class="notes">${list}</ul>` : `<p class="empty">Nothing yet. Nice playing so far.</p>`}`;
+  // On your move the coach's pick is always shown (no need to ask), laid out like a note (Figma 2354:26272):
+  // a headline, one card with the move, the reasons, then Got it. Otherwise: the portrait and the notes.
+  const h = pane.hint || (yourMove ? Coach.hint(state) : null);
+  const pickCard = h?.pick ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${h.pick.label}</span>${h.pick.k !== undefined ? `${tileHtml(h.pick.k, { size: "md" })}<span class="sub">${tileName(h.pick.k)}</span>` : ""}</div></div>` : "";
+  const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions"><button type="button" class="btn" data-close>Got it</button></div>` : "";
+  // the Notes section only appears once the coach has written a note
+  const notesHtml = notes.length ? `<p class="section-label">Notes</p><ul class="notes">${list}</ul>` : "";
+  // nothing to suggest and no notes: one quiet line so the panel isn't empty
+  const idle = !h && !notes.length ? `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>` : "";
+  body.innerHTML = `${h ? suggestion : ""}${notesHtml}${idle}`;
 }
 
 /* ---------------- modals ---------------- */
@@ -794,8 +806,10 @@ $("bar").addEventListener("click", (e) => {
 $("coach").addEventListener("click", () => {
   if (pane.open) return closePane();
   const fresh = notes.filter((n) => !n.read);
-  if (fresh.length) openNote(fresh[fresh.length - 1].id);
-  else openList();
+  if (fresh.length) return openNote(fresh[fresh.length - 1].id);  // the coach has something new to say: that first
+  // otherwise, on your move, "Coach me" means you want help: answer straight away, as "What would you do?" does
+  if (myTurn() || G.claimPendingFor(state, 0)) pane.hint = Coach.hint(state);
+  openList();
 });
 $("bubble").addEventListener("click", () => openNote(+$("bubble").dataset.id));
 $("paneClose").addEventListener("click", closePane);
@@ -894,6 +908,11 @@ $("claimedBtn").addEventListener("click", () => {
   savePrefs();
   render();
 });
+$("flowersBtn").addEventListener("click", () => {
+  prefs.noFlowers = !prefs.noFlowers;  // takes effect from the next hand dealt
+  savePrefs();
+  render();
+});
 $("scoresBtn").addEventListener("click", () => {
   prefs.showScores = !prefs.showScores;
   savePrefs();
@@ -932,16 +951,24 @@ function dealHooks() {
 }
 
 /* Start new hand (from the results card): the card goes away, then the same shuffle-and-deal plays into the next hand. */
+/* The coach panel slides away first (its .45s transition) so the deal plays on a clear table. */
+async function dismissPane() {
+  if (!pane.open) return;
+  closePane();
+  await sleep(450);
+}
+
 async function startNextHand() {
   if (dealing) return;
   dealing = true;
+  await dismissPane();
   epoch++;
   announce = null;
   selected = null;
   $("modal").hidden = true;
   let roundDone = false;
   await dealAnimation(() => {
-    roundDone = G.nextHand(state);
+    roundDone = (state.noFlowers = prefs.noFlowers, G.nextHand(state));
     render();
     save();
   }, dealHooks());
@@ -955,6 +982,7 @@ async function newGame() {
   if (dealing) return;
   dealing = true;
   setConfirmNew(false);
+  await dismissPane();
   epoch++;  // cancel any bot move still pending from the old game
   announce = null;
   guideOpen = false;
@@ -963,7 +991,7 @@ async function newGame() {
   closePane();
   render();
   await dealAnimation(() => {
-    state = G.createGame();
+    state = G.createGame({ noFlowers: prefs.noFlowers });
     notes = [];
     render();
     save();

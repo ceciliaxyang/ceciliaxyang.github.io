@@ -1,5 +1,5 @@
 // Move evaluation shared by the bots (to play) and the coach (to judge your moves).
-import { kindOf, countsOf, shanten, acceptance, analyzeDiscards, isHonor, isDragon, isSuited, suitOf } from "./engine.js";
+import { kindOf, countsOf, shanten, acceptance, analyzeDiscards, isHonor, isDragon, isSuited, suitOf, isTerminal } from "./engine.js";
 import { seatWind, unseenFor, handCounts } from "./game.js";
 
 /* Honors that score a fan as a peng for player p. */
@@ -40,7 +40,7 @@ export function danger(state, p, k, threatList = threats(state, p)) {
 /* Could this hand still score a fan if it is open (no concealed-hand fan)? */
 export function hasFanPath(state, p, { extraMeldKind = null, removeKinds = [] } = {}) {
   const pl = state.players[p];
-  if (!pl.flowers.length) return true; // "No flowers" is a fan
+  if (!pl.flowers.length && !state.noFlowers) return true; // "No flowers" is a fan (only when flowers are in the game)
   if (pl.flowers.some((f) => (kindOf(f) - 34) % 4 === seatWind(state, p))) return true;
   const meldKinds = pl.melds.map((m) => ({ type: m.type, k: m.k }));
   if (extraMeldKind !== null) meldKinds.push({ type: "pung", k: extraMeldKind });
@@ -76,7 +76,14 @@ export function rankDiscards(state, p, level = "normal") {
     if (th.length && r.shanten >= 1) score -= r.danger * (r.shanten >= 2 ? farW : nearW);
     r.score = score;
   }
-  res.sort((a, b) => b.score - a.score);
+  // Beginner-friendly tie-breaker, only between equally good moves: throw single winds and dragons that don't
+  // score for you first, then lone 1s and 9s, then tiles others have already thrown away (they're safer).
+  const thrown = Array(34).fill(0);
+  state.players.forEach((q) => q.discards.forEach((d) => { if (!d.taken) thrown[kindOf(d.id)]++; }));
+  const lone = (k) => c[k] === 1 && ![-2, -1, 1, 2].some((d) => { const x = k + d; return x >= 0 && x < 27 && suitOf(x) === suitOf(k) && c[x]; });
+  const tier = (k) => (isHonor(k) && c[k] === 1 && !isValueTile(state, p, k) ? 0 : isTerminal(k) && lone(k) ? 1 : 2);
+  for (const r of res) { r.tier = tier(r.k); r.thrown = thrown[r.k]; }
+  res.sort((a, b) => b.score - a.score || a.tier - b.tier || b.thrown - a.thrown);
   return { list: res, threats: th, counts: c, open, unseen };
 }
 

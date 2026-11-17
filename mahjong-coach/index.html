@@ -53,6 +53,9 @@
               <button type="button" class="set-row" id="sortBtn" role="switch" aria-checked="true">
                 <span class="set-text"><b>Autosort</b><small>Keep your hand and the discards sorted. Off: drag your tiles yourself</small></span><span class="switch" aria-hidden="true"></span>
               </button>
+              <button type="button" class="set-row" id="flowersBtn" role="switch" aria-checked="true">
+                <span class="set-text"><b>Play without flowers</b><small>Leave the flower and season tiles out. Starts with the next hand</small></span><span class="switch" aria-hidden="true"></span>
+              </button>
               <button type="button" class="set-row" id="scoresBtn" role="switch" aria-checked="false">
                 <span class="set-text"><b>Scores</b><small>Show everyone's points next to their name</small></span><span class="switch" aria-hidden="true"></span>
               </button>
@@ -72,7 +75,7 @@
     </div>
   </div>
 
-  <button type="button" class="coach fab-btn dark" id="coach" aria-label="Open coach"><span id="coachAv"></span>Coach</button>
+  <button type="button" class="coach fab-btn dark" id="coach" aria-label="Open coach"><span id="coachAv"></span>Coach me</button>
   <button type="button" class="bubble" id="bubble" hidden></button>
 
   <aside class="pane" id="pane" aria-label="Coach" aria-hidden="true">
@@ -80,7 +83,7 @@
       <button type="button" class="icon-btn" id="paneBack" aria-label="All notes" hidden>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <h2 class="pane-title">Coach</h2>
+      <h2 class="pane-title"><span class="visually-hidden">Coach</span><span id="paneAv"></span></h2>
       <button type="button" class="icon-btn" id="paneClose" aria-label="Close">
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M1.5 1.5L16.5 16.5M16.5 1.5L1.5 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>

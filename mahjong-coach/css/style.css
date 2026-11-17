@@ -326,8 +326,10 @@ span.scope { cursor: default; }
   .me .me-plate .who { gap: 8px; }
   .me .me-plate .plate { width: auto; height: auto; background: none; color: inherit; font-size: 14px; }
   .me .me-plate .pname { font-size: 14px; line-height: 18px; color: inherit; }
-  /* your turn: the whole pill turns red */
-  .me .me-plate:has(.plate.on) { background: var(--turn); color: #fff; }
+  /* your turn: only the wind gets a red circle; the pill itself stays grey */
+  .me .me-plate { padding-left: 12px; }
+  .me .me-plate .plate { width: 32px; height: 32px; border-radius: 50%; }
+  .me .me-plate .plate.on { background: var(--turn); color: #fff; }
 }
 /* The latest move, fixed height. Default: stacked and centered (prompt, 16px, the tile(s) in play, 24px, the
    button). Compact (only when the default would push your hand below the fold): one row, prompt and tile(s)
@@ -345,6 +347,11 @@ span.scope { cursor: default; }
 .bar.compact { flex-direction: row; justify-content: space-between; height: calc(20px + 16px + var(--lg) * var(--tile-r) + 48px); padding: 24px 32px; }
 .bar.compact .act-left { align-items: flex-start; }
 .bar.compact .say { text-align: left; }
+/* only a prompt, no tile or button: centred in the box */
+.bar.compact.solo { justify-content: center; }
+.bar.compact.solo .act-left { align-items: center; justify-content: center; }
+.bar.compact.solo .say { text-align: center; }
+.bar.compact.solo .inplay:empty { display: none; }
 /* player and tile names: dark, same weight as the sentence (per the white-box style guide) */
 .bar .say b { color: var(--text); font-weight: 500; }
 .bar .say .tile { --w: 18px; vertical-align: -6px; margin: 0 2px; }
@@ -389,7 +396,8 @@ span.scope { cursor: default; }
 .coach.fab-btn > :not(.coach-av) { align-self: center; }
 .coach.fab-btn { line-height: 48px; }
 .coach.has-note.fab-btn { background: #111; color: #fff; }  /* something to say: the pill goes black; her face is drawn in this same black */
-.coach-av { position: relative; width: 48px; height: 48px; flex-shrink: 0; perspective: 120px; }
+.coach-av { position: relative; width: 48px; height: 48px; flex-shrink: 0; perspective: 120px;
+  margin-right: -8px; }  /* her figure is narrower than its square: pull "Coach me" 8px closer */
 .coach-av svg { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; transition: transform .5s var(--spring); }
 .coach-av-seal { transform: rotateY(180deg); }
 .coach.has-note .coach-av-day { transform: rotateY(-180deg); }
@@ -434,15 +442,20 @@ span.scope { cursor: default; }
 .pane-body p { margin: 0 0 14px; font-size: 15px; line-height: 23px; color: var(--text); }
 .pane-body p .tile, .pane-body li .tile { vertical-align: -7px; margin: 0 1px; }
 .pane-body .tip { padding: 14px 16px; border-radius: 16px; background: var(--felt); font-size: 14px; line-height: 21px; }
+/* the coach's portrait at the top of the panel */
+.coach-portrait { width: 112px; height: 112px; margin: 4px 0 16px; border-radius: 50%; overflow: hidden; background: #f1f1ee; }
+.coach-portrait.head { width: 36px; height: 36px; margin: 0; }  /* same size as the close button */
+.coach-portrait svg { display: block; width: 100%; height: 100%; transform: translateY(6%) scale(1.06); }
 .pane-actions { display: flex; gap: 8px; margin-top: 24px; }
 .pane-actions .btn { flex: 1; }
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 20px; }
 .compare-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 12px 14px; border-radius: 24px; background: var(--felt); text-align: center; }
 .compare-card.best { background: #eef6f1; }
 .compare-card .tile { --w: 44px; }
-.compare-card .lbl { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.compare-card .sub { font-size: 13px; line-height: 16px; color: var(--text); font-weight: 500; }
+.compare-card .lbl { font-size: 12px; line-height: 16px; font-weight: 400; color: #666; }
+.compare-card .sub { font-size: 14px; line-height: 18px; color: var(--text); font-weight: 600; }
 .compare-card.mine .tile { opacity: .75; }
+.compare.single { grid-template-columns: 1fr; }
 .strip { display: flex; flex-wrap: wrap; gap: 8px 6px; margin: -4px 0 16px; }
 .strip-item { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .strip-item small { font-size: 11px; color: var(--muted); font-weight: 500; }
@@ -452,11 +465,12 @@ span.scope { cursor: default; }
 .fan-list li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: 14px; line-height: 20px; }
 .fan-list li span:last-child { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
 .fan-list li.total { font-weight: 600; }
+.fan-list li small { display: block; font-size: 12px; line-height: 16px; color: var(--muted); }
 .fan-list li.total span:last-child { color: var(--text); }
 .hint-list { list-style: none; margin: 0 0 16px; padding: 0; }
-.hint-list li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: 13px; line-height: 18px; }
+.hint-list li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hair); font-size: 14px; line-height: 20px; }
+.hint-list li span:nth-child(2) { font-weight: 600; }
 .hint-list li span:last-child { color: var(--muted); }
-.hint-list li:first-child span { font-weight: 600; }
 .notes { list-style: none; margin: 8px 0 0; padding: 0; }
 .notes li + li { margin-top: 8px; }
 .note-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: 0; border-radius: 18px; background: var(--felt); text-align: left; cursor: pointer; }

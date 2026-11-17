@@ -23,10 +23,11 @@ export function refreshNames(state) {
 export const DEAD_WALL = 14;
 export const liveTiles = (state) => Math.max(0, state.wall.length - DEAD_WALL);
 
-export function createGame({ minFan = 1 } = {}) {
+export function createGame({ minFan = 1, noFlowers = true } = {}) {
   const state = {
     version: 1,
     minFan,
+    noFlowers,  // play without the 8 flower and season tiles
     players: NAMES.map((name, i) => ({ name, human: i === 0, score: 0, hand: [], melds: [], flowers: [], discards: [] })),
     dealer: 0,
     prevailing: 0,
@@ -63,7 +64,8 @@ function shuffle(a) {
 
 export function startHand(state) {
   state.handNo++;
-  state.wall = shuffle([...Array(144).keys()]);
+  // without flowers the wall is the 136 suit and honor tiles only
+  state.wall = shuffle([...Array(144).keys()].filter((id) => !state.noFlowers || kindOf(id) < 34));
   for (const pl of state.players) { pl.hand = []; pl.melds = []; pl.flowers = []; pl.discards = []; }
   for (let i = 0; i < 4; i++) {
     const p = (state.dealer + i) % 4;
@@ -139,6 +141,7 @@ export function winCheck(state, p, extraKind = null, { selfDraw = false, robbing
     seatWind: seatWind(state, p),
     prevailing: state.prevailing,
     flowers: pl.flowers.map(kindOf),
+    flowersInPlay: !state.noFlowers,
     selfDraw,
     lastTile: selfDraw && !!state.flags.lastTile,
     replacement: selfDraw && !!state.flags.replacement,

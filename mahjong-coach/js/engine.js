@@ -237,7 +237,8 @@ export function scoreWin(ctx) {
   const common = [];
   if (ctx.selfDraw) common.push(["Self-drawn win", 1]);
   if (ctx.melds.every((m) => m.concealed)) common.push(["Concealed hand", 1]);
-  if (!ctx.flowers.length) common.push(["No flowers", 1]);
+  // "No flowers" only scores when flowers are in the game at all
+  if (!ctx.flowers.length && ctx.flowersInPlay !== false) common.push(["No flowers", 1]);
   const seatFlowers = ctx.flowers.filter((f) => (f - 34) % 4 === ctx.seatWind).length;
   if (seatFlowers) common.push(["Seat flower" + (seatFlowers > 1 ? " ×" + seatFlowers : ""), seatFlowers]);
   if (ctx.lastTile && ctx.selfDraw) common.push(["Last tile", 1]);
