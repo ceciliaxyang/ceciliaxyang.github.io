@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mahjong Coach link preview</title>
+<!--
+  The link preview (og-image.png), drawn from the same Guanyin as the Coach button and panel, so a new
+  Guanyin version updates all three. To re-render, with the dev server running (npm run dev):
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars \
+      --force-device-scale-factor=1 --window-size=1200,900 --virtual-time-budget=3000 \
+      --screenshot=shot.png "http://localhost:3000/mahjong-coach/og/og.html"
+    sips -c 630 1200 shot.png --out ../og-image.png
+  (the page is 900px tall with the 1200x630 card centred, so sips' centre crop is exact)
+-->
+<style>
+  html, body { margin: 0; background: #f7f7f5; }
+  body { height: 900px; display: flex; align-items: center; justify-content: center; }
+  #card { width: 1200px; height: 630px; display: block; }
+</style>
+</head>
+<body>
+<svg id="card" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg"></svg>
+<script type="module">
+  import { guanyinMarkup } from "../js/coach-art.js";
+  // one white tile, centred, with Guanyin as a bust running off the bottom of its face (no halo)
+  const w = 260, h = w * 1.5, d = w * 0.13, r = w * 0.16, x = (1200 - w) / 2, y = (630 - (h + d)) / 2;
+  // a tall view box so her robe carries on past the bottom of the tile face (clipped there)
+  const aw = w + 20, ah = aw * 82 / 64;
+  const art = guanyinMarkup("8 4 64 82").replace("<svg", `<svg x="${x - 10}" y="${y + 70}" width="${aw}" height="${ah}"`);
+  document.getElementById("card").innerHTML = `
+    <defs>
+      <linearGradient id="face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f3f3f0"/></linearGradient>
+      <filter id="bl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+      <clipPath id="c"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/></clipPath>
+    </defs>
+    <rect width="1200" height="630" fill="#f7f7f5"/>
+    <rect x="${x + 8}" y="${y + d + 10}" width="${w - 16}" height="${h}" rx="${r}" fill="#000" opacity=".16" filter="url(#bl)"/>
+    <rect x="${x}" y="${y + d + 1}" width="${w}" height="${h}" rx="${r}" fill="#c2c2ba"/>
+    <rect x="${x}" y="${y + d}" width="${w}" height="${h}" rx="${r}" fill="#dcdcd6"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="url(#face)" stroke="rgba(0,0,0,.06)"/>
+    <g clip-path="url(#c)">${art}</g>`;
+  // no halo on the preview
+  document.querySelectorAll(".gy-halo").forEach((el) => el.remove());
+</script>
+</body>
+</html>

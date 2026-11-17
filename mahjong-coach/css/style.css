@@ -362,8 +362,10 @@ span.scope { cursor: default; }
 .bar .inplay .tile { --w: var(--lg); margin-bottom: 0; }
 .bar .inplay .tile.arrive { animation: drop .35s var(--spring); }
 @media (max-width: 760px) {
-  .bar { height: auto; min-height: calc(20px + 10px + var(--lg) * var(--tile-r) + 10px + 40px); gap: 10px; }
-  .bar.compact { height: auto; min-height: calc(20px + 10px + var(--lg) * var(--tile-r)); }
+  /* one steady height between turns, so the page doesn't jump: room for a two-line prompt, the tile(s) in play
+     and a button, plus the 24px padding (the phone's bottom sheet sizes itself separately) */
+  .bar { height: calc(24px + 36px + 10px + var(--lg) * var(--tile-r) + 10px + 40px + 24px); min-height: 0; gap: 10px; }
+  .bar.compact { height: calc(24px + 36px + 10px + var(--lg) * var(--tile-r) + 24px); min-height: 0; }
   .act-left { gap: 10px; }
   .bar .say { white-space: normal; font-size: 13px; line-height: 18px; }
 }
@@ -389,28 +391,37 @@ span.scope { cursor: default; }
 /* Coach chathead */
 /* Coach: for now just a floating button like New game / Settings, bottom right, with a badge for new notes */
 .coach { position: fixed; right: max(26px, env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 30; }
-/* Porcelain pill: Guanyin stands straight on the white pill (no circle of her own), rising from its bottom edge.
-   A new note turns the whole pill black and she flips to white lines (keeping her red crown and green band). */
-.coach.fab-btn { background: #fff; color: var(--text); display: inline-flex; align-items: stretch; gap: 6px; padding: 0 22px 0 10px; overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 4px 12px rgba(0, 0, 0, .08); transition: transform .15s ease, background .3s ease, color .3s ease; }
+/* Thick white material (like the coach's speech bubble), no outline: Guanyin rises from its bottom edge. */
+.coach.fab-btn { background: rgba(255, 255, 255, .86); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  color: var(--text); display: inline-flex; align-items: stretch; gap: 6px; padding: 0 22px 0 12px; overflow: visible;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .10); transition: transform .15s ease, background .3s ease, color .3s ease; }
 .coach.fab-btn > :not(.coach-av) { align-self: center; }
 .coach.fab-btn { line-height: 48px; }
-.coach.has-note.fab-btn { background: #111; color: #fff; }  /* something to say: the pill goes black; her face is drawn in this same black */
-.coach-av { position: relative; width: 48px; height: 48px; flex-shrink: 0; perspective: 120px;
-  margin-right: -8px; }  /* her figure is narrower than its square: pull "Coach me" 8px closer */
-.coach-av svg { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; transition: transform .5s var(--spring); }
-.coach-av-seal { transform: rotateY(180deg); }
-.coach.has-note .coach-av-day { transform: rotateY(-180deg); }
-.coach.has-note .coach-av-seal { transform: none; }
-/* hover lifts the shadow instead of tinting the pill: her face is filled with the pill's colour */
-.coach.fab-btn:hover { box-shadow: 0 0 0 1px rgba(0, 0, 0, .08), 0 6px 16px rgba(0, 0, 0, .14); }
-/* a new note: a gentle pulse (a slow swell and a soft red glow), no shake */
-.coach.alert { animation: pulse 1.8s ease-in-out 3; }
-@keyframes pulse {
-  0%, 100% { transform: none; box-shadow: 0 0 0 0 rgba(184, 50, 44, 0); }
-  50% { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(184, 50, 44, .22); }
+/* Guanyin v2: the pill stays white; an insight (and hovering with a mouse) only lights up her gold halo.
+   Hover is mouse-only so a tap on a phone doesn't leave it stuck on. */
+@media (hover: hover) {
+  .coach:hover .coach-av .gy-halo { opacity: 1; }
 }
-@media (prefers-reduced-motion: reduce) { .coach.alert { animation: none; } }
+/* smaller than the pill, so her veil sits inside it rather than running to the edge */
+.coach-av { position: relative; width: 42px; height: 48px; flex-shrink: 0; margin-right: -2px; }
+/* her robe is cut off at the pill's bottom edge, but the halo may spill out above and to the sides */
+/* she's clipped to the pill: its bottom edge and its rounded bottom-left corner (the clip box's left edge and
+   corner radius line up with the pill's: the drawing starts 11px in, the pill is 48px tall so its radius is 24px).
+   Above her head the glow can still spill out. */
+.coach-av svg { position: absolute; left: -1px; bottom: 0; width: 44px; height: 44px; overflow: visible;
+  clip-path: inset(-40px -40px 0 -11px round 0 0 0 24px); }
+.coach-av .gy-halo { opacity: 0; transition: opacity .4s ease; }
+.coach.has-note .coach-av .gy-halo { opacity: 1; }
+/* hover lifts the shadow instead of tinting the pill: her face is filled with the pill's colour */
+.coach.fab-btn:hover { box-shadow: 0 8px 22px rgba(0, 0, 0, .14); }
+/* a new note: a gentle pulse (a slow swell and a soft red glow), no shake */
+/* a new insight: the button stays still and only Guanyin's glow breathes, swelling and brightening a few times */
+.coach.alert .gy-halo { transform-box: fill-box; transform-origin: center; animation: haloPulse 1.8s ease-in-out 3; }
+@keyframes haloPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.14); opacity: .75; }
+}
+@media (prefers-reduced-motion: reduce) { .coach.alert .gy-halo { animation: none; } }
 .coach-badge {
   position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--red); color: #fff;
   font-size: 12px; line-height: 22px; font-weight: 600; box-shadow: 0 0 0 2px #fff;
@@ -443,9 +454,15 @@ span.scope { cursor: default; }
 .pane-body p .tile, .pane-body li .tile { vertical-align: -7px; margin: 0 1px; }
 .pane-body .tip { padding: 14px 16px; border-radius: 16px; background: var(--felt); font-size: 14px; line-height: 21px; }
 /* the coach's portrait at the top of the panel */
-.coach-portrait { width: 112px; height: 112px; margin: 4px 0 16px; border-radius: 50%; overflow: hidden; background: #f1f1ee; }
+/* the coach in the panel header: no disc behind her, just her soft gold glow; her robe fades out at the bottom */
+.coach-portrait { width: 112px; height: 112px; margin: 4px 0 16px; overflow: visible; background: none;
+  -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
 .coach-portrait.head { width: 36px; height: 36px; margin: 0; }  /* same size as the close button */
-.coach-portrait svg { display: block; width: 100%; height: 100%; transform: translateY(6%) scale(1.06); }
+.coach-portrait svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* in the panel her glow breathes slowly and gently, all the time */
+.coach-portrait .gy-halo { transform-box: fill-box; transform-origin: center; animation: haloBreathe 3.6s ease-in-out infinite; }
+@keyframes haloBreathe { 0%, 100% { transform: scale(.94); opacity: .75; } 50% { transform: scale(1.06); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .coach-portrait .gy-halo { animation: none; } }
 .pane-actions { display: flex; gap: 8px; margin-top: 24px; }
 .pane-actions .btn { flex: 1; }
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 20px; }
@@ -494,7 +511,8 @@ span.scope { cursor: default; }
   .pane-body h3 { font-size: 24px; line-height: 28px; }
   .coach { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); }
   .coach.fab-btn { padding: 0 16px 0 6px; gap: 4px; line-height: 40px; }
-  .coach-av { width: 40px; height: 40px; }
+  .coach-av { width: 36px; height: 40px; }
+  .coach-av svg { width: 38px; height: 38px; clip-path: inset(-40px -40px 0 -5px round 0 0 0 20px); }  /* 5px in, 40px tall pill */
   .bubble { right: 12px; bottom: calc(12px + 40px + 10px + env(safe-area-inset-bottom)); }
 }
 

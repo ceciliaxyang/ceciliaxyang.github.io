@@ -170,6 +170,8 @@ function claim(resp) {
 const nudgeKey = () => `${state.handNo}:${state.phase}:${state.current}:${state.lastDiscard?.id ?? ""}:${state.wall.length}`;
 function say(html) { nudge = { key: nudgeKey(), html }; render(); }
 const tx = (k) => tileHtml(k, { size: "xs" });
+// a curved arrow turning back, for Undo and Take it back
+const UNDO_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>`;
 
 function callPicked() {
   const ld = state.lastDiscard;
@@ -594,7 +596,7 @@ function renderBar() {
     // after any call that doesn't work, Call becomes Undo: it puts the lifted tiles back in your hand
     const undo = nudge && nudge.key === nudgeKey();
     btns.push(undo && callPick.length
-      ? `<button type="button" class="btn" data-undo-call>Undo</button>`
+      ? `<button type="button" class="btn" data-undo-call>${UNDO_ICON}Undo</button>`
       : callPick.length
       ? `<button type="button" class="btn" data-call>Call</button>`
       : `<button type="button" class="btn" data-claim="pass">Continue</button>`);
@@ -677,7 +679,7 @@ function renderPane() {
     const canUndo = n.snapshot && n.handNo === state.handNo;
     body.innerHTML = `<h3>${n.title}</h3>${cmp}${n.html}
       <div class="pane-actions">
-        ${canUndo ? `<button type="button" class="btn" data-undo="${n.id}">Take it back</button>` : ""}
+        ${canUndo ? `<button type="button" class="btn" data-undo="${n.id}">${UNDO_ICON}Take it back</button>` : ""}
         <button type="button" class="btn light" data-close>Got it</button>
       </div>`;
     return;

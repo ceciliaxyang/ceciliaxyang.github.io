@@ -120,7 +120,7 @@ export function reviewAct(before, action) {
   return note(before, {
     kind: "discard",
     title: `${tileName(best.k)} was the better tile to throw away`,
-    bubble: worseShape ? `That moved you further from winning. Tap to see why.` : `There was a better tile to throw. Tap to see why.`,
+    bubble: worseShape ? `That moved you further from winning.` : `There was a better tile to throw.`,
     compare: worseShape
       ? { mine: { k, label: "You threw", sub: awayShort(mine.shanten) }, best: { k: best.k, label: "Better", sub: awayShort(best.shanten) } }
       : { mine: { k, label: "You threw", sub: helps(mine.ukeire) }, best: { k: best.k, label: "Better", sub: helps(best.ukeire) } },
@@ -208,7 +208,7 @@ export function reviewClaim(before, resp) {
     return note(before, {
       kind: "claim",
       title: `Taking ${from}'s ${tileName(k)} would have helped`,
-      bubble: `Taking that ${tileName(k)} would have helped. Tap to see why.`,
+      bubble: `Taking that ${tileName(k)} would have helped.`,
       html: p.join(""),
     });
   }
@@ -227,7 +227,7 @@ export function reviewClaim(before, resp) {
     return note(before, {
       kind: "claim",
       title: `Letting that ${tileName(k)} go was better`,
-      bubble: `Taking that tile didn't help. Tap to see why.`,
+      bubble: `Taking that tile didn't help.`,
       html: p.join(""),
     });
   }
