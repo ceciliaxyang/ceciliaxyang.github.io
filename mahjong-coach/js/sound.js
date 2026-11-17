@@ -6,6 +6,24 @@ let enabled = true;
 
 export function setSoundEnabled(on) { enabled = on; }
 
+// Phones only let a page start sound during a tap, and the first clack plays later (mid-animation). So the
+// audio is switched on at the first tap anywhere, with a silent blip. On iPhone the page also asks to play
+// like media ("playback") so the clatter isn't muted by the ring/silent switch; the in-game Sound switch
+// is the way to turn it off.
+function unlock() {
+  if (!enabled) return;
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state !== "running") ctx.resume();
+    const b = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = b; src.connect(ctx.destination); src.start(0);
+  } catch { /* no audio on this device */ }
+  if (ctx && ctx.state === "running") ["pointerdown", "touchend", "keydown"].forEach((e) => removeEventListener(e, unlock, true));
+}
+["pointerdown", "touchend", "keydown"].forEach((e) => addEventListener(e, unlock, true));
+
 function audio() {
   if (!enabled) return null;
   try {
