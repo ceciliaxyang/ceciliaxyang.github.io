@@ -275,15 +275,30 @@ function setSheet(collapsed) {
 
 const DEPTH = 0.13;  // matches --depth in style.css: a tile's 3D edge as a share of its width
 function fitLayout() {
-  const bar = $("bar"), hand = $("hand");
+  const bar = $("bar"), hand = $("hand"), center = document.querySelector(".center");
   if (!bar || !hand) return;
   bar.classList.remove("compact");  // measure with the centred, stacked layout
+  center?.style.removeProperty("--lg-max");
   if (PHONE.matches) return;  // phones: always stacked, in the sheet
-  // keep the centred, stacked box as long as your whole row of tiles (with its 3D edge) is inside the window;
-  // switch to the left/right row only when it would push your hand past the bottom edge
-  const handBottom = Math.max(...[...hand.querySelectorAll(".tile")].map((t) => { const r = t.getBoundingClientRect(); return r.bottom + r.width * DEPTH + 1; }), 0);
-  const fits = Math.round(handBottom + window.scrollY) <= window.innerHeight;
-  bar.classList.toggle("compact", !fits);
+  // The floating buttons along the bottom (New game, Settings, You, Coach) may cover at most 20% of your tiles
+  // (their height including the 3D edge), measured with the page scrolled to the top.
+  const buttonsTop = Math.min(...[".fab", "#mePlate", "#coach"].map((sel) => document.querySelector(sel)?.getBoundingClientRect().top ?? innerHeight), innerHeight);
+  const fits = () => {
+    const rects = [...hand.querySelectorAll(".tile")].map((t) => t.getBoundingClientRect());
+    if (!rects.length) return true;
+    const h = rects[0].height + rects[0].width * DEPTH + 1;
+    const bottom = Math.max(...rects.map((r) => r.bottom + r.width * DEPTH + 1)) + window.scrollY;
+    return Math.round(bottom - buttonsTop) <= h * 0.2;
+  };
+  // 1. keep the centred, stacked box if that fits; 2. otherwise the shorter left/right box;
+  // 3. if even that is too tall, shrink the tiles a little at a time until it fits
+  if (fits()) return;
+  bar.classList.add("compact");
+  if (fits()) return;
+  let w = hand.querySelector(".tile")?.getBoundingClientRect().width ?? 56;
+  while (w > 36 && !fits()) { w -= 2; center.style.setProperty("--lg-max", `${w}px`); }
+  // a very short window where even 36px tiles don't clear the buttons: keep full-size tiles (scroll to see them)
+  if (!fits()) center.style.removeProperty("--lg-max");
 }
 window.addEventListener("resize", () => fitLayout());
 
@@ -906,9 +921,13 @@ document.addEventListener("click", (e) => { if (confirmNew && !e.target.closest(
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function dealHooks() {
   if (!PHONE.matches) return {};
+  // Phones: the sheet drops fully out of view, the tiles shuffle and deal (yours land where your hand will be),
+  // then the sheet rises up behind them; the buttons and labels fade back last.
+  const sheet = $("sheet");
   return {
-    beforePile: async () => { setSheet(true); await sleep(380); },
-    beforeDeal: async () => { setSheet(false); await sleep(380); },
+    beforePile: async () => { sheet.classList.add("away"); setSheet(false); await sleep(380); },
+    sheetShift: () => sheet.getBoundingClientRect().top - (innerHeight - sheet.offsetHeight),
+    afterLand: async () => { sheet.classList.remove("away"); await sleep(420); },
   };
 }
 
@@ -981,10 +1000,7 @@ if (firstVisit && !AUTO) {
   sh.classList.add("away");
   render();
   requestAnimationFrame(() => requestAnimationFrame(() => { sh.style.transition = ""; }));
-  const hooks = dealHooks();
-  if (hooks.beforeDeal) hooks.beforeDeal = async () => { $("sheet").classList.remove("away"); setSheet(false); await sleep(380); };
-  if (hooks.beforePile) hooks.beforePile = async () => {};  // already out of the way
-  introDeal(() => render(), hooks).then(() => { dealing = false; update(); });
+  introDeal(() => render(), dealHooks()).then(() => { dealing = false; update(); });
 } else {
   update();
 }

@@ -21,12 +21,13 @@ const PATHS = {
   eyes: "M17.8 19.5 q.7 .32 1.4 0 M20.8 19.5 q.7 .32 1.4 0",
 };
 
+// no background of their own: she sits on the pill, which is white normally and red with a new note
 const EVERYDAY = { bg: IVORY, veil: BLUE, veilOpacity: 0.14, robe: IVORY, robeLine: BLUE, collar: BLUE, hair: INK, skin: IVORY, crown: RED, band: GREEN, dot: RED, eyes: INK };
-const SEAL = { bg: RED, veil: IVORY, veilOpacity: 0.22, robe: RED, robeLine: IVORY, collar: IVORY, hair: IVORY, skin: RED, crown: IVORY, band: IVORY, dot: IVORY, eyes: IVORY };
+// a new note: white lines on the black pill, keeping her red crown, green band and red dot
+const SEAL = { bg: INK, veil: IVORY, veilOpacity: 0.16, robe: INK, robeLine: IVORY, collar: IVORY, hair: IVORY, skin: INK, crown: RED, band: GREEN, dot: RED, eyes: IVORY };
 
 function draw(c, cls) {
   return `<svg class="${cls}" viewBox="0 0 40 40" aria-hidden="true">
-    <rect width="40" height="40" fill="${c.bg}"/>
     <path d="${PATHS.veil}" fill="${c.veil}" opacity="${c.veilOpacity}"/>
     <path d="${PATHS.robe}" fill="${c.robe}" stroke="${c.robeLine}" stroke-width=".9" stroke-linejoin="round"/>
     <path d="${PATHS.collar}" fill="${c.collar}"/>

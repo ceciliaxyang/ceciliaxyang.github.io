@@ -123,15 +123,15 @@ export function faceSvg(k) {
   else {
     const i = k - 34;
     const col = [RED, BLUE, "#c77a12", GREEN, GREEN, RED, "#c77a12", BLUE][i];
-    body = `<text x="7" y="20" font-family="-apple-system,system-ui,sans-serif" font-size="15" font-weight="700" fill="${INK}">${(i % 4) + 1}</text>` +
+    body = `<text x="7" y="20" font-family="'SF Pro Display',-apple-system,system-ui,sans-serif" font-size="15" font-weight="700" fill="${INK}">${(i % 4) + 1}</text>` +
       `<text x="45" y="21" text-anchor="middle" font-family="${SERIF}" font-size="15" font-weight="700" fill="${col}">${BONUS[i]}</text>` +
       flowerArt(col);
   }
   // Small corner number (upper right) on circles and bamboo, haloed in the tile's ivory so it reads over the pattern; the pattern shifts down a little to make room.
   if (k < 9)
-    body += `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${numOf(k)}</text>`;
+    body += `<text x="56" y="14" text-anchor="end" font-family="'SF Pro Display',-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${numOf(k)}</text>`;
   else if (k < 27)
-    body = `<g transform="translate(4.8 10) scale(.84)">${body}</g>` + `<text x="56" y="14" text-anchor="end" font-family="-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="${FACE}" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
+    body = `<g transform="translate(4.8 10) scale(.84)">${body}</g>` + `<text x="56" y="14" text-anchor="end" font-family="'SF Pro Display',-apple-system,system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}" stroke="${FACE}" stroke-width="3" paint-order="stroke">${numOf(k)}</text>`;
   return `<svg viewBox="0 0 60 80" aria-hidden="true">${body}</svg>`;
 }
 

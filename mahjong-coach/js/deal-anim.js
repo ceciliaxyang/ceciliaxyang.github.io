@@ -152,7 +152,11 @@ async function dealFromPile(layer, ghosts, pile, startNew, hooks) {
   const body = document.body;
   startNew();
   await frame();
-  if (hooks.beforeDeal) await hooks.beforeDeal();  // phones: the sheet opens now, ready to receive your tiles
+  if (hooks.beforeDeal) await hooks.beforeDeal();
+  // phones: the sheet is still below the screen, so tiles headed into it aim for where it will be once it's up
+  const shift = hooks.sheetShift ? hooks.sheetShift() : 0;
+  const sheet = document.getElementById("sheet");
+  const at = (t) => { const p = place(t); if (shift && sheet?.contains(t)) p.y -= shift; return p; };
   layer.classList.add("flying");  // tiles in flight pass over the sheet and buttons
   shuffleRattle(0.6, 24);  // tiles landing in front of each player
   const targets = dealOrder();
@@ -162,43 +166,71 @@ async function dealFromPile(layer, ghosts, pile, startNew, hooks) {
   const wallAt = wallTile ? place(wallTile) : null;
   await Promise.all([
     ...targets.map((t, i) => {
-      const p = place(t);
+      const p = at(t);
       return move(ghosts[i], { x: p.x, y: p.y, rot: p.rot, s: p.w / GHOST_W }, 560, Math.random() * 90);
     }),
     ...spare.map((g) => (wallAt
       ? move(g, { x: wallAt.x, y: wallAt.y, rot: wallAt.rot, s: wallAt.w / GHOST_W }, 560, Math.random() * 90)
       : Promise.resolve()).then(() => g.el.remove())),
   ]);
+  if (hooks.afterLand) {
+    // phones: everyone else's tiles hand over to the real ones (which sit under the sheet) before the sheet rises,
+    // so only your own tiles stay on top of it
+    body.classList.add("table-ready");
+    targets.forEach((t, i) => { if (!sheet?.contains(t)) ghosts[i].el.remove(); });
+    await hooks.afterLand();  // now the sheet rises up behind your tiles
+  }
   const mine = new Set([...document.querySelectorAll("#hand .tile, #meExposed .tile")]);
   await Promise.all(targets.map((t, i) => (mine.has(t) && !t.classList.contains("back") ? flip(ghosts[i], t.innerHTML, false, i % 14 * 25) : null)));
-  body.classList.remove("dealing-hide");
+  body.classList.remove("dealing-hide", "table-ready");
   layer.remove();
+  body.classList.add("undealing");  // buttons and labels fade back in, last
   body.classList.remove("dealing");
+  setTimeout(() => body.classList.remove("undealing"), 450);
 }
 
 /* New game: clear the table, gather every tile into the swirl, flip it face down, then deal. */
 export async function dealAnimation(startNew, hooks = {}) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { startNew(); return; }
   const body = document.body;
-  if (hooks.beforePile) await hooks.beforePile();  // phones: tuck the sheet away first
   const layer = newLayer();
+  // your own tiles (in the phone's sheet) get a layer above the sheet, so they can leave it as it goes down;
+  // everyone else's stay under the sheet
+  const top = newLayer();
+  top.classList.add("flying");
+  const sheet = document.getElementById("sheet");
 
   // 1. buttons and labels fade away; the real tiles hand over to stand-ins
   body.classList.add("dealing");
   const ghosts = visibleTiles().map((t) => {
     const back = t.classList.contains("back") || t.classList.contains("face-down");
-    return { g: makeGhost(layer, place(t), t.innerHTML, back), back };
+    const mine = !!sheet?.contains(t);
+    return { g: makeGhost(mine ? top : layer, place(t), t.innerHTML, back), back, mine };
   });
   body.classList.add("dealing-hide");
+  // phones: the sheet slides down while the tiles gather
+  const tucked = hooks.beforePile ? hooks.beforePile() : null;
   await wait(280);
 
   // 2. every tile slides into the middle in a "mid-shuffle swirl": scattered at every angle across an
-  //    oval, like hands mixing the tiles, but never touching
+  //    oval, like hands mixing the tiles, but never touching. Your own tiles take the spots nearest the centre.
   const all = ghosts.map((x) => x.g);
   const pile = pileLayout(all.length);
-  const order = [...all.keys()].sort(() => Math.random() - 0.5);  // tiles land in a random spot of the pile
+  const byCentre = [...pile.slots.keys()].sort((a, b) =>
+    Math.hypot(pile.slots[a].x - pile.cx, pile.slots[a].y - pile.cy) - Math.hypot(pile.slots[b].x - pile.cx, pile.slots[b].y - pile.cy));
+  const mineIdx = [...all.keys()].filter((i) => ghosts[i].mine);
+  const otherIdx = [...all.keys()].filter((i) => !ghosts[i].mine).sort(() => Math.random() - 0.5);
+  const slotOf = new Map();
+  mineIdx.forEach((gi, k) => slotOf.set(gi, byCentre[k]));
+  const rest = byCentre.slice(mineIdx.length).sort(() => Math.random() - 0.5);
+  otherIdx.forEach((gi, k) => slotOf.set(gi, rest[k]));
+  // `order` = ghosts in slot order (the deal takes tiles from the far side of the pile first)
+  const order = [...all.keys()].sort((a, b) => slotOf.get(a) - slotOf.get(b));
   shuffleRattle(1.05, Math.min(60, all.length));  // the clatter of tiles being swept together and mixed
-  await Promise.all(order.map((gi, i) => move(all[gi], pile.slots[i], 600, Math.min(i * 8, 420))));
+  await Promise.all([
+    ...[...mineIdx, ...otherIdx].map((gi, i) => move(all[gi], pile.slots[slotOf.get(gi)], 600, Math.min(i * 8, 420))),
+    tucked,
+  ]);
 
   // 3. the whole pile flips face down, a wave across it
   await Promise.all(ghosts.map((x, i) => (x.back ? null : flip(x.g, "", true, Math.min(order.indexOf(i) * 6, 360)))));
@@ -206,6 +238,7 @@ export async function dealAnimation(startNew, hooks = {}) {
 
   // 4–5. deal
   await dealFromPile(layer, order.map((gi) => all[gi]), pile, startNew, hooks);
+  top.remove();
 }
 
 /* First visit: the table starts as the face-down swirl with a "Start new game" button under it. Pressing it
@@ -229,7 +262,7 @@ export async function introDeal(startNew, hooks = {}) {
   btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
     startNew();
-    if (hooks.beforeDeal) await hooks.beforeDeal();
+    if (hooks.afterLand) await hooks.afterLand();
     layer.remove();
     body.classList.remove("dealing", "dealing-hide");
     return;

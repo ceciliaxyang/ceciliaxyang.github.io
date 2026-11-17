@@ -42,7 +42,7 @@
 [hidden] { display: none !important; }
 html, body { margin: 0; background: var(--page); color: var(--fg); }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -169,8 +169,18 @@ span.scope { cursor: default; }
 .tile.sm { --w: var(--sm); }
 .tile.xs { --w: var(--xs); }
 /* face-down: the same 3D depth as a face-up tile (edge + 1px rim + shadow), just in the green back colours */
-.tile.back { background: linear-gradient(#138060, var(--back)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 #08493a, 0 calc(var(--w) * var(--depth) + 1px) 0 #053628, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
-.tile.face-down { background: linear-gradient(#138060, var(--back)); }
+/* Jade backs ("thin edges"): the body stays deep green while light seems to pass through the thin rim, with a faint
+   bright line along the top edge. The gradient tips a few degrees differently from tile to tile. */
+.tile.back, .tile.face-down {
+  --jade-a: 180deg;
+  background: linear-gradient(var(--jade-a), #127a5b, #0d6649);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08), inset 0 max(1px, calc(var(--w) * .033)) 0 rgba(150, 235, 200, .35),
+    inset 0 0 calc(var(--w) * .15) rgba(90, 200, 155, .22),
+    0 calc(var(--w) * var(--depth)) 0 #08493a, 0 calc(var(--w) * var(--depth) + 1px) 0 #053628, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+}
+.tile.back:nth-child(3n + 1), .tile.face-down:nth-child(3n + 1) { --jade-a: 172deg; }
+.tile.back:nth-child(5n + 2), .tile.face-down:nth-child(5n + 2) { --jade-a: 189deg; }
+.tile.back:nth-child(7n + 3), .tile.face-down:nth-child(7n + 3) { --jade-a: 176deg; }
 .tile.face-down svg { visibility: hidden; }
 
 /* Table: the side players' columns on the left and right; the middle column holds the player opposite,
@@ -187,7 +197,9 @@ span.scope { cursor: default; }
 .center { display: flex; flex-direction: column; gap: 48px; min-width: 0; container-type: inline-size; }
 /* your hand spans the white box edge to edge: 14 tiles and 13 3px gaps across the middle column;
    the tile in play in the white box is the same size (phones are different: the box moves into the sheet) */
-.center .hand, .center .bar { --lg: min(56px, calc((100cqw - 13 * var(--tgap)) / 14)); }  /* capped at 56px wide so the centred box fits most laptop screens */
+/* short windows: --lg-max (set by fitLayout) shrinks the discards and your called sets along with your hand */
+.center { --mid: min(calc(var(--lg) * .8), calc(var(--lg-max, 999px) * .8)); }
+.center .hand, .center .bar { --lg: min(var(--lg-max, 56px), calc((100cqw - 13 * var(--tgap)) / 14)); }  /* capped at 56px wide so the centred box fits most laptop screens */
 /* a full hand stretches toward the box edges, but never more than 12px between tiles (it stays centred) */
 .center .hand.spread { align-self: center; width: 100%; justify-content: space-between;
   max-width: calc(var(--n, 14) * var(--lg) + (var(--n, 14) - 1) * 12px); }
@@ -370,14 +382,20 @@ span.scope { cursor: default; }
 /* Coach chathead */
 /* Coach: for now just a floating button like New game / Settings, bottom right, with a badge for new notes */
 .coach { position: fixed; right: max(26px, env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 30; }
-.coach.fab-btn { background: #000; color: #fff; display: inline-flex; align-items: center; gap: 10px; padding: 0 22px 0 6px; }
-/* Guanyin in a round avatar at the start of the pill; with a new note she flips to the red seal */
-.coach-av { position: relative; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; perspective: 120px; }
+/* Porcelain pill: Guanyin stands straight on the white pill (no circle of her own), rising from its bottom edge.
+   A new note turns the whole pill black and she flips to white lines (keeping her red crown and green band). */
+.coach.fab-btn { background: #fff; color: var(--text); display: inline-flex; align-items: stretch; gap: 6px; padding: 0 22px 0 10px; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 4px 12px rgba(0, 0, 0, .08); transition: transform .15s ease, background .3s ease, color .3s ease; }
+.coach.fab-btn > :not(.coach-av) { align-self: center; }
+.coach.fab-btn { line-height: 48px; }
+.coach.has-note.fab-btn { background: #111; color: #fff; }  /* something to say: the pill goes black; her face is drawn in this same black */
+.coach-av { position: relative; width: 48px; height: 48px; flex-shrink: 0; perspective: 120px; }
 .coach-av svg { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; transition: transform .5s var(--spring); }
 .coach-av-seal { transform: rotateY(180deg); }
 .coach.has-note .coach-av-day { transform: rotateY(-180deg); }
 .coach.has-note .coach-av-seal { transform: none; }
-.coach.fab-btn:hover { background: #222; }
+/* hover lifts the shadow instead of tinting the pill: her face is filled with the pill's colour */
+.coach.fab-btn:hover { box-shadow: 0 0 0 1px rgba(0, 0, 0, .08), 0 6px 16px rgba(0, 0, 0, .14); }
 /* a new note: a gentle pulse (a slow swell and a soft red glow), no shake */
 .coach.alert { animation: pulse 1.8s ease-in-out 3; }
 @keyframes pulse {
@@ -391,9 +409,11 @@ span.scope { cursor: default; }
 }
 .bubble {
   position: fixed; right: max(26px, env(safe-area-inset-right)); bottom: calc(26px + 48px + 12px + env(safe-area-inset-bottom)); z-index: 30;
-  max-width: min(280px, calc(100vw - 120px)); padding: 12px 16px; border: 0; border-radius: 20px 20px 6px 20px; background: #171717; color: #fff;
-  font-size: 14px; line-height: 19px; font-weight: 500; text-align: left; cursor: pointer;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .2); transform-origin: bottom right; animation: pop .45s var(--spring);
+  max-width: min(280px, calc(100vw - 120px)); padding: 12px 16px; border: 0; border-radius: 20px 20px 6px 20px; color: var(--text);
+  /* thick white material: mostly opaque white with a strong blur, a hairline edge and a soft lift */
+  background: rgba(255, 255, 255, .86); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 8px 24px rgba(0, 0, 0, .12);
+  font-size: 14px; line-height: 19px; font-weight: 500; text-align: left; cursor: pointer; transform-origin: bottom right; animation: pop .45s var(--spring);
 }
 @keyframes pop { from { transform: scale(.6) translateY(8px); opacity: 0; } }
 
@@ -457,8 +477,8 @@ span.scope { cursor: default; }
   .pane-body { padding: 4px 24px calc(32px + env(safe-area-inset-bottom)); }
   .pane-body h3 { font-size: 24px; line-height: 28px; }
   .coach { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); }
-  .coach.fab-btn { padding: 0 16px 0 4px; gap: 8px; }
-  .coach-av { width: 32px; height: 32px; }
+  .coach.fab-btn { padding: 0 16px 0 6px; gap: 4px; line-height: 40px; }
+  .coach-av { width: 40px; height: 40px; }
   .bubble { right: 12px; bottom: calc(12px + 40px + 10px + env(safe-area-inset-bottom)); }
 }
 
@@ -594,7 +614,10 @@ body.dealing .fab, body.dealing .coach, body.dealing .bubble, body.dealing .who,
 body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount {
   opacity: 0; pointer-events: none; transition: opacity .25s ease;
 }
+/* after the deal: the buttons and labels fade back in, last */
+body.undealing :is(.fab, .coach, .who, #bar > *, .me-plate, .sheet-grab, .dcount) { transition: opacity .4s ease; }
 body.dealing-hide #table .tile, body.dealing-hide #sheet .tile { visibility: hidden; }
+body.dealing-hide.table-ready #table .tile { visibility: visible; }  /* phones: opponents' tiles are in place before the sheet rises */
 body.dealing .bar { background: transparent; transition: background .25s ease; }  /* the white box steps aside */
 /* first visit: "Start new game" sits under the face-down pile */
 .deal-layer .deal-start { position: absolute; left: 50%; transform: translateX(-50%); }
