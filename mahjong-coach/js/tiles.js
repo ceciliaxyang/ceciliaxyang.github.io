@@ -1,6 +1,6 @@
 // Tile names and the SVG faces drawn on each tile (traditional Chinese tile art, simplified).
 import { suitOf, numOf } from "./engine.js";
-import { zh } from "./lang.js";
+import { zh, getLang } from "./lang.js";
 
 const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const WINDS = ["東", "南", "西", "北"];
@@ -116,7 +116,8 @@ const CHAR_Y = 56;
 
 export function faceSvg(k) {
   let body;
-  if (k < 9) body = text(NUMERALS[k], CHAR_Y, CHAR_SIZE, INK);  // Characters: just the numeral (no 萬), with a corner number
+  // Characters: in Mandarin just the numeral; in Cantonese the numeral over a red 萬, like real Hong Kong tiles. Both keep a corner number.
+  if (k < 9) body = getLang() === "cantonese" ? text(NUMERALS[k], 36, 30, INK) + text("萬", 70, 30, RED) : text(NUMERALS[k], CHAR_Y, CHAR_SIZE, INK);
   else if (k < 18) body = DOTS[numOf(k)]();
   else if (k < 27) body = BAMBOO[numOf(k)]();
   else if (k < 31) body = text(WINDS[k - 27], CHAR_Y, CHAR_SIZE, INK);
