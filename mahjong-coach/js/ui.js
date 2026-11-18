@@ -192,6 +192,18 @@ function callPicked() {
   if (ld.from !== 3) return say(`That's a chow, and you can only chow the player right before you (${state.players[3].name}). From ${state.players[ld.from].name} you can only peng (three of a kind), kong (four of a kind) or win.`);
   return claim({ type: "chow", chow: ks });
 }
+/* The call button is named after the set your lifted tiles make with the discard: Peng (two more of it),
+   Kong (three more) or Chow (two that run with it). Anything else, or just one tile so far, stays "Call". */
+function callLabel() {
+  const k = kindOf(state.lastDiscard.id);
+  const ks = callPick.map(kindOf).sort((a, b) => a - b);
+  if (ks.length >= 2 && ks.every((x) => x === k)) return ks.length === 2 ? "Peng" : "Kong";
+  if (ks.length === 2 && isSuited(k)) {
+    const run = [...ks, k].sort((a, b) => a - b);
+    if (run.every((x) => Math.floor(x / 9) === Math.floor(k / 9)) && run[1] === run[0] + 1 && run[2] === run[1] + 1) return "Chow";
+  }
+  return "Call";
+}
 function mahjongOnDiscard() {
   if (!state.claim.options[0].win) return;
   const burst = celebrateFrom(kindOf(state.lastDiscard.id));
@@ -662,7 +674,7 @@ function renderBar() {
     if (!o.win) btns.push(undo && callPick.length
       ? `<button type="button" class="btn" data-undo-call>${UNDO_ICON}Undo</button>`
       : callPick.length
-      ? `<button type="button" class="btn" data-call>Call</button>`
+      ? `<button type="button" class="btn" data-call>${callLabel()}</button>`
       : `<button type="button" class="btn" data-claim="pass">Continue</button>`);
   } else if (state.phase === "over" && (resultClosed || resultHeld)) {
     // the results card was closed: say how the hand ended and offer the card again (a secondary grey button;

@@ -536,7 +536,8 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 .hint-box p:last-child, .hint-box ul:last-child { margin-bottom: 0; }
 
 @media (max-width: 600px) {
-  .pane { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: none; height: 82vh; max-height: none; border-radius: 28px 28px 0 0;
+  /* the sheet is as tall as what it says (up to 82% of the screen, then it scrolls), so there's no empty space under Got it */
+  .pane { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: none; height: auto; max-height: 82vh; border-radius: 28px 28px 0 0;
     background: #fff; box-shadow: 0 -20px 60px rgba(0, 0, 0, .14); transform-origin: center; transform: translateY(105%); opacity: 1;
     transition: transform .45s var(--ease), visibility 0s .45s; }
   .pane.open { transition: transform .45s var(--ease), visibility 0s; }
