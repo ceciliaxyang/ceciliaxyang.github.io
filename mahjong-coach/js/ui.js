@@ -9,6 +9,7 @@ import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
 import { tileConfetti } from "./confetti.js";
 import { setLang, zh, term, callChar, localize } from "./lang.js";
+import { swipeToClose } from "./swipe.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
 
 // ?autoplay and ?sandbox are for testing: they save to their own slot so your real game is untouched.
@@ -934,6 +935,9 @@ $("coach").addEventListener("click", () => {
 });
 $("bubble").addEventListener("click", () => openNote(+$("bubble").dataset.id));
 $("paneClose").addEventListener("click", closePane);
+// phones: swipe either sheet down to close it
+swipeToClose($("pane"), $("paneBody"), closePane);
+swipeToClose($("settings"), $("settings"), () => toggleSettings(false), { slideOut: true });
 $("paneBody").addEventListener("click", (e) => {
   const u = e.target.closest("[data-undo]");
   if (u) return takeBack(+u.dataset.undo);
