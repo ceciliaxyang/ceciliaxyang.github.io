@@ -351,7 +351,8 @@ function fitLayoutInner(bar, hand, center) {
   bar.classList.remove("compact");  // measure with the centred, stacked layout
   center?.style.removeProperty("--lg-max");
   if (PHONE.matches) return;  // phones: always stacked, in the sheet
-  if (LANDSCAPE.matches) { bar.classList.add("compact"); return; }  // sideways: always one row; your hand is pinned to the bottom
+  // sideways: your hand is pinned to the bottom and the box has a set height; stacked and centred if it fits, else one row
+  if (LANDSCAPE.matches) { if (bar.scrollHeight > bar.clientHeight + 1) bar.classList.add("compact"); return; }
   // The floating buttons along the bottom (New game, Settings, You, Coach) may cover at most 20% of your tiles
   // (their height including the 3D edge), measured with the page scrolled to the top.
   const buttonsTop = Math.min(...[".fab", "#mePlate", "#coach"].map((sel) => document.querySelector(sel)?.getBoundingClientRect().top ?? innerHeight), innerHeight);

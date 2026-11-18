@@ -793,7 +793,7 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   }
   /* the side players' tiles run all the way down; only the middle leaves room for your hand */
   .page { padding: calc(10px + env(safe-area-inset-top)) var(--edge-r) calc(10px + env(safe-area-inset-bottom)) var(--edge-l); }
-  .center { padding-bottom: calc(var(--box-top) - 10px - env(safe-area-inset-bottom)); }
+  .center { padding-bottom: calc(var(--box-top) - 10px - env(safe-area-inset-bottom) + 12px); }  /* 12px more air above your tiles */
   /* the middle fills the screen above your hand: discards at the top, the white box just above your tiles */
   .table { column-gap: 12px; min-height: calc(100vh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); align-items: stretch; }
   .seat-left, .seat-right { align-self: start; }
@@ -806,16 +806,18 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .center { gap: 10px; --mid: var(--opp); }  /* discards (and your called sets) the same size as the other players' tiles */
   .felt { gap: 10px; margin-top: 0; padding: 0; }
   .discards { --dw: var(--opp); }
-  .dcount { height: 14px; padding: 0 4px; border-radius: 7px; font-size: 9px; line-height: 14px; }
+  /* the discards are small here, so the ×2 badges shrink and let more of the tile show through */
+  .dcount { bottom: calc(var(--dw) * var(--depth) + 1px + 2px); height: 11px; padding: 0 3px; border-radius: 5.5px; font-size: 7.5px; line-height: 11px;
+    background: rgba(34, 34, 34, .42); box-shadow: none; }
   /* the white box: one row (prompt and tile in play on the left, the button on the right), a little smaller */
-  .center .bar { --lg: calc(var(--land-lg) * .8); }
-  .bar, .bar.compact { flex: 1; height: auto; min-height: calc(16px + 18px + 8px + var(--lg) * var(--tile-r) + 16px); padding: 16px 24px; border-radius: 28px; gap: 8px;
+  .center .bar { --lg: calc(var(--land-lg) * .7); }
+  .bar, .bar.compact { flex: 1; height: auto; min-height: calc(16px + 18px + 8px + var(--lg) * var(--tile-r) + 16px); padding: 14px 24px; border-radius: 28px; gap: 12px;
     margin: 0; }
   /* The white box spans the middle column (side players' tiles to side players' tiles) and starts just under the
      discards. With one row of discards it sits in the middle of the screen: its bottom is as far from the bottom
      of the screen as its top is from the top (--box-top). More rows of discards push its top down. */
   .felt .bar { position: relative; z-index: 5; }
-  .bar .act-left { gap: 8px; }
+  .bar .act-left { gap: 10px; }
   .bar .say { font-size: 14px; line-height: 18px; }
   .bar .btn { height: 40px; padding: 0 18px; font-size: 13px; }
 
@@ -829,7 +831,7 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .me:has(.exposed:empty) .hand { margin-top: 0; }
 
   /* the compass, floating top right */
-  .me .me-plate { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(var(--in-r) + 10px); left: auto; bottom: auto; transform: none;
+  .me .me-plate { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(var(--in-r) + 24px); left: auto; bottom: auto; transform: none;
     height: auto; margin: 0; padding: 0; background: none; }
   .compass { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .compass-ring { position: relative; width: 88px; height: 80px; }
@@ -839,7 +841,7 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .me .me-plate .compass .pname { font-size: 11px; line-height: 14px; }
 
   /* New game and Settings, top left; Settings opens downward */
-  .fab { top: calc(10px + env(safe-area-inset-top)); bottom: auto; left: calc(var(--edge-l) + 24px); }  /* only just over the left player's tiles */
+  .fab { top: calc(10px + env(safe-area-inset-top)); bottom: auto; left: var(--in-l); }  /* just inside the left player's tiles */
   .fab-btn { height: 40px; padding: 0 16px; font-size: 13px; }
   .fab-btn.icon { width: 40px; padding: 0; }
   .fab-btn.icon svg { width: 18px; height: 18px; }
@@ -850,6 +852,9 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
      doesn't read as one of your tiles */
   .coach { right: calc(var(--edge-r) - 6px); bottom: calc(2px + env(safe-area-inset-bottom)); }
   .coach .coach-tile { --w: 52px; }
+  /* over the right player's tiles it's a little see-through, so their tiles show; with an insight it's solid again */
+  .coach .coach-tile { opacity: .7; transition: opacity .3s ease; }
+  .coach.has-note .coach-tile, .coach:hover .coach-tile { opacity: 1; }
   .bubble { right: var(--edge-r); bottom: calc(52px * 1.63 + 22px + env(safe-area-inset-bottom)); }
   /* the coach's card uses the full height of the screen, just left of the Coach */
   .pane { top: calc(10px + env(safe-area-inset-top)); bottom: calc(10px + env(safe-area-inset-bottom)); right: calc(var(--edge-r) + 72px); max-height: none; }
