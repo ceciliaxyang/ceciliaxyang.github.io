@@ -64,6 +64,50 @@ function roleOf(k, c, unseen) {
   return { kind: "shape", text: `next to your ${near.map((x) => numOf(x)).join(" and ")}. It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run${deadNote}` };
 }
 
+/* Why a tile is fine to throw away. For most tiles this is just its job (a lone wind, a lone 1...), but for a
+   tile in a pair or a group the job ("a pair, and every hand needs one") would read as a reason to keep it,
+   so those say why this copy is spare instead. */
+function throwReason(k, c, unseen) {
+  const n = c[k];
+  if (n >= 2 && isSuited(k)) {
+    // one copy is part of a run around it: the other is the spare
+    const s = suitOf(k), ok = (x) => x >= 0 && x < 27 && suitOf(x) === s && c[x] > 0;
+    const runs = [[k - 2, k - 1], [k - 1, k + 1], [k + 1, k + 2]].filter(([a, b]) => ok(a) && ok(b));
+    if (runs.length) {
+      const [a, b] = runs[0], seq = [a, b, k].sort((x, y) => x - y).map(numOf).join("-");
+      return { kind: "spare", text: `a spare: your ${seq} run only needs one ${numOf(k)}` };
+    }
+  }
+  if (n === 4) return { kind: "spare", text: "your fourth copy, and a group of three only needs three" };
+  if (n === 3) return { kind: "spare", text: "a spare copy: throwing one still leaves you a pair of them" };
+  if (n === 2) {
+    const pairs = c.filter((x) => x === 2).length;
+    if (pairs > 1) return { kind: "spare", text: `one of your ${pairs} pairs, and a winning hand only needs one` };
+    return { kind: "spare", text: "a pair, but your other tiles are closer to making groups, and a new pair is easy to find later" };
+  }
+  return roleOf(k, c, unseen);
+}
+
+/* The coach's pick for your discard, shared by "Here's what I'd do" and the notes so they never disagree.
+   Among the moves that leave you just as close to winning as the best one:
+   - keep your only pair and any finished group of three, if another tile is just as close (a beginner habit
+     that matters more than a few extra useful tiles);
+   - then, within a couple of useful tiles of the top move, prefer lone winds and dragons, then lone 1s and 9s. */
+function coachPick(state) {
+  const ranked = rankDiscards(state, 0);
+  const c = ranked.counts;
+  const pairCount = c.filter((n) => n >= 2).length;
+  const habit = (r) => (c[r.k] >= 3 || (c[r.k] === 2 && pairCount === 1) ? 3 : r.tier);
+  const top0 = ranked.list[0];
+  const sameDist = ranked.list.filter((r) => r.shanten === top0.shanten);
+  const keepers = sameDist.filter((r) => habit(r) !== 3);
+  const pool = keepers.length ? keepers : sameDist;   // already in score order
+  const lead = pool[0];
+  const tol = Math.max(2, Math.round(lead.ukeire * 0.1));
+  const near = pool.filter((r) => r.score >= lead.score - tol).sort((a, b) => habit(a) - habit(b) || b.score - a.score);
+  return { ranked, c, habit, top0, near, best: near[0] };
+}
+
 let noteSeq = 0;
 function note(state, fields) {
   return { id: ++noteSeq, handNo: state.handNo, time: Date.now(), ...fields };
@@ -78,11 +122,14 @@ export function reviewAct(before, action) {
     return missedWinNote(before, opts.tsumo, true);
   }
   if (action.type !== "discard") return null;
-  const ranked = rankDiscards(before, 0);
+  const pick = coachPick(before);
+  const ranked = pick.ranked;
   const k = kindOf(action.id);
   const mine = ranked.list.find((r) => r.k === k);
-  const best = ranked.list[0];
+  const best = pick.best;
   if (!mine || best.k === k) return null;
+  // anything the coach would also have been happy with (her near-tie choices) isn't worth a note
+  if (pick.near.some((r) => r.k === k)) return null;
   const worseShape = mine.shanten > best.shanten;
   const fewer = mine.shanten === best.shanten && best.ukeire - mine.ukeire >= Math.max(4, best.ukeire * 0.25);
   // if you threw a safe tile while someone looked ready, that's defence, not a mistake
@@ -93,7 +140,7 @@ export function reviewAct(before, action) {
 
   const c = ranked.counts;
   const unseen = ranked.unseen;
-  const roleBest = roleOf(best.k, c, unseen);
+  const roleBest = throwReason(best.k, c, unseen);
   const roleMine = roleOf(k, c, unseen);
   const p = [];
   if (unsafe && !worseShape && !fewer) {
@@ -261,19 +308,9 @@ export function hint(state) {
   if (state.phase === "act" && state.current === 0) {
     const opts = actOptions(state, 0);
     if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: state.points === false ? `<p>Your hand is complete. Tap <b>Win</b>.</p>` : `<p>Your hand is worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
-    const ranked = rankDiscards(state, 0);
-    // Near-ties (same distance from winning, within a couple of useful tiles) follow beginner habits instead of
-    // the last useful tile: lone winds and dragons go first, then lone 1s and 9s, and never your only pair.
-    const c = ranked.counts;
-    const pairCount = c.filter((n) => n >= 2).length;
-    const habit = (r) => (c[r.k] === 2 && pairCount === 1 ? 3 : r.tier);
-    const top0 = ranked.list[0];
-    const tol = Math.max(2, Math.round(top0.ukeire * 0.1));
-    const near = ranked.list.filter((r) => r.shanten === top0.shanten && r.score >= top0.score - tol)
-      .sort((a, b) => habit(a) - habit(b) || b.score - a.score);
-    const best = near[0];
+    const { ranked, c, habit, top0, near, best } = coachPick(state);
     const top = [best, ...ranked.list.filter((r) => r !== best)].slice(0, 3);
-    const role = roleOf(best.k, ranked.counts, ranked.unseen);
+    const role = throwReason(best.k, ranked.counts, ranked.unseen);
     const rows = top.map((r) => `<li>${t(r.k)}<span>${awayShort(r.shanten)}</span><span>${helps(r.ukeire)}</span></li>`).join("");
     // single winds or dragons the coach is keeping because they can earn points: say so, since beginners expect
     // lone honors to go first
@@ -289,7 +326,9 @@ export function hint(state) {
       : `<p>It's ${role.text}.</p>`;
     // the numbers slightly favoured breaking your only pair: say why the coach didn't
     const pairNote = top0 !== best && habit(top0) === 3
-      ? `<p><b>Why not ${t(top0.k)}?</b> It's about as good, but it's your only pair. Every winning hand needs one, so keep it.</p>`
+      ? (c[top0.k] >= 3
+        ? `<p><b>Why not ${t(top0.k)}?</b> On paper it keeps a few more tiles in play, but you have three of them, a finished group. Keep it.</p>`
+        : `<p><b>Why not ${t(top0.k)}?</b> On paper it keeps a few more tiles in play, but it's your only pair. Every winning hand needs one, so keep it.</p>`)
       : "";
     let html = `${lead}${pairNote}${keptHtml}`
       + `<p>Your top choices (how far from winning, and how many useful tiles are left):</p><ul class="hint-list">${rows}</ul>`;

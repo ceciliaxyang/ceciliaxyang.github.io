@@ -607,9 +607,11 @@ function renderBar() {
     }
     const o = G.actOptions(state, 0);
     if (o.tsumo && o.tsumo.legal) {
-      // a winning hand: say so instead of asking for a discard
-      if (selected === null) say = "You got Mahjong!";
-      btns.unshift(`<button type="button" class="btn red" data-act="mahjong">Mahjong</button>`);
+      // a winning hand: Mahjong is the only button (no discarding)
+      say = "You got Mahjong!";
+      play = "";
+      btns.length = 0;
+      btns.push(`<button type="button" class="btn red" data-act="mahjong">Mahjong</button>`);
     }
   } else if (G.claimPendingFor(state, 0)) {
     const ld = state.lastDiscard;
@@ -626,8 +628,9 @@ function renderBar() {
     if (o.win) btns.push(`<button type="button" class="btn red" data-mahjong>Mahjong</button>`);
     // one button: Continue, which becomes Call once you've lifted tiles from your hand
     // after any call that doesn't work, Call becomes Undo: it puts the lifted tiles back in your hand
+    // (when the discard wins it for you, Mahjong is the only button)
     const undo = nudge && nudge.key === nudgeKey();
-    btns.push(undo && callPick.length
+    if (!o.win) btns.push(undo && callPick.length
       ? `<button type="button" class="btn" data-undo-call>${UNDO_ICON}Undo</button>`
       : callPick.length
       ? `<button type="button" class="btn" data-call>Call</button>`
@@ -807,12 +810,15 @@ $("hand").addEventListener("click", (e) => {
   const b = e.target.closest(".tile");
   if (dragJustEnded) return;
   if (b && G.claimPendingFor(state, 0) && !state.lastDiscard.robbing) {
+    if (state.claim.options[0].win) return;  // the discard wins it for you: the only move is Mahjong
     const id = +b.dataset.id;
     callPick = callPick.includes(id) ? callPick.filter((x) => x !== id) : callPick.length < 3 ? [...callPick, id] : callPick;
     nudge = null;
     return render();
   }
   if (!b || !myTurn()) return;
+  const wins = G.actOptions(state, 0).tsumo;
+  if (wins && wins.legal) return;  // a winning hand: the only move is Mahjong
   const id = +b.dataset.id;
   selected = selected === id ? null : id;
   render();
@@ -1038,7 +1044,8 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === " " && !e.repeat && G.claimPendingFor(state, 0) && !guideOpen && !confirmNew && !e.target.closest?.("input, textarea, .settings")) {
     e.preventDefault();
-    if (callPick.length) callPicked(); else claim({ type: "pass" });
+    if (state.claim.options[0].win) mahjongOnDiscard();  // Space wins rather than passing on a winning tile
+    else if (callPick.length) callPicked(); else claim({ type: "pass" });
     return;
   }
   if (e.key === "Escape") {
