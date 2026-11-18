@@ -247,7 +247,15 @@ function placeSheet() {
     // prompt, extra called sets) it grows once and stays at that height, so the floating buttons don't bob.
     if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
     // keep the page scrollable past the sheet so nothing above it is hidden for good
-    document.documentElement.style.setProperty("--sheet-h", sheet.classList.contains("collapsed") ? "calc(150px + env(safe-area-inset-bottom))" : `${sheet.offsetHeight}px`);
+    if (sheet.classList.contains("collapsed")) {
+      // collapsed: show down to just below your row of tiles (which now sits right under the compass)
+      const peek = Math.round(me.offsetTop + me.offsetHeight + 16);
+      sheet.style.setProperty("--sheet-peek", `${peek}px`);
+      document.documentElement.style.setProperty("--sheet-h", `${peek}px`);
+    } else {
+      sheet.style.removeProperty("--sheet-peek");
+      document.documentElement.style.setProperty("--sheet-h", `${sheet.offsetHeight}px`);
+    }
   } else if (bar.parentElement === sheet) {
     felt.append(bar);
     center.append(me);
@@ -275,6 +283,11 @@ function setSheet(collapsed) {
   });
   grab.addEventListener("pointerup", () => { y0 = null; });
   grab.addEventListener("click", () => { if (!moved) setSheet(!$("sheet").classList.contains("collapsed")); moved = false; });
+  // a tap anywhere on the collapsed sheet (its compass or your tiles) opens it again
+  $("sheet").addEventListener("click", (e) => {
+    if (e.target.closest("#sheetGrab") || !$("sheet").classList.contains("collapsed")) return;
+    setSheet(false);
+  });
 }
 
 const DEPTH = 0.13;  // matches --depth in style.css: a tile's 3D edge as a share of its width
@@ -1036,9 +1049,9 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Desktop: the coach is a popover, so a click anywhere outside it (other than the coach tile or its bubble) closes it
+// The coach has no close button: a click or tap anywhere outside it (other than the coach tile or its bubble) closes it
 document.addEventListener("pointerdown", (e) => {
-  if (!pane.open || PHONE.matches) return;
+  if (!pane.open) return;
   if (e.target.closest("#pane, #coach, #bubble")) return;
   closePane();
 });

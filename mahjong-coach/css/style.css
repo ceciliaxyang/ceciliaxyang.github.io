@@ -450,13 +450,10 @@ span.scope { cursor: default; }
 }
 .pane.open { transform: none; opacity: 1; visibility: visible; transition: transform .4s var(--spring), opacity .2s ease, visibility 0s; }
 .pane .pane-body { min-height: 0; }
-/* the popover grows out of Guanyin's tile, so her face in its header would only repeat it (phones keep it) */
-/* Desktop popover: no header at all (no portrait, no close button). It closes with Got it, a click outside
-   or Escape. Phones keep the header. */
-@media (min-width: 601px) {
-  .pane .pane-head { display: none; }
-  .pane .pane-body { padding-top: 28px; }
-}
+/* No header (no portrait, no close button), on desktop and phones alike: it opens from Guanyin's tile, so her
+   face would only repeat it. It closes with Got it, a tap or click outside, or Escape. */
+.pane .pane-head { display: none; }
+.pane .pane-body { padding-top: 28px; }
 @media (prefers-reduced-motion: reduce) { .pane, .pane.open { transition: opacity .15s ease, visibility 0s; transform: none; } }
 .pane-head { display: flex; align-items: center; gap: 8px; padding: calc(20px + env(safe-area-inset-top)) 20px 12px 28px; }
 .pane-title { flex: 1; margin: 0; font-size: 16px; line-height: 20px; font-weight: 600; }
@@ -533,7 +530,7 @@ span.scope { cursor: default; }
     transition: transform .45s var(--ease), visibility 0s .45s; }
   .pane.open { transition: transform .45s var(--ease), visibility 0s; }
   .pane-head { padding: 18px 16px 8px 24px; }
-  .pane-body { padding: 4px 24px calc(32px + env(safe-area-inset-bottom)); }
+  .pane-body { padding: 28px 24px calc(32px + env(safe-area-inset-bottom)); }
   .pane-actions { margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; }
   .pane-body h3 { font-size: 24px; line-height: 28px; }
   .coach { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); }
@@ -613,7 +610,14 @@ span.scope { cursor: default; }
   .sheet-grab { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 96px; height: 24px; padding: 0; border: 0; background: none; cursor: grab; }
   .sheet-grab::before { content: ""; display: block; width: 36px; height: 5px; margin: 8px auto 0; border-radius: 3px; background: #d0d0d0; }
   .sheet.collapsed { transform: translateY(calc(100% - var(--sheet-peek))); }
-  .sheet.collapsed > :not(.sheet-grab):not(.me-plate) { visibility: hidden; transition: visibility 0s .35s; }
+  /* Collapsed: the grabber, the compass and a peek of your row of tiles stay in view (your tiles move up to
+     sit right under the compass; the white box and your called sets are hidden). The peek height is measured
+     in placeSheet. Tapping anywhere on the collapsed sheet opens it again. */
+  .sheet.collapsed > .bar, .sheet.collapsed > .sheet-div { visibility: hidden; transition: visibility 0s .35s; }
+  .sheet.collapsed > .me-plate { order: -2; }
+  .sheet.collapsed > .me { order: -1; margin-top: 0; pointer-events: none; }
+  .sheet.collapsed .me .exposed { display: none; }
+  .sheet.collapsed { cursor: pointer; }
   .sheet .act-left { gap: 16px; }
   .sheet .bar .say { font-size: 16px; line-height: 20px; white-space: normal; }
   .sheet .bar .say .say-more { display: block; }
