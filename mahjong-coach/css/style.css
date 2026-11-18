@@ -465,8 +465,8 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 }
 .pane.open { transform: none; opacity: 1; visibility: visible; transition: transform .4s var(--spring), opacity .2s ease, visibility 0s; }
 .pane .pane-body { min-height: 0; }
-/* No header (no portrait, no close button), on desktop and phones alike: it opens from Guanyin's tile, so her
-   face would only repeat it. It closes with Got it, a tap or click outside, or Escape. */
+/* No header on desktop (no portrait, no close button): it opens from Guanyin's tile, so her face would only repeat
+   it. It closes with Got it, a click outside, or Escape. Phones add just a close button (see the phone rules). */
 .pane .pane-head { display: none; }
 .pane .pane-body { padding-top: 28px; }
 @media (prefers-reduced-motion: reduce) { .pane, .pane.open { transition: opacity .15s ease, visibility 0s; transform: none; } }
@@ -550,7 +550,11 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
   .pane-head { padding: 18px 16px 8px 24px; }
   .pane-body { padding: 28px 24px calc(32px + env(safe-area-inset-bottom)); }
   .pane-actions { margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; }
-  .pane-body h3 { font-size: 24px; line-height: 28px; }
+  .pane-body h3 { font-size: 24px; line-height: 28px; padding-right: 40px; }  /* clear of the close button */
+  /* phones: the coach sheet gets a close button in its top right corner (just the button: no title or portrait) */
+  .pane .pane-head { display: block; position: absolute; top: 14px; right: 14px; z-index: 2; padding: 0; }
+  .pane .pane-title { display: none; }
+  .pane #paneClose { color: var(--text); }
   .coach { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); }
   .coach-tile { --w: 32px; }
   .bubble { right: 12px; bottom: calc(12px + 64px + 8px + env(safe-area-inset-bottom)); }
@@ -746,7 +750,8 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .settings-head { display: flex; position: sticky; top: -20px; z-index: 1; align-items: center; justify-content: space-between;
     margin: -20px -12px 4px; padding: 20px 20px 8px 26px; background: #fff; }
   .settings-head h2 { margin: 0; font-size: 20px; line-height: 24px; font-weight: 600; letter-spacing: -.3px; }
-  .settings-head .icon-btn { color: var(--text); }
+  /* the close button sits in the sheet's top right corner, as is usual for a sheet */
+  .settings-head .icon-btn { position: absolute; top: 14px; right: 14px; color: var(--text); }
   /* the grabber, like the game's own sheet */
   .fab .settings::before { content: ""; position: absolute; z-index: 2; top: 8px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: #d0d0d0; }
   @keyframes settings-up { from { transform: translateY(100%); } }
