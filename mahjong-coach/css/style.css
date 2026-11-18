@@ -752,8 +752,6 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .settings-head h2 { margin: 0; font-size: 20px; line-height: 24px; font-weight: 600; letter-spacing: -.3px; }
   /* the close button sits in the sheet's top right corner, as is usual for a sheet */
   .settings-head .icon-btn { position: absolute; top: 14px; right: 14px; color: var(--text); }
-  /* the grabber, like the game's own sheet */
-  .fab .settings::before { content: ""; position: absolute; z-index: 2; top: 8px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: #d0d0d0; }
   @keyframes settings-up { from { transform: translateY(100%); } }
 }
 @media (max-width: 600px) and (prefers-reduced-motion: reduce) { .fab .settings { animation: none; } }
