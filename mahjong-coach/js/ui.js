@@ -954,6 +954,7 @@ function closeResult() { resultClosed = true; render(); }
 function openResult() { resultClosed = false; render(); }
 
 $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(); });
+$("settingsClose").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(false); $("settingsBtn").focus(); });
 document.addEventListener("click", (e) => { if (!$("settings").hidden && !e.target.closest(".settings-wrap")) toggleSettings(false); });
 $("sortBtn").addEventListener("click", () => {
   // turning it off starts your own order from the sorted one you were looking at

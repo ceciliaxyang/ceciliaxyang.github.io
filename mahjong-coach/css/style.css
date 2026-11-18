@@ -117,6 +117,7 @@ p { text-wrap: pretty; }
 /* Difficulty: a small segmented control */
 .set-row.set-static { cursor: default; flex-wrap: wrap; row-gap: 10px; }
 .set-row.set-static:hover { background: none; }
+.settings-head { display: none; }  /* only on phones, where Settings is a sheet */
 .seg { display: inline-flex; padding: 3px; border-radius: 100px; background: var(--pill); }
 /* a row with a longer description: the choices sit underneath, full width, each button an equal share */
 .set-stack { flex-wrap: wrap; gap: 10px; }
@@ -740,8 +741,14 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .28), 0 -20px 60px rgba(0, 0, 0, .14);
     animation: settings-up .35s var(--ease); transform-origin: center bottom;
   }
+  .fab .settings { padding-top: 20px; }
+  /* its header: "Settings" and a close button, staying in view if the sheet scrolls */
+  .settings-head { display: flex; position: sticky; top: -20px; z-index: 1; align-items: center; justify-content: space-between;
+    margin: -20px -12px 4px; padding: 20px 20px 8px 26px; background: #fff; }
+  .settings-head h2 { margin: 0; font-size: 20px; line-height: 24px; font-weight: 600; letter-spacing: -.3px; }
+  .settings-head .icon-btn { color: var(--text); }
   /* the grabber, like the game's own sheet */
-  .fab .settings::before { content: ""; position: absolute; top: 8px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: #d0d0d0; }
+  .fab .settings::before { content: ""; position: absolute; z-index: 2; top: 8px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: #d0d0d0; }
   @keyframes settings-up { from { transform: translateY(100%); } }
 }
 @media (max-width: 600px) and (prefers-reduced-motion: reduce) { .fab .settings { animation: none; } }
