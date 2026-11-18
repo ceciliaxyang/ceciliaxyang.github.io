@@ -502,6 +502,7 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 .pane-actions .btn { pointer-events: auto; -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%);
   box-shadow: none; }  /* flat: no shadow */
 .pane-actions .btn:not(.light) { background: rgba(17, 17, 17, .86); }
+.pane-actions .btn.red { background: var(--red); }  /* Mahjong: the same red as the white box's button */
 .pane-actions .btn.light { background: rgba(214, 214, 211, .9); }  /* a darker grey so it stands out from the white card */
 .pane-actions .btn.light:hover { background: rgba(200, 200, 196, .95); }
 #bar .btn.light { background: rgba(214, 214, 211, .9); }  /* the same grey as Got it, on the white bottom sheet */
@@ -540,6 +541,9 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 .fan-list li small { display: block; font-size: 12px; line-height: 16px; color: var(--muted); }
 .fan-list li.total span:last-child { color: var(--text); }
 .hint-list { list-style: none; margin: 0 0 16px; padding: 0; }
+/* a tie between tiles doing different jobs: one short line per tile */
+.why-list { list-style: none; margin: -6px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 23px; color: var(--text); }
+.why-list .tile { vertical-align: -7px; margin: 0 1px; }
 .hint-list li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hair); font-size: 14px; line-height: 20px; }
 .hint-list li span:nth-child(2) { font-weight: 600; }
 .hint-list li span:last-child { color: var(--muted); }

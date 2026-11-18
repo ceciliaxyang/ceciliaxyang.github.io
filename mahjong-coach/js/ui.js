@@ -216,17 +216,17 @@ function mahjongOnDiscard() {
   claim({ type: "win" });
   burst();
 }
-function mahjongOnTurn() {
+function mahjongOnTurn(from = null) {
   const o = G.actOptions(state, 0);
   if (!(o.tsumo && o.tsumo.legal)) return;
-  const burst = celebrateFrom();
+  const burst = celebrateFrom(null, from);
   act({ type: "tsumo" });
   burst();
 }
 /* Your win: tiles from your hand burst out of the Mahjong button as confetti. Where the button is has to be
    measured before the win re-renders the bar, so this measures first and returns the burst to fire after. */
-function celebrateFrom(extra = null) {
-  const btn = document.querySelector("#bar .btn.red");
+function celebrateFrom(extra = null, from = null) {
+  const btn = from || document.querySelector("#bar .btn.red");
   const rect = btn ? btn.getBoundingClientRect() : null;
   const me = state.players[0];
   const kinds = [...me.hand.map(kindOf), ...me.melds.flatMap((m) => m.tiles.map(kindOf)), ...(extra !== null ? [extra] : [])];
@@ -775,6 +775,11 @@ function openList() {
 }
 function closePane() { pane.open = false; render(); }
 
+/* A call's set in the green box: one row, your own tiles a little see-through, the name of the tile taken under it. */
+function setTilesHtml(set, k) {
+  return `<div class="pick-set"><span class="pick-set-row">${set.map((x) => tileHtml(x.k, { size: "md", cls: x.mine ? "mine" : "" })).join("")}</span><span class="sub">${tileName(k)}</span></div>`;
+}
+
 function renderPane() {
   const el = $("pane");
   el.classList.toggle("open", pane.open);
@@ -791,8 +796,9 @@ function renderPane() {
       <div class="compare-card mine"><span class="lbl">${n.compare.mine.label}</span>${tileHtml(n.compare.mine.k, { size: "md" })}<span class="sub">${n.compare.mine.sub || tileName(n.compare.mine.k)}</span></div>
       <div class="compare-card best"><span class="lbl">${n.compare.best.label}</span>${tileHtml(n.compare.best.k, { size: "md" })}<span class="sub">${n.compare.best.sub || tileName(n.compare.best.k)}</span></div>
     </div>` : "";
+    const setCard = n.set ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${n.set.label}</span>${setTilesHtml(n.set.tiles, n.set.k)}</div></div>` : "";
     const canUndo = n.snapshot && n.handNo === state.handNo;
-    body.innerHTML = `<h3>${n.title}</h3>${cmp}${n.html}
+    body.innerHTML = `<h3>${n.title}</h3>${cmp}${setCard}${n.html}
       <div class="pane-actions">
         ${canUndo ? `<button type="button" class="btn" data-undo="${n.id}">${UNDO_ICON}Take it back</button>` : ""}
         <button type="button" class="btn light" data-close>Got it</button>
@@ -807,10 +813,11 @@ function renderPane() {
   const ks = h?.pick ? (h.pick.ks || (h.pick.k !== undefined ? [h.pick.k] : [])) : [];
   // a call: the whole set in one row (your tiles a little see-through), named after the tile you'd take
   const pickTiles = h?.pick?.set
-    ? `<div class="pick-set"><span class="pick-set-row">${h.pick.set.map((x) => tileHtml(x.k, { size: "md", cls: x.mine ? "mine" : "" })).join("")}</span><span class="sub">${tileName(h.pick.k)}</span></div>`
+    ? setTilesHtml(h.pick.set, h.pick.k)
     : ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join("")}</div>` : "";
   const pickCard = h?.pick ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${h.pick.label}</span>${pickTiles}</div></div>` : "";
-  const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions"><button type="button" class="btn" data-close>Got it</button></div>` : "";
+  const action = h?.win ? `<button type="button" class="btn red" data-pane-mahjong>Mahjong</button>` : `<button type="button" class="btn" data-close>Got it</button>`;
+  const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions">${action}</div>` : "";
   // not your move: one quiet line so the panel isn't empty
   body.innerHTML = h ? suggestion : `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>`;
 }
@@ -952,6 +959,9 @@ $("paneBody").addEventListener("click", (e) => {
   const u = e.target.closest("[data-undo]");
   if (u) return takeBack(+u.dataset.undo);
   if (e.target.closest("[data-close]")) return closePane();
+  // the coach's "You can win" card: its Mahjong button wins, with the confetti bursting from it
+  const mj = e.target.closest("[data-pane-mahjong]");
+  if (mj) { mahjongOnTurn(mj); return closePane(); }
   if (e.target.closest("[data-hint]")) { pane.hint = Coach.hint(state); render(); }
 });
 

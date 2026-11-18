@@ -243,12 +243,13 @@ export function reviewClaim(before, resp) {
   // you passed, claiming was clearly better
   if (resp.type === "pass") {
     const p = [];
+    const call = pick.type === "pung" ? "peng" : pick.type;
     if (rec.reason === "value") {
-      p.push(`<p>Three ${t(k)} (a <i>peng</i>) earns <b>1 point</b>${isDragon(k) ? ". Dragons always score" : `, because ${k - 27 === seatWind(before, 0) ? "it's your wind" : "it's this round's wind"}`}. You need points to win.</p>`);
+      p.push(`<p>This peng earns <b>1 point</b>${isDragon(k) ? ". Dragons always score" : `, because ${k - 27 === seatWind(before, 0) ? "it's your wind" : "it's this round's wind"}`}. You need points to win.</p>`);
       p.push(`<p>Taking it ${pick.shanten < ev.base.shanten ? `would also have moved you to <b>${away(pick.shanten)}</b>` : `would have kept you ${away(pick.shanten)}`}.</p>`);
       p.push(`<p class="tip">Tip: if you have two dragons, or two of your wind, take the third.</p>`);
     } else {
-      p.push(`<p>Taking it to make ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)} (a <i>chow</i>)` : `three ${t(k)} (a <i>peng</i>)`} would have left you <b>${away(pick.shanten)}</b>. Without it you stayed ${away(ev.base.shanten)}.</p>`);
+      p.push(`<p>This ${call} would have left you <b>${away(pick.shanten)}</b>. Without it you stayed ${away(ev.base.shanten)}.</p>`);
       if (pick.shanten <= 0) p.push(`<p>Then any of these would win (the number is how many are left):</p>${tileStrip(pick.tiles, unseen)}`);
       p.push(`<p class="tip">Tip: if taking a tile gets you 1 away from winning, take it.</p>`);
     }
@@ -256,6 +257,8 @@ export function reviewClaim(before, resp) {
       kind: "claim",
       title: `Taking ${from}'s ${tileName(k)} would have helped`,
       bubble: `Taking that ${tileName(k)} would have helped.`,
+      // the green box: the call you could have made, as a set
+      set: { label: `You should have claimed a ${call}`, k, tiles: callSet(pick, k) },
       html: p.join(""),
     });
   }
@@ -281,33 +284,40 @@ export function reviewClaim(before, resp) {
   return null;
 }
 
+/* A call's whole set for the green box: your own tiles (marked mine, drawn see-through) and the thrown-away one,
+   a run in number order. */
+function callSet(pick, k) {
+  const mine = pick.type === "chow" ? pick.chow : pick.type === "kong" ? [k, k, k] : [k, k];
+  const set = [...mine.map((x) => ({ k: x, mine: true })), { k, mine: false }];
+  return pick.type === "chow" ? set.sort((a, b) => a.k - b.k) : set;
+}
+
 function chowTiles(ch, k) {
   return [...ch, k].sort((a, b) => a - b).map((x) => t(x)).join("");
 }
 
 /* ---------- On-demand hint ---------- */
 
-/* Why you can't take someone's thrown-away tile, in one short sentence, starting with the call you'd most
-   likely try. Plain and direct: "You need two more X to claim a peng." */
+/* Why you can't take someone's thrown-away tile, in one short sentence under the "Let it go" box. */
 function whyCantClaim(state, k) {
+  // said plainly: you can't claim it. The one case with more to it is a run you could have made, had the tile
+  // come from the player before you
   const c = handCounts(state.players[0]);
   const from = state.lastDiscard.from;
   const left = state.players[3].name;
-  // a run you could make with it, if it had come from the right player
   const run = isSuited(k) && [[-2, -1], [-1, 1], [1, 2]].some(([a, b]) => {
     const x = k + a, y = k + b;
     return x >= 0 && y < 27 && suitOf(x) === suitOf(k) && suitOf(y) === suitOf(k) && c[x] && c[y];
   });
-  if (run && from !== 3) return `You can only make a run (a <i>chow</i>) with tiles from ${left}, the player before you.`;
-  const need = c[k] === 1 ? "one more" : "two more";
-  if (from === 3 && isSuited(k)) return `You need ${need} ${t(k)} to claim a <i>peng</i>, or two tiles next to it to make a run.`;
-  return `You need ${need} ${t(k)} to claim a <i>peng</i>.`;
+  if (run && from !== 3) return `You could make a run with it, but runs only take tiles from ${left}, the player before you. Press Continue.`;
+  return "You can't claim it: you don't have the tiles to make a set with it. Press Continue.";
 }
 
 export function hint(state) {
   if (state.phase === "act" && state.current === 0) {
     const opts = actOptions(state, 0);
-    if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", pick: { label: "Tap Win" }, html: state.points === false ? `<p>Your hand is complete. Tap <b>Win</b>.</p>` : `<p>Your hand is worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Win</b>.</p>` };
+    // no green box here: the card's own red Mahjong button (at the bottom, like the one in the white box) wins
+    if (opts.tsumo && opts.tsumo.legal) return { title: "You can win", win: true, html: state.points === false ? `<p>Your hand is complete. Tap <b>Mahjong</b> to win.</p>` : `<p>Your hand is complete, and it's worth <b>${opts.tsumo.fan} point${opts.tsumo.fan === 1 ? "" : "s"}</b>. Tap <b>Mahjong</b> to win.</p>` };
     const { ranked, c, habit, top0, near, best } = coachPick(state);
     const top = [best, ...ranked.list.filter((r) => r !== best)].slice(0, 3);
     const role = throwReason(best.k, ranked.counts, ranked.unseen);
@@ -321,9 +331,15 @@ export function hint(state) {
       : "";
     // moves exactly as good as the best one all go in the card; the tie-breaker decides which is named first
     const equal = near.filter((r) => habit(r) === habit(best) && r.score === best.score).map((r) => r.k);
-    const lead = equal.length > 1
-      ? `<p>These are equally good. I'd start with ${t(best.k)}. It's ${role.text}.</p>`
-      : `<p>It's ${role.text}.</p>`;
+    // a tie: no favourite. If the tiles are doing the same job (two single winds, say), one reason covers them all;
+    // otherwise each gets its own
+    const roles = equal.map((k) => ({ k, text: throwReason(k, ranked.counts, ranked.unseen).text }));
+    const either = equal.length === 2 ? "either one" : "any of them";
+    const lead = equal.length < 2
+      ? `<p>It's ${role.text}.</p>`
+      : roles.every((r) => r.text === roles[0].text)
+        ? `<p>These are equally good. Each one is ${roles[0].text}. Throw ${either}.</p>`
+        : `<p>These are equally good, so throw ${either}.</p><ul class="why-list">${roles.map((r) => `<li>${t(r.k)} is ${r.text}.</li>`).join("")}</ul>`;
     // the numbers slightly favoured breaking your only pair: say why the coach didn't
     const pairNote = top0 !== best && habit(top0) === 3
       ? (c[top0.k] >= 3
@@ -339,7 +355,7 @@ export function hint(state) {
   if (state.phase === "claim" && state.claim?.options[0] && !state.claim.responses[0]) {
     if (state.claim.options[0].none) {
       const k = kindOf(state.lastDiscard.id);
-      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>${whyCantClaim(state, k)} Press Continue.</p>` };
+      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>${whyCantClaim(state, k)}</p>` };
     }
     const rec = recommendClaim(state, 0, state.claim.options[0]);
     const pick = rec.pick;
@@ -349,13 +365,11 @@ export function hint(state) {
       return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still be ${away(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
     }
     // the card names the call and shows the whole set: your own tiles (drawn a little see-through) and the thrown-away one
-    const mine = pick.type === "chow" ? pick.chow : pick.type === "kong" ? [k, k, k] : [k, k];
-    const set = pick.type === "chow"
-      ? [...mine.map((x) => ({ k: x, mine: true })), { k, mine: false }].sort((a, b) => a.k - b.k)
-      : [...mine.map((x) => ({ k: x, mine: true })), { k, mine: false }];
-    const made = pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)}` : pick.type === "kong" ? `four ${t(k)}` : `three ${t(k)}`;
-    return { title: "Here's what I'd do", pick: { k, label: `Claim a ${pick.type === "pung" ? "peng" : pick.type}`, set },
-      html: `<p>Making ${made} gets you to ${away(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
+    const set = callSet(pick, k);
+    // the green box already shows the set, so the sentence just names the call
+    const call = pick.type === "pung" ? "peng" : pick.type;
+    return { title: "Here's what I'd do", pick: { k, label: `Claim a ${call}`, set },
+      html: `<p>This ${call} would get you to ${away(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
   }
   return { title: "Waiting", html: `<p>It's not your turn yet. I'll speak up if I spot something.</p>` };
 }
