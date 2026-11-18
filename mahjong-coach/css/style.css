@@ -78,6 +78,11 @@ p { text-wrap: pretty; }
 /* New game, armed: it turns black (like Coach) and reads Confirm until you tap again (or anywhere else) */
 .fab-btn.light.confirm, .fab-btn.light.confirm:hover { background: #000; color: #fff; }
 .fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
+/* New game when the hand is over: solid black, the main thing to do next. It breathes: grows a little and
+   shrinks back, slowly and without stopping, to draw the eye */
+.fab-btn.primary, .fab-btn.primary:hover { background: #000; color: #fff; animation: fab-breathe 2.4s ease-in-out infinite; }
+@keyframes fab-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .fab-btn.primary { animation: none; } }
 @media (max-width: 600px) {
   .fab { left: max(12px, env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); }
   .fab-btn { height: 40px; padding: 0 16px; font-size: 13px; }
@@ -422,6 +427,10 @@ span.scope { cursor: default; }
 @keyframes ctShadow { 0%, 100% { transform: scaleX(1); opacity: .55; } 50% { transform: scaleX(.82); opacity: .35; } }
 @keyframes ctBreathe { 0%, 100% { transform: scale(.94); } 50% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .ct-body, .ct-shadow, .coach.has-note .ct-glow { animation: none; } .ct-body { transform: rotate(-5deg); } }
+/* when the hand is over the Coach steps away (nothing left to coach, and New game is the one thing to do);
+   it comes back with the next game */
+.coach { transition: opacity .3s ease, visibility 0s; }
+body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .3s ease, visibility 0s .3s; }
 .coach-badge {
   position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--red); color: #fff;
   font-size: 12px; line-height: 22px; font-weight: 600; box-shadow: 0 0 0 2px #fff;
@@ -484,6 +493,8 @@ span.scope { cursor: default; }
 .pane-actions .btn:not(.light) { background: rgba(17, 17, 17, .86); }
 .pane-actions .btn.light { background: rgba(214, 214, 211, .9); }  /* a darker grey so it stands out from the white card */
 .pane-actions .btn.light:hover { background: rgba(200, 200, 196, .95); }
+#bar .btn.light { background: rgba(214, 214, 211, .9); }  /* the same grey as Got it, on the white bottom sheet */
+#bar .btn.light:hover { background: rgba(200, 200, 196, .95); }
 .pane-actions .btn { flex: 1; }
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 20px; }
 .compare-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 12px 14px; border-radius: 24px; background: var(--felt); text-align: center; }
@@ -548,6 +559,9 @@ span.scope { cursor: default; }
   width: min(640px, 100%); padding: 40px; border-radius: 36px; background: #fff; box-shadow: 0 30px 70px rgba(0, 0, 0, .18);
   animation: card .5s var(--spring);
 }
+.modal-card { position: relative; }
+/* the results card's close button, top right */
+.modal-close { position: absolute; top: 20px; right: 20px; color: var(--text); }
 @keyframes card { from { transform: translateY(24px) scale(.97); opacity: 0; } }
 .modal-card h2 { margin: 0 0 8px; font-size: 40px; line-height: 44px; font-weight: 500; letter-spacing: -1.2px; }
 .modal-card .lede { margin: 0 0 24px; font-size: 15px; line-height: 22px; color: var(--muted); }
@@ -678,13 +692,32 @@ span.scope { cursor: default; }
 .deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
 .deal-layer .tile.flip-side.rev { background: linear-gradient(to left, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); }
 body.dealing .fab, body.dealing .coach, body.dealing .bubble, body.dealing .who, body.dealing #bar > *,
-body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount {
+body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount, body.dealing .sheet-div {
   opacity: 0; pointer-events: none; transition: opacity .25s ease;
 }
 /* after the deal: the buttons and labels fade back in, last */
-body.undealing :is(.fab, .coach, .who, #bar > *, .me-plate, .sheet-grab, .dcount) { transition: opacity .4s ease; }
+body.undealing :is(.fab, .coach, .who, #bar > *, .me-plate, .sheet-grab, .dcount, .sheet-div) { transition: opacity .4s ease; }
 body.dealing-hide #table .tile, body.dealing-hide #sheet .tile { visibility: hidden; }
 body.dealing-hide.table-ready #table .tile { visibility: visible; }  /* phones: opponents' tiles are in place before the sheet rises */
 body.dealing .bar { background: transparent; transition: background .25s ease; }  /* the white box steps aside */
 /* first visit: "Start new game" sits under the face-down pile */
 .deal-layer .deal-start { position: absolute; left: 50%; transform: translateX(-50%); }
+
+/* Mahjong confetti (js/confetti.js): tiles from your winning hand, above everything, ignoring taps */
+.confetti { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; perspective: 800px; }
+/* each piece is a solid block: --cw wide, --ch tall, --cd thick (real tiles are about two thirds as thick as wide) */
+.confetti-piece {
+  --cw: 28px; --ch: calc(var(--cw) * var(--tile-r)); --cd: calc(var(--cw) * .62);
+  position: absolute; width: var(--cw); height: var(--ch); transform-style: preserve-3d; will-change: transform;
+}
+.cf-face { position: absolute; left: 0; top: 0; width: var(--cw); height: var(--ch); border-radius: 4px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.cf-front { transform: translateZ(calc(var(--cd) / 2)); }
+.cf-front .tile { --w: var(--cw); display: block; margin: 0; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06); }
+.cf-back { transform: rotateY(180deg) translateZ(calc(var(--cd) / 2)); background: linear-gradient(#127a5b, #0d6649); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1); }
+/* the sides: white porcelain for the front 60%, green for the back 40%, a touch darker than the faces */
+.cf-top, .cf-bottom { height: var(--cd); top: calc((var(--ch) - var(--cd)) / 2); border-radius: 2px; }
+.cf-left, .cf-right { width: var(--cd); left: calc((var(--cw) - var(--cd)) / 2); border-radius: 2px; }
+.cf-top { transform: rotateX(90deg) translateZ(calc(var(--ch) / 2)); background: linear-gradient(to bottom, #0f6f52 0 40%, #f1f1ec 40%); }
+.cf-bottom { transform: rotateX(-90deg) translateZ(calc(var(--ch) / 2)); background: linear-gradient(to bottom, #cfcfc8 0 60%, #0a553f 60%); }
+.cf-right { transform: rotateY(90deg) translateZ(calc(var(--cw) / 2)); background: linear-gradient(to right, #dededa 0 60%, #0b5d45 60%); }
+.cf-left { transform: rotateY(-90deg) translateZ(calc(var(--cw) / 2)); background: linear-gradient(to right, #0b5d45 0 40%, #dededa 40%); }

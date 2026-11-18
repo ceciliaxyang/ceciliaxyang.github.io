@@ -7,6 +7,7 @@ import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
 import { coachTileHtml, coachPortraitHtml } from "./coach-art.js";
 import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
+import { tileConfetti } from "./confetti.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
 
 // ?autoplay and ?sandbox are for testing: they save to their own slot so your real game is untouched.
@@ -192,11 +193,26 @@ function callPicked() {
   return claim({ type: "chow", chow: ks });
 }
 function mahjongOnDiscard() {
-  if (state.claim.options[0].win) claim({ type: "win" });
+  if (!state.claim.options[0].win) return;
+  const burst = celebrateFrom(kindOf(state.lastDiscard.id));
+  claim({ type: "win" });
+  burst();
 }
 function mahjongOnTurn() {
   const o = G.actOptions(state, 0);
-  if (o.tsumo && o.tsumo.legal) act({ type: "tsumo" });
+  if (!(o.tsumo && o.tsumo.legal)) return;
+  const burst = celebrateFrom();
+  act({ type: "tsumo" });
+  burst();
+}
+/* Your win: tiles from your hand burst out of the Mahjong button as confetti. Where the button is has to be
+   measured before the win re-renders the bar, so this measures first and returns the burst to fire after. */
+function celebrateFrom(extra = null) {
+  const btn = document.querySelector("#bar .btn.red");
+  const rect = btn ? btn.getBoundingClientRect() : null;
+  const me = state.players[0];
+  const kinds = [...me.hand.map(kindOf), ...me.melds.flatMap((m) => m.tiles.map(kindOf)), ...(extra !== null ? [extra] : [])];
+  return () => tileConfetti(rect, kinds);
 }
 function runExample(k) {
   const n = k % 9;
@@ -339,6 +355,13 @@ window.addEventListener("resize", () => fitLayout());
 window.addEventListener("scroll", () => markPlateOverTiles(), { passive: true });
 
 function render() {
+  if (state.phase === "over" && state.result && state.result !== heldResult) {
+    heldResult = state.result;
+    if (state.result.type === "draw" || state.result.winner !== 0) {
+      resultHeld = true;
+      setTimeout(() => { resultHeld = false; render(); }, RESULT_HOLD);
+    }
+  }
   // where the tile(s) in the white box sit right now: a discard that leaves the box flies from there
   const boxRects = new Map([...document.querySelectorAll("#bar [data-fly-id]")].map((e) => [+e.dataset.flyId, e.getBoundingClientRect()]));
   freshDiscards = [];
@@ -608,8 +631,14 @@ function renderBar() {
     const o = G.actOptions(state, 0);
     if (o.tsumo && o.tsumo.legal) {
       // a winning hand: Mahjong is the only button (no discarding)
+      // like a win off a discard: the tile that won it shows in the tile-in-play spot (the one you just drew)
       say = "You got Mahjong!";
       play = "";
+      if (state.drawn !== null && state.drawn !== undefined) {
+        const k = kindOf(state.drawn);
+        say = `You drew <b>${tileName(k)}</b>.<span class="say-more"> You got Mahjong!</span>`;
+        play = tileHtml(k, { size: "lg", cls: arrive(`w${state.drawn}`) });
+      }
       btns.length = 0;
       btns.push(`<button type="button" class="btn red" data-act="mahjong">Mahjong</button>`);
     }
@@ -635,6 +664,22 @@ function renderBar() {
       : callPick.length
       ? `<button type="button" class="btn" data-call>Call</button>`
       : `<button type="button" class="btn" data-claim="pass">Continue</button>`);
+  } else if (state.phase === "over" && (resultClosed || resultHeld)) {
+    // the results card was closed: say how the hand ended and offer the card again (a secondary grey button;
+    // the main next step is the New game button, which turns black while the hand is over)
+    const r = state.result;
+    const who = r.winner === 0 ? "You" : `<b>${state.players[r.winner]?.name}</b>`;
+    const got = r.winner === 0 ? "You got Mahjong!" : `${who} got Mahjong.`;  // no exclamation mark when someone else wins
+    if (r.type === "draw") say = "It's a draw.";
+    else if (r.tile === null || r.tile === undefined) say = got;
+    else {
+      // the same words and tile as when the win came up: the tile drawn, or the discard it was won off
+      const k = kindOf(r.tile);
+      const how = r.selfDraw ? `${who} drew <b>${tileName(k)}</b>.` : `<b>${r.from === 0 ? "You" : state.players[r.from].name}</b> discarded <b>${tileName(k)}</b>.`;
+      say = `${how}<span class="say-more"> ${got}</span>`;
+      play = tileHtml(k, { size: "lg" });
+    }
+    if (!resultHeld) btns.push(`<button type="button" class="btn light" data-open-result>${r.type === "draw" ? "See result" : "View winning hand"}</button>`);
   } else if (state.phase === "claim" && state.lastDiscard?.robbing) {
     // someone adding to a kong can still be robbed: show it while the others decide
     const ld = state.lastDiscard;
@@ -647,6 +692,10 @@ function renderBar() {
   const why = nudge && nudge.key === nudgeKey();
   // just words, no tile or button: the compact box centres them instead of setting them to the left
   bar.classList.toggle("solo", !play && !btns.length);
+  // when the hand is over, starting a new game is the main thing to do: the New game button turns black
+  $("newBtn").classList.toggle("primary", state.phase === "over");
+  document.body.classList.toggle("hand-over", state.phase === "over");
+  $("newBtn").classList.toggle("light", state.phase !== "over");
   bar.innerHTML = `<div class="act-left">
       <div class="say ${why ? "nudge" : ""}" ${why ? 'role="status"' : ""}>${why ? nudge.html : say}</div>
       <div class="inplay">${play}</div>
@@ -736,6 +785,12 @@ function renderPane() {
 /* ---------------- modals ---------------- */
 
 let guideOpen = false;
+let resultClosed = false;  // the results card was closed to look at the table (the bar can bring it back)
+// When someone else wins (or the wall runs out), the table holds for a moment first, showing who won and the
+// tile that did it, before the results card comes up. (Your own win already pauses: you tap Mahjong.)
+const RESULT_HOLD = 1500;
+let resultHeld = false;
+let heldResult = state.phase === "over" ? state.result : null;  // a hand already over on load shows its card at once
 let confirmNew = false;     // New game was tapped once: the button now says Confirm (a second tap starts over)
 let confirmTimer = null;
 
@@ -748,7 +803,7 @@ function renderModal() {
     card.innerHTML = guideHtml();
     return;
   }
-  if (state.phase !== "over") { m.hidden = true; return; }
+  if (state.phase !== "over" || resultClosed || resultHeld) { m.hidden = true; return; }
   m.hidden = false;
   card.innerHTML = resultHtml();
 }
@@ -765,6 +820,8 @@ function handGroups(p, arr) {
   if (pl.flowers.length) groups.push(pl.flowers.map(kindOf));
   return `<div class="groups">${groups.map((g) => `<span class="group">${g.map((k) => tileHtml(k, { size: "sm" })).join("")}</span>`).join("")}</div>`;
 }
+
+const CLOSE_ICON = `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M1.5 1.5L16.5 16.5M16.5 1.5L1.5 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
 
 function resultHtml() {
   const r = state.result;
@@ -784,9 +841,11 @@ function resultHtml() {
   const delta = r.delta || [0, 0, 0, 0];
   const scores = state.players.map((pl, i) => `<div class="score-cell"><b>${pl.name}</b>${prefs.showScores ? `<span>${pl.score}</span>` : ""}
     <em class="${delta[i] > 0 ? "up" : delta[i] < 0 ? "down" : ""}">${delta[i] > 0 ? "+" : ""}${delta[i] || "–"}</em></div>`).join("");
-  return `<h2>${head}</h2><p class="lede">${lede}</p>${body}${prefs.showScores ? `<div class="scores">${scores}</div>` : ""}
+  // for now a finished hand always leads to a fresh game (a "next hand" that carries scores on may come later)
+  return `<button type="button" class="icon-btn modal-close" data-close-result aria-label="Close">${CLOSE_ICON}</button>
+    <h2>${head}</h2><p class="lede">${lede}</p>${body}${prefs.showScores ? `<div class="scores">${scores}</div>` : ""}
     <div class="btns">
-      <button type="button" class="btn" data-next>Start new hand</button>
+      <button type="button" class="btn" data-new-game>Start new game</button>
     </div>`;
 }
 
@@ -826,6 +885,7 @@ $("hand").addEventListener("click", (e) => {
 
 $("bar").addEventListener("click", (e) => {
   if (announce && e.target.closest("[data-ann-ok]")) { announce = null; return update(); }
+  if (e.target.closest("[data-open-result]")) return openResult();
   const a = e.target.closest("[data-act]");
   if (a && myTurn()) {
     if (a.dataset.act === "discard" && selected !== null) act({ type: "discard", id: selected });
@@ -863,7 +923,13 @@ $("modal").addEventListener("click", (e) => {
   if (e.target.closest("[data-close-guide]") || (guideOpen && e.target === $("modal"))) { guideOpen = false; render(); return; }
   if (e.target.closest("[data-open-coach]")) { openList(); return; }
   if (e.target.closest("[data-next]")) startNextHand();
+  if (e.target.closest("[data-new-game]")) newGame();
+  // close the results card: its X, or a tap on the blurred table around it
+  if (state.phase === "over" && !guideOpen && (e.target.closest("[data-close-result]") || e.target === $("modal"))) closeResult();
 });
+
+function closeResult() { resultClosed = true; render(); }
+function openResult() { resultClosed = false; render(); }
 
 $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(); });
 document.addEventListener("click", (e) => { if (!$("settings").hidden && !e.target.closest(".settings-wrap")) toggleSettings(false); });
@@ -970,7 +1036,8 @@ function setConfirmNew(on) {
 }
 $("newBtn").addEventListener("click", (e) => {
   e.stopPropagation();
-  if (confirmNew) newGame(); else if (!dealing) setConfirmNew(true);
+  // once the hand is over there's nothing to lose, so it starts straight away; mid-hand it asks first
+  if (confirmNew || state.phase === "over") newGame(); else if (!dealing) setConfirmNew(true);
 });
 document.addEventListener("click", (e) => { if (confirmNew && !e.target.closest("#newBtn")) setConfirmNew(false); });
 /* Phones: tuck the bottom sheet away while the pile gathers (so the animation sits in the middle of the
@@ -1003,6 +1070,7 @@ async function startNextHand() {
   epoch++;
   announce = null;
   selected = null;
+  resultClosed = false;
   $("modal").hidden = true;
   let roundDone = false;
   await dealAnimation(() => {
@@ -1024,6 +1092,7 @@ async function newGame() {
   epoch++;  // cancel any bot move still pending from the old game
   announce = null;
   guideOpen = false;
+  resultClosed = false;
   nudge = null;
   selected = null;
   closePane();
@@ -1052,6 +1121,7 @@ document.addEventListener("keydown", (e) => {
     if (!$("settings").hidden) { toggleSettings(false); $("settingsBtn").focus(); }
     else if (confirmNew) setConfirmNew(false);
     else if (guideOpen) { guideOpen = false; render(); }
+    else if (state.phase === "over" && !resultClosed && !dealing) closeResult();
     else if (pane.open) closePane();
   }
 });

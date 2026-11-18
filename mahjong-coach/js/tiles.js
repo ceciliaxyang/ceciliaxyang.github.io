@@ -15,7 +15,10 @@ const BLUE = "#0b3fa8";
 const INK = "#111111";
 const FACE = "#ffffff";
 // Kaiti (brush style): Apple's Kaiti TC/SC first, then the Kai fonts Windows and Android ship, then any serif.
-const SERIF = `'Kaiti TC','Kaiti SC','STKaiti','BiauKai','DFKai-SB','KaiTi','TW-Kai','AR PL UKai TW',serif`;
+// Tile characters, in order of preference: LXGW WenKai TC (a Kai-style web font, so it's the same in every
+// browser), Klee One (a web font too, if WenKai can't load), then Kaiti on Macs that have it, then other Kai
+// fonts. Both web fonts are loaded in index.html. (Safari can't use Kaiti: it's an optional macOS download.)
+const SERIF = `'LXGW WenKai TC','Klee One','Kaiti TC','Kaiti SC','STKaiti','BiauKai','DFKai-SB','KaiTi','TW-Kai','AR PL UKai TW',serif`;
 
 export function tileName(k) {
   if (k < 27) return `${numOf(k)} ${SUIT_EN[suitOf(k)]}`;

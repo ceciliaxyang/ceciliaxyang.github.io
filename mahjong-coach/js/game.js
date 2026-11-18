@@ -389,7 +389,9 @@ function finishWin(state, p, w, { selfDraw, from = null }) {
   delta.forEach((d, q) => (state.players[q].score += d));
   state.phase = "over";
   state.claim = null;
-  state.result = { type: "win", winner: p, selfDraw, from, fan: w.fan, items: w.items, arrangement: w.arrangement, points: pts, delta };
+  // the tile that completed the hand: the one just drawn, or the discard (or kong tile) it was won off
+  const tile = selfDraw ? state.drawn : state.lastDiscard ? state.lastDiscard.id : null;
+  state.result = { type: "win", winner: p, selfDraw, from, tile: tile ?? null, fan: w.fan, items: w.items, arrangement: w.arrangement, points: pts, delta };
   const name = state.players[p].name;
   log(state, `${name} won${selfDraw ? " on a self-drawn tile" : " off " + state.players[from].name + "'s discard"} with ${w.fan} fan.`);
 }
