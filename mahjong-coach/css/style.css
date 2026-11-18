@@ -118,6 +118,11 @@ p { text-wrap: pretty; }
 .set-row.set-static { cursor: default; flex-wrap: wrap; row-gap: 10px; }
 .set-row.set-static:hover { background: none; }
 .seg { display: inline-flex; padding: 3px; border-radius: 100px; background: var(--pill); }
+/* a row with a longer description: the choices sit underneath, full width, each button an equal share */
+.set-stack { flex-wrap: wrap; gap: 10px; }
+.set-stack .set-text { flex-basis: 100%; }
+.set-stack .seg { display: flex; width: 100%; }
+.set-stack .seg > * { flex: 1; }
 .seg button {
   padding: 6px 12px; border: 0; border-radius: 100px; background: none; font-size: 13px; line-height: 16px; font-weight: 500;
   color: var(--muted); cursor: pointer; transition: background .15s ease, color .15s ease;
@@ -125,7 +130,7 @@ p { text-wrap: pretty; }
 .seg button[aria-checked="true"] { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .1); }
 .seg button:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 .set-chev { flex-shrink: 0; color: var(--muted); }
-.fab .settings { top: auto; bottom: calc(100% + 8px); left: 0; right: auto; transform-origin: bottom left; }
+.fab .settings { top: auto; bottom: calc(100% + 8px); left: 0; right: auto; transform-origin: bottom left; overflow-y: auto; overscroll-behavior: contain; }
 .scopes { display: flex; gap: 8px; flex-wrap: wrap; }
 .scope {
   flex-shrink: 0; padding: 12px 16px; border: 0; border-radius: 32px; background: var(--pill); color: var(--text);
@@ -725,3 +730,21 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
 
 /* the Chinese character on the Peng / Kong / Chow button, in the tiles' brush font */
 .call-zh { margin-right: -2px; font-family: 'LXGW WenKai TC', 'Klee One', 'Kaiti TC', 'Kaiti SC', 'STKaiti', serif; font-size: 1.25em; font-weight: 700; line-height: 1; vertical-align: -1px; }
+
+/* Phones: Settings opens as a bottom sheet over a dimmed table (not a popover), so every setting fits on screen.
+   Tapping the dimmed table or pressing Escape closes it, as before. */
+@media (max-width: 600px) {
+  .fab .settings {
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 90; width: auto; max-height: 92vh;
+    padding: 28px 12px calc(16px + env(safe-area-inset-bottom)); border-radius: 28px 28px 0 0;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .28), 0 -20px 60px rgba(0, 0, 0, .14);
+    animation: settings-up .35s var(--ease); transform-origin: center bottom;
+  }
+  /* the grabber, like the game's own sheet */
+  .fab .settings::before { content: ""; position: absolute; top: 8px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: #d0d0d0; }
+  @keyframes settings-up { from { transform: translateY(100%); } }
+}
+@media (max-width: 600px) and (prefers-reduced-motion: reduce) { .fab .settings { animation: none; } }
+
+/* the Coach steps aside while the Settings sheet is open on a phone */
+@media (max-width: 600px) { body.settings-open .coach { opacity: 0; visibility: hidden; } }

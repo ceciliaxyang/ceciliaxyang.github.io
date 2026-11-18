@@ -1,5 +1,6 @@
 // Tile names and the SVG faces drawn on each tile (traditional Chinese tile art, simplified).
 import { suitOf, numOf } from "./engine.js";
+import { zh } from "./lang.js";
 
 const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const WINDS = ["東", "南", "西", "北"];
@@ -76,7 +77,7 @@ const BAMBOO = {
 };
 
 function text(ch, y, size, color, weight = 700) {
-  return `<text x="30" y="${y}" text-anchor="middle" font-family="${SERIF}" font-size="${size}" font-weight="${weight}" fill="${color}">${ch}</text>`;
+  return `<text x="30" y="${y}" text-anchor="middle" font-family="${SERIF}" font-size="${size}" font-weight="${weight}" fill="${color}">${zh(ch)}</text>`;
 }
 
 /* Flower and season tiles, after a real bonus tile: the number top left, a small character top right, and a
@@ -127,7 +128,7 @@ export function faceSvg(k) {
     const i = k - 34;
     const col = [RED, BLUE, "#c77a12", GREEN, GREEN, RED, "#c77a12", BLUE][i];
     body = `<text x="7" y="20" font-family="'SF Pro Display',-apple-system,system-ui,sans-serif" font-size="15" font-weight="700" fill="${INK}">${(i % 4) + 1}</text>` +
-      `<text x="45" y="21" text-anchor="middle" font-family="${SERIF}" font-size="15" font-weight="700" fill="${col}">${BONUS[i]}</text>` +
+      `<text x="45" y="21" text-anchor="middle" font-family="${SERIF}" font-size="15" font-weight="700" fill="${col}">${zh(BONUS[i])}</text>` +
       flowerArt(col);
   }
   // Small corner number (upper right) on circles and bamboo, haloed in the tile's ivory so it reads over the pattern; the pattern shifts down a little to make room.

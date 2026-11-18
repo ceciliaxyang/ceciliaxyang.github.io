@@ -8,6 +8,7 @@ import { coachTileHtml, coachPortraitHtml } from "./coach-art.js";
 import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
 import { tileConfetti } from "./confetti.js";
+import { setLang, zh, term, callChar, localize } from "./lang.js";
 import { tileHtml, backHtml, tileName, WINDS, WIND_EN } from "./tiles.js";
 
 // ?autoplay and ?sandbox are for testing: they save to their own slot so your real game is untouched.
@@ -19,7 +20,8 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
 // noFlowers: play without the flower and season tiles (on by default; applies from the next hand dealt)
-const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, ...loadPrefs() };
+const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, lang: "mandarin", ...loadPrefs() };
+setLang(prefs.lang);
 const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
 let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
 state.points = prefs.showScores;  // Scores on = playing with points (a win needs points); off = any complete hand wins
@@ -197,12 +199,13 @@ function callPicked() {
 function callLabel() {
   const k = kindOf(state.lastDiscard.id);
   const ks = callPick.map(kindOf).sort((a, b) => a - b);
-  // each with its Chinese character, in the tiles' brush font: 碰 peng, 槓 kong, 吃 chow
-  const zh = (ch, en) => `<span class="call-zh" lang="zh-Hant">${ch}</span>${en}`;
-  if (ks.length >= 2 && ks.every((x) => x === k)) return ks.length === 2 ? zh("碰", "Peng") : zh("槓", "Kong");
+  // each with its Chinese character, in the tiles' brush font, and its name in the chosen language:
+  // 碰 Pèng, 杠 Gàng, 吃 Chī (Mandarin) or 碰 Pung, 槓 Kong, 吃 Chow (Cantonese)
+  const label = (t) => `<span class="call-zh">${callChar(t)}</span>${term(t, true)}`;
+  if (ks.length >= 2 && ks.every((x) => x === k)) return ks.length === 2 ? label("peng") : label("kong");
   if (ks.length === 2 && isSuited(k)) {
     const run = [...ks, k].sort((a, b) => a - b);
-    if (run.every((x) => Math.floor(x / 9) === Math.floor(k / 9)) && run[1] === run[0] + 1 && run[2] === run[1] + 1) return zh("吃", "Chow");
+    if (run.every((x) => Math.floor(x / 9) === Math.floor(k / 9)) && run[1] === run[0] + 1 && run[2] === run[1] + 1) return label("chow");
   }
   return "Call";
 }
@@ -437,9 +440,14 @@ function renderSettings() {
   setSoundEnabled(prefs.sound);
   document.body.classList.toggle("show-claimed", prefs.showClaimed);
   document.querySelectorAll("[data-diff]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.diff === prefs.difficulty)));
+  document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.lang === prefs.lang)));
 }
 function toggleSettings(open = $("settings").hidden) {
   $("settings").hidden = !open;
+  document.body.classList.toggle("settings-open", open);
+  // the menu opens upward from the button: it never runs off the top of the screen (it scrolls instead)
+  // (phones show it as a bottom sheet instead, sized in the CSS)
+  if (open) $("settings").style.maxHeight = matchMedia("(max-width: 600px)").matches ? "" : `${Math.max(200, $("settingsBtn").getBoundingClientRect().top - 8 - 12)}px`;
   $("settingsBtn").setAttribute("aria-expanded", String(open));
 }
 
@@ -474,8 +482,8 @@ function plateHtml(p) {
   const title = `${name}: ${WIND_EN[sw]} seat${sw === 0 ? ", dealer" : ""}`;
   return `<div class="who ${p === 0 ? "mine" : ""}" title="${title}">
     <div class="plate circle ${on ? "on" : ""} ${thinking ? "thinking" : ""}">${thinking
-      ? `<span class="dots" role="img" aria-label="${WINDS[sw]}, thinking"><i></i><i></i><i></i></span>`
-      : `<span class="wind">${WINDS[sw]}</span>`}</div>
+      ? `<span class="dots" role="img" aria-label="${zh(WINDS[sw])}, thinking"><i></i><i></i><i></i></span>`
+      : `<span class="wind">${zh(WINDS[sw])}</span>`}</div>
     <span class="pname">${name}${pts}</span>
   </div>`;
 }
@@ -491,7 +499,7 @@ function compassHtml() {
     const name = p === 0 ? "You" : pl.name;
     const title = `${name}: ${WIND_EN[sw]} seat${sw === 0 ? ", dealer" : ""}${prefs.showScores ? `, ${pl.score} points` : ""}`;
     return `<span class="plate circle c-${pos[p]} ${on ? "on" : ""} ${thinking ? "thinking" : ""}" title="${title}" role="img" aria-label="${title}">${thinking
-      ? `<span class="dots"><i></i><i></i><i></i></span>` : `<span class="wind">${WINDS[sw]}</span>`}</span>`;
+      ? `<span class="dots"><i></i><i></i><i></i></span>` : `<span class="wind">${zh(WINDS[sw])}</span>`}</span>`;
   }).join("");
   // the label names whoever's turn it is (you when nobody's: between hands)
   const who = turnHolder() ?? 0;
@@ -1009,6 +1017,21 @@ function endDrag(e) {
 $("hand").addEventListener("pointerup", endDrag);
 $("hand").addEventListener("pointercancel", endDrag);
 
+document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
+  prefs.lang = b.dataset.lang;
+  setLang(prefs.lang);
+  savePrefs();
+  render();
+  localize(document.body);  // text already on screen that render() didn't redraw
+}));
+/* Whatever text appears, from any part of the game, uses the chosen language's spelling of the calls. */
+new MutationObserver((list) => {
+  for (const m of list) {
+    if (m.type === "characterData") localize(m.target.parentNode);
+    else m.addedNodes.forEach((n) => localize(n.nodeType === 3 ? n.parentNode : n));
+  }
+}).observe(document.body, { childList: true, subtree: true, characterData: true });
+localize(document.body);
 document.querySelectorAll("[data-diff]").forEach((b) => b.addEventListener("click", () => {
   prefs.difficulty = b.dataset.diff;
   savePrefs();
