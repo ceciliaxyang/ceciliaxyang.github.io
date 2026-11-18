@@ -197,10 +197,12 @@ function callPicked() {
 function callLabel() {
   const k = kindOf(state.lastDiscard.id);
   const ks = callPick.map(kindOf).sort((a, b) => a - b);
-  if (ks.length >= 2 && ks.every((x) => x === k)) return ks.length === 2 ? "Peng" : "Kong";
+  // each with its Chinese character, in the tiles' brush font: 碰 peng, 槓 kong, 吃 chow
+  const zh = (ch, en) => `<span class="call-zh" lang="zh-Hant">${ch}</span>${en}`;
+  if (ks.length >= 2 && ks.every((x) => x === k)) return ks.length === 2 ? zh("碰", "Peng") : zh("槓", "Kong");
   if (ks.length === 2 && isSuited(k)) {
     const run = [...ks, k].sort((a, b) => a - b);
-    if (run.every((x) => Math.floor(x / 9) === Math.floor(k / 9)) && run[1] === run[0] + 1 && run[2] === run[1] + 1) return "Chow";
+    if (run.every((x) => Math.floor(x / 9) === Math.floor(k / 9)) && run[1] === run[0] + 1 && run[2] === run[1] + 1) return zh("吃", "Chow");
   }
   return "Call";
 }

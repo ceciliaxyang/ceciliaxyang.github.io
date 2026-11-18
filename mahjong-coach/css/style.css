@@ -722,3 +722,6 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
 .cf-bottom { transform: rotateX(-90deg) translateZ(calc(var(--ch) / 2)); background: linear-gradient(to bottom, #cfcfc8 0 60%, #0a553f 60%); }
 .cf-right { transform: rotateY(90deg) translateZ(calc(var(--cw) / 2)); background: linear-gradient(to right, #dededa 0 60%, #0b5d45 60%); }
 .cf-left { transform: rotateY(-90deg) translateZ(calc(var(--cw) / 2)); background: linear-gradient(to right, #0b5d45 0 40%, #dededa 40%); }
+
+/* the Chinese character on the Peng / Kong / Chow button, in the tiles' brush font */
+.call-zh { margin-right: -2px; font-family: 'LXGW WenKai TC', 'Klee One', 'Kaiti TC', 'Kaiti SC', 'STKaiti', serif; font-size: 1.25em; font-weight: 700; line-height: 1; vertical-align: -1px; }
