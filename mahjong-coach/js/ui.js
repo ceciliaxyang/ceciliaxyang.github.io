@@ -283,6 +283,8 @@ function placeSheet() {
     // Steady height: the sheet never shrinks back between turns. If a turn needs more room (a longer
     // prompt, extra called sets) it grows once and stays at that height, so the floating buttons don't bob.
     if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
+    // the sheet's full height (even while tucked away): the coach's sheet is at least this tall, so it covers it
+    document.documentElement.style.setProperty("--sheet-full", `${sheet.offsetHeight}px`);
     // keep the page scrollable past the sheet so nothing above it is hidden for good
     if (sheet.classList.contains("collapsed")) {
       // collapsed: show down to just below your row of tiles (which now sits right under the compass)
@@ -803,7 +805,10 @@ function renderPane() {
   const h = pane.hint || (yourMove ? Coach.hint(state) : null);
   // one tile, or every equally good tile side by side, each with its name under it
   const ks = h?.pick ? (h.pick.ks || (h.pick.k !== undefined ? [h.pick.k] : [])) : [];
-  const pickTiles = ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join("")}</div>` : "";
+  // a call: the whole set in one row (your tiles a little see-through), named after the tile you'd take
+  const pickTiles = h?.pick?.set
+    ? `<div class="pick-set"><span class="pick-set-row">${h.pick.set.map((x) => tileHtml(x.k, { size: "md", cls: x.mine ? "mine" : "" })).join("")}</span><span class="sub">${tileName(h.pick.k)}</span></div>`
+    : ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join("")}</div>` : "";
   const pickCard = h?.pick ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${h.pick.label}</span>${pickTiles}</div></div>` : "";
   const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions"><button type="button" class="btn" data-close>Got it</button></div>` : "";
   // not your move: one quiet line so the panel isn't empty

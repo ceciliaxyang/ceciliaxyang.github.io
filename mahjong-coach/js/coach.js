@@ -348,7 +348,14 @@ export function hint(state) {
     if (pick.type === "pass") {
       return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still be ${away(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
     }
-    return { title: "Here's what I'd do", pick: { k, label: "Take it" }, html: `<p>Making ${pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)}` : `three ${t(k)}`} gets you to ${away(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
+    // the card names the call and shows the whole set: your own tiles (drawn a little see-through) and the thrown-away one
+    const mine = pick.type === "chow" ? pick.chow : pick.type === "kong" ? [k, k, k] : [k, k];
+    const set = pick.type === "chow"
+      ? [...mine.map((x) => ({ k: x, mine: true })), { k, mine: false }].sort((a, b) => a.k - b.k)
+      : [...mine.map((x) => ({ k: x, mine: true })), { k, mine: false }];
+    const made = pick.type === "chow" ? `the run ${chowTiles(pick.chow, k)}` : pick.type === "kong" ? `four ${t(k)}` : `three ${t(k)}`;
+    return { title: "Here's what I'd do", pick: { k, label: `Claim a ${pick.type === "pung" ? "peng" : pick.type}`, set },
+      html: `<p>Making ${made} gets you to ${away(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
   }
   return { title: "Waiting", html: `<p>It's not your turn yet. I'll speak up if I spot something.</p>` };
 }
