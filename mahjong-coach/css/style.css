@@ -763,3 +763,85 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
 
 /* the Coach steps aside while the Settings sheet is open on a phone */
 @media (max-width: 600px) { body.settings-open .coach { opacity: 0; visibility: hidden; } }
+
+/* Phones held sideways (wide but short): everything fits on one screen, no scrolling.
+   - The other players show only their tiles (no wind or name): the side players' run down the screen edges,
+     the player opposite's along the top.
+   - New game and Settings sit top left, the compass of winds (as on a phone held upright) floats top right,
+     the Coach stays bottom right; all three just inside the side players' tiles.
+   - Your hand is pinned to the bottom of the screen; the discards and the white box fill the middle. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 601px) {
+  :root {
+    --opp: 22px; --tgap: 2px; --ggap: 8px;
+    --edge-l: max(12px, env(safe-area-inset-left)); --edge-r: max(12px, env(safe-area-inset-right));
+    --in-l: calc(var(--edge-l) + var(--opp) * 1.5 + 12px);   /* just inside the side players' tiles: the middle column */
+    --in-r: calc(var(--edge-r) + var(--opp) * 1.5 + 12px);
+    /* your hand: 14 tiles, centred, clear of the Coach on the right (and the same margin on the left) */
+    --land-lg: min(48px, calc((100vw - var(--in-l) - var(--in-r) - 2 * 64px - 13 * var(--tgap)) / 14));
+    --hand-h: calc(var(--land-lg) * (var(--tile-r) + var(--depth)) + 1px + 18px + 10px + env(safe-area-inset-bottom));
+    --row: calc(var(--opp) * (var(--tile-r) + var(--depth)) + 1px);   /* one row of opponent tiles or discards */
+    /* where the white box starts with one row of discards: below the player opposite's tiles and that row */
+    --box-top: calc(10px + env(safe-area-inset-top) + var(--row) + 10px + var(--row) + 10px);
+  }
+  /* the side players' tiles run all the way down; only the middle leaves room for your hand */
+  .page { padding: calc(10px + env(safe-area-inset-top)) var(--edge-r) calc(10px + env(safe-area-inset-bottom)) var(--edge-l); }
+  .center { padding-bottom: calc(var(--box-top) - 10px - env(safe-area-inset-bottom)); }
+  /* the middle fills the screen above your hand: discards at the top, the white box just above your tiles */
+  .table { column-gap: 12px; min-height: calc(100vh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); align-items: stretch; }
+  .seat-left, .seat-right { align-self: start; }
+  .center { display: flex; flex-direction: column; }
+  .felt { flex: 1; }
+  .seat .who { display: none; }
+  .seat { gap: 0; }
+  /* the player opposite's row sits level with the buttons, between them */
+  .seat-top .line { flex-wrap: nowrap; justify-content: center; }
+  .center { gap: 10px; --mid: var(--opp); }  /* discards (and your called sets) the same size as the other players' tiles */
+  .felt { gap: 10px; margin-top: 0; padding: 0; }
+  .discards { --dw: var(--opp); }
+  .dcount { height: 14px; padding: 0 4px; border-radius: 7px; font-size: 9px; line-height: 14px; }
+  /* the white box: one row (prompt and tile in play on the left, the button on the right), a little smaller */
+  .center .bar { --lg: calc(var(--land-lg) * .8); }
+  .bar, .bar.compact { flex: 1; height: auto; min-height: calc(16px + 18px + 8px + var(--lg) * var(--tile-r) + 16px); padding: 16px 24px; border-radius: 28px; gap: 8px;
+    margin: 0; }
+  /* The white box spans the middle column (side players' tiles to side players' tiles) and starts just under the
+     discards. With one row of discards it sits in the middle of the screen: its bottom is as far from the bottom
+     of the screen as its top is from the top (--box-top). More rows of discards push its top down. */
+  .felt .bar { position: relative; z-index: 5; }
+  .bar .act-left { gap: 8px; }
+  .bar .say { font-size: 14px; line-height: 18px; }
+  .bar .btn { height: 40px; padding: 0 18px; font-size: 13px; }
+
+  /* your hand (and any called sets or flowers, to its left) pinned to the bottom */
+  .center > .me { position: fixed; left: calc(var(--in-l) + 52px); right: calc(var(--in-r) + 52px); bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 10;
+    margin: 0; flex-direction: row; align-items: flex-end; justify-content: center; gap: 12px; pointer-events: none; }
+  .center > .me > * { pointer-events: auto; }
+  .me .exposed { margin-bottom: 0; }
+  .me .exposed .tile { --w: var(--mid); }
+  .center .hand { --lg: var(--land-lg); }
+  .me:has(.exposed:empty) .hand { margin-top: 0; }
+
+  /* the compass, floating top right */
+  .me .me-plate { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: var(--in-r); left: auto; bottom: auto; transform: none;
+    height: auto; margin: 0; padding: 0; background: none; }
+  .compass { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .compass-ring { position: relative; width: 88px; height: 80px; }
+  .me .me-plate .compass .plate { position: absolute; width: 32px; height: 32px; font-size: 11px; }
+  .compass .c-l { left: 0; top: 24px; } .compass .c-t { left: 28px; top: 0; }
+  .compass .c-r { left: 56px; top: 24px; } .compass .c-b { left: 28px; top: 48px; }
+  .me .me-plate .compass .pname { font-size: 11px; line-height: 14px; }
+
+  /* New game and Settings, top left; Settings opens downward */
+  .fab { top: calc(10px + env(safe-area-inset-top)); bottom: auto; left: var(--edge-l); }  /* over the left player's tiles is fine */
+  .fab-btn { height: 40px; padding: 0 16px; font-size: 13px; }
+  .fab-btn.icon { width: 40px; padding: 0; }
+  .fab-btn.icon svg { width: 18px; height: 18px; }
+  .fab .settings { top: calc(100% + 8px); bottom: auto; transform-origin: top left; max-height: calc(100vh - 70px - env(safe-area-inset-top)); }
+
+  /* the Coach, bottom right, with its bubble and card above it */
+  /* the Coach: bigger than your tiles and tucked into the corner (over the right player's last tiles), so it
+     doesn't read as one of your tiles */
+  .coach { right: calc(var(--edge-r) - 6px); bottom: calc(2px + env(safe-area-inset-bottom)); }
+  .coach .coach-tile { --w: 52px; }
+  .bubble { right: var(--edge-r); bottom: calc(52px * 1.63 + 22px + env(safe-area-inset-bottom)); }
+  .pane { right: var(--edge-r); bottom: calc(52px * 1.63 + 22px + env(safe-area-inset-bottom)); max-height: calc(100vh - 52px * 1.63 - 34px - env(safe-area-inset-bottom)); }
+}

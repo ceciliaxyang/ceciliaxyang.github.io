@@ -269,6 +269,9 @@ function takeBack(id) {
 // Default: the latest move stacked and centered. If that would push your "You" label below the bottom of the
 // window, use the compact one-row version instead (72px shorter). Checked after every render and on resize.
 const PHONE = window.matchMedia("(max-width: 600px)");
+// phones held sideways: everything on one screen (see the matching block at the end of style.css)
+const LANDSCAPE = window.matchMedia("(orientation: landscape) and (max-height: 500px) and (min-width: 601px)");
+LANDSCAPE.addEventListener("change", () => render());
 let sheetMinH = 0;
 // a new screen size starts the steady height over
 window.addEventListener("resize", () => { sheetMinH = 0; $("sheet").style.minHeight = ""; if (PHONE.matches) placeSheet(); });
@@ -334,7 +337,7 @@ function fitLayout() {
 function markPlateOverTiles() {
   const plate = $("mePlate");
   if (!plate) return;
-  if (PHONE.matches) { plate.classList.remove("on-tiles"); return; }
+  if (PHONE.matches || LANDSCAPE.matches) { plate.classList.remove("on-tiles"); return; }
   plate.classList.remove("on-tiles");
   const p = plate.getBoundingClientRect();
   const over = [...document.querySelectorAll("#hand .tile, #meExposed .tile")].some((t) => {
@@ -348,6 +351,7 @@ function fitLayoutInner(bar, hand, center) {
   bar.classList.remove("compact");  // measure with the centred, stacked layout
   center?.style.removeProperty("--lg-max");
   if (PHONE.matches) return;  // phones: always stacked, in the sheet
+  if (LANDSCAPE.matches) { bar.classList.add("compact"); return; }  // sideways: always one row; your hand is pinned to the bottom
   // The floating buttons along the bottom (New game, Settings, You, Coach) may cover at most 20% of your tiles
   // (their height including the 3D edge), measured with the page scrolled to the top.
   const buttonsTop = Math.min(...[".fab", "#mePlate", "#coach"].map((sel) => document.querySelector(sel)?.getBoundingClientRect().top ?? innerHeight), innerHeight);
@@ -448,7 +452,7 @@ function toggleSettings(open = $("settings").hidden) {
   document.body.classList.toggle("settings-open", open);
   // the menu opens upward from the button: it never runs off the top of the screen (it scrolls instead)
   // (phones show it as a bottom sheet instead, sized in the CSS)
-  if (open) $("settings").style.maxHeight = matchMedia("(max-width: 600px)").matches ? "" : `${Math.max(200, $("settingsBtn").getBoundingClientRect().top - 8 - 12)}px`;
+  if (open) $("settings").style.maxHeight = matchMedia("(max-width: 600px)").matches || LANDSCAPE.matches ? "" : `${Math.max(200, $("settingsBtn").getBoundingClientRect().top - 8 - 12)}px`;
   $("settingsBtn").setAttribute("aria-expanded", String(open));
 }
 
@@ -602,7 +606,7 @@ function handOrder(hand) {
 
 function renderMe() {
   const pl = state.players[0];
-  $("mePlate").innerHTML = PHONE.matches ? compassHtml() : plateHtml(0);
+  $("mePlate").innerHTML = PHONE.matches || LANDSCAPE.matches ? compassHtml() : plateHtml(0);
   $("meExposed").innerHTML = meldsHtml(pl, "md");
   const live = myTurn();
   const hand = pl.hand.slice();
