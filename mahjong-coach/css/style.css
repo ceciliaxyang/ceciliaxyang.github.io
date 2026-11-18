@@ -507,6 +507,14 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 #bar .btn.light { background: rgba(214, 214, 211, .9); }  /* the same grey as Got it, on the white bottom sheet */
 #bar .btn.light:hover { background: rgba(200, 200, 196, .95); }
 .pane-actions .btn { flex: 1; }
+/* short screens (a phone held sideways): the card is short and most of the advice is below the fold, so the
+   buttons get smaller and leave more of it in view */
+@media (max-height: 500px) {
+  .pane-actions { justify-content: flex-end; margin-top: 16px; padding-top: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .pane-actions .btn { flex: 0 0 auto; padding: 9px 18px; font-size: 14px; line-height: 18px; }  /* as wide as its words, at the right */
+  .pane-body { padding-top: 20px; }
+  .pane-body h3 { margin: 0 0 12px; font-size: 20px; line-height: 24px; letter-spacing: -.4px; }  /* the title shrinks too */
+}
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 20px; }
 .compare-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 12px 14px; border-radius: 24px; background: var(--felt); text-align: center; }
 .compare-card.best { background: #eef6f1; }
@@ -821,7 +829,7 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .me:has(.exposed:empty) .hand { margin-top: 0; }
 
   /* the compass, floating top right */
-  .me .me-plate { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: var(--in-r); left: auto; bottom: auto; transform: none;
+  .me .me-plate { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(var(--in-r) + 10px); left: auto; bottom: auto; transform: none;
     height: auto; margin: 0; padding: 0; background: none; }
   .compass { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .compass-ring { position: relative; width: 88px; height: 80px; }
@@ -831,7 +839,7 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .me .me-plate .compass .pname { font-size: 11px; line-height: 14px; }
 
   /* New game and Settings, top left; Settings opens downward */
-  .fab { top: calc(10px + env(safe-area-inset-top)); bottom: auto; left: var(--edge-l); }  /* over the left player's tiles is fine */
+  .fab { top: calc(10px + env(safe-area-inset-top)); bottom: auto; left: calc(var(--edge-l) + 24px); }  /* only just over the left player's tiles */
   .fab-btn { height: 40px; padding: 0 16px; font-size: 13px; }
   .fab-btn.icon { width: 40px; padding: 0; }
   .fab-btn.icon svg { width: 18px; height: 18px; }
@@ -843,5 +851,6 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
   .coach { right: calc(var(--edge-r) - 6px); bottom: calc(2px + env(safe-area-inset-bottom)); }
   .coach .coach-tile { --w: 52px; }
   .bubble { right: var(--edge-r); bottom: calc(52px * 1.63 + 22px + env(safe-area-inset-bottom)); }
-  .pane { right: var(--edge-r); bottom: calc(52px * 1.63 + 22px + env(safe-area-inset-bottom)); max-height: calc(100vh - 52px * 1.63 - 34px - env(safe-area-inset-bottom)); }
+  /* the coach's card uses the full height of the screen, just left of the Coach */
+  .pane { top: calc(10px + env(safe-area-inset-top)); bottom: calc(10px + env(safe-area-inset-bottom)); right: calc(var(--edge-r) + 72px); max-height: none; }
 }
