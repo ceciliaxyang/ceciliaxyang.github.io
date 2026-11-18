@@ -156,13 +156,10 @@ export function reviewAct(before, action) {
       html: p.join(""),
     });
   }
-  p.push(`<p>Throwing ${t(k)} left you <b>${away(mine.shanten)}</b>.</p>`);
-  p.push(worseShape
-    ? `<p>Throwing ${t(best.k)} would have left you <b>${away(best.shanten)}</b>.</p>`
-    : `<p>Throwing ${t(best.k)} keeps you just as close, with more useful tiles left: <b>${best.ukeire}</b> instead of <b>${mine.ukeire}</b>.</p>`);
-  // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so leave it out
-  if (best.tiles.length <= 8) p.push(`<p>Then you'd hope to pick up one of these (the number is how many are left):</p>${tileStrip(best.tiles, unseen)}`);
+  // the two boxes above already say how close each throw leaves you, so the text starts with why
   p.push(`<p><b>Why:</b> ${t(best.k)} is ${roleBest.text}. Your ${t(k)} was ${roleMine.text}.</p>`);
+  // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so leave it out
+  if (best.tiles.length <= 8) p.push(`<p>Throwing ${t(best.k)}, you'd hope to pick up one of these (the number is how many are left):</p>${tileStrip(best.tiles, unseen)}`);
   p.push(`<p class="tip">${tipFor(roleBest, roleMine, before)}</p>`);
   return note(before, {
     kind: "discard",
