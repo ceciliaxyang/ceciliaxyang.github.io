@@ -281,6 +281,23 @@ const DEPTH = 0.13;  // matches --depth in style.css: a tile's 3D edge as a shar
 function fitLayout() {
   const bar = $("bar"), hand = $("hand"), center = document.querySelector(".center");
   if (!bar || !hand) return;
+  try { fitLayoutInner(bar, hand, center); } finally { markPlateOverTiles(); }
+}
+/* Desktop: the floating "You" label gets its pill only when it sits over your tiles (or called sets). */
+function markPlateOverTiles() {
+  const plate = $("mePlate");
+  if (!plate) return;
+  if (PHONE.matches) { plate.classList.remove("on-tiles"); return; }
+  plate.classList.remove("on-tiles");
+  const p = plate.getBoundingClientRect();
+  const over = [...document.querySelectorAll("#hand .tile, #meExposed .tile")].some((t) => {
+    const r = t.getBoundingClientRect();
+    const bottom = r.bottom + r.width * DEPTH + 1;  // include the tile's 3D edge
+    return r.left < p.right && r.right > p.left && r.top < p.bottom && bottom > p.top;
+  });
+  plate.classList.toggle("on-tiles", over);
+}
+function fitLayoutInner(bar, hand, center) {
   bar.classList.remove("compact");  // measure with the centred, stacked layout
   center?.style.removeProperty("--lg-max");
   if (PHONE.matches) return;  // phones: always stacked, in the sheet
@@ -305,6 +322,8 @@ function fitLayout() {
   if (!fits()) center.style.removeProperty("--lg-max");
 }
 window.addEventListener("resize", () => fitLayout());
+// the "You" label is fixed, so scrolling can move your tiles under it (or out from under it)
+window.addEventListener("scroll", () => markPlateOverTiles(), { passive: true });
 
 function render() {
   // where the tile(s) in the white box sit right now: a discard that leaves the box flies from there

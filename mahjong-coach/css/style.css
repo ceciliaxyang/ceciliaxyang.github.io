@@ -312,24 +312,24 @@ span.scope { cursor: default; }
 .me .exposed .tile { --w: var(--mid); }
 .me:has(.exposed:empty) .hand { margin-top: -18px; }  /* no flowers: the hand itself sits 24px under the box */
 .me .me-plate { margin-top: calc(24px - (var(--lg) * var(--depth) + 1px)); }
-/* Desktop: "You" floats at the bottom centre, on the same line as New game / Settings / Coach me;
-   one pill on the same grey material as New game, red on your turn */
+/* Desktop: "You" floats at the bottom centre, on the same line as New game / Settings / Coach me. Normally
+   it looks like the player opposite: a grey wind circle (red on your turn) with the name beside it, no pill.
+   Only when it would sit over your tiles (.on-tiles, set in fitLayout) does it get a grey pill behind it so
+   it stays readable. */
 @media (min-width: 601px) {
   .me .me-plate {
     position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 30; transform: translateX(-50%); margin: 0;
-    height: 48px; padding: 0 24px; display: flex; align-items: center;
-    border-radius: 100px; background: rgba(221, 221, 221, .55); color: var(--text);
-    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
-    transition: background .25s ease, color .25s ease;
+    height: 48px; display: flex; align-items: center; color: var(--text);
+    border-radius: 100px; transition: background .25s ease;
   }
-  /* one pill: the wind and "You" sit on it with no circle of their own */
-  .me .me-plate .who { gap: 8px; }
-  .me .me-plate .plate { width: auto; height: auto; background: none; color: inherit; font-size: 14px; }
-  .me .me-plate .pname { font-size: 14px; line-height: 18px; color: inherit; }
-  /* your turn: only the wind gets a red circle; the pill itself stays grey */
-  .me .me-plate { padding-left: 12px; }
-  .me .me-plate .plate { width: 32px; height: 32px; border-radius: 50%; }
-  .me .me-plate .plate.on { background: var(--turn); color: #fff; }
+  .me .me-plate .who { gap: 12px; }
+  .me .me-plate .plate { width: var(--tag-size); height: var(--tag-size); border-radius: 50%; }
+  .me .me-plate.on-tiles { padding: 0 24px 0 8px; background: rgba(221, 221, 221, .55);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+  .me .me-plate.on-tiles .who { gap: 8px; }
+  .me .me-plate.on-tiles .plate { width: 32px; height: 32px; font-size: 14px; }
+  .me .me-plate.on-tiles .plate:not(.on) { background: none; }
+  .me .me-plate .pname { font-size: 14px; line-height: 18px; }
 }
 /* The latest move, fixed height. Default: stacked and centered (prompt, 16px, the tile(s) in play, 24px, the
    button). Compact (only when the default would push your hand below the fold): one row, prompt and tile(s)
@@ -399,7 +399,7 @@ span.scope { cursor: default; }
 /* sized to the tile so it always leaves a margin either side (about 4px on a phone's 32px tile), and set
    low, just above the tile's bottom edge */
 .ct-label { position: absolute; left: 50%; top: calc(var(--w) * 1.5 - 3px); transform: translate(-50%, -100%);
-  color: var(--text); font-size: calc(var(--w) * .235); line-height: 1.2; font-weight: 600; white-space: nowrap; letter-spacing: -.1px;
+  color: #262626; font-size: calc(var(--w) * .235); line-height: 1.2; font-weight: 600; white-space: nowrap; letter-spacing: -.1px;
   text-shadow: 0 0 3px #fff, 0 0 2px #fff; }  /* written straight on the tile; a soft white halo keeps it clear of her robe lines */
 .coach-tile { --w: 40px; position: relative; display: block; width: var(--w); height: calc(var(--w) * 1.63); }
 .ct-body { position: absolute; inset: 0; animation: ctFloat 3.2s ease-in-out infinite; }

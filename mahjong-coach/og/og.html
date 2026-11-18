@@ -23,22 +23,34 @@
 <script type="module">
   import { guanyinMarkup } from "../js/coach-art.js";
   // one white tile, centred, with Guanyin as a bust running off the bottom of its face (no halo)
-  const w = 260, h = w * 1.5, d = w * 0.13, r = w * 0.16, x = (1200 - w) / 2, y = (630 - (h + d)) / 2;
+  const w = 260, h = w * 1.5, d = w * 0.13, r = w * 0.16, x = (1200 - w) / 2, y = (630 - (h + d)) / 2 - 30;
   // a tall view box so her robe carries on past the bottom of the tile face (clipped there)
   const aw = w + 20, ah = aw * 82 / 64;
-  const art = guanyinMarkup("8 4 64 82").replace("<svg", `<svg x="${x - 10}" y="${y + 70}" width="${aw}" height="${ah}"`);
+  // raised (y + 34) to leave room for the title written across the bottom of the tile
+  const art = guanyinMarkup("8 4 64 82").replace("<svg", `<svg x="${x - 10}" y="${y + 34}" width="${aw}" height="${ah}"`);
+  // "Mahjong Coach" written straight onto the tile, low down, over her robe (a white edge keeps it crisp)
+  const title = `<text x="${x + w / 2}" y="${y + h - 30}" text-anchor="middle" font-family="'SF Pro Display', -apple-system, system-ui, sans-serif"
+    font-size="30" font-weight="600" letter-spacing="-0.5" fill="#262626" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">Mahjong Coach</text>`;
+  // the tile leans a little, as if just set down, with its shadow falling down and to the right on the table
+  // the tile is lifted (y - 30) so it floats above its shadow
+  const cx = x + w / 2, cy = y + (h + d) / 2, TILT = -7;
   document.getElementById("card").innerHTML = `
     <defs>
       <linearGradient id="face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f3f3f0"/></linearGradient>
-      <filter id="bl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+      <!-- like the floating Coach tile in the game: a soft oval shadow on the table, with a gap below the tile -->
+      <radialGradient id="floor" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset=".7" stop-color="#000" stop-opacity="0"/></radialGradient>
       <clipPath id="c"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/></clipPath>
     </defs>
     <rect width="1200" height="630" fill="#f7f7f5"/>
-    <rect x="${x + 8}" y="${y + d + 10}" width="${w - 16}" height="${h}" rx="${r}" fill="#000" opacity=".16" filter="url(#bl)"/>
-    <rect x="${x}" y="${y + d + 1}" width="${w}" height="${h}" rx="${r}" fill="#c2c2ba"/>
-    <rect x="${x}" y="${y + d}" width="${w}" height="${h}" rx="${r}" fill="#dcdcd6"/>
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="url(#face)" stroke="rgba(0,0,0,.06)"/>
-    <g clip-path="url(#c)">${art}</g>`;
+    <!-- same proportions as the floating Coach tile's shadow (84% of the tile wide, a quarter of its width tall,
+         its centre about 0.28 tile-widths below the tile), centred under the tilted tile's bottom edge -->
+    <ellipse cx="${cx + Math.sin(-TILT * Math.PI / 180) * (h + d) / 2}" cy="${cy + Math.cos(TILT * Math.PI / 180) * (h + d) / 2 + w * 0.28}" rx="${w * 0.42}" ry="${w * 0.125}" fill="url(#floor)"/>
+    <g transform="rotate(${TILT} ${cx} ${cy})">
+      <rect x="${x}" y="${y + d + 1}" width="${w}" height="${h}" rx="${r}" fill="#c2c2ba"/>
+      <rect x="${x}" y="${y + d}" width="${w}" height="${h}" rx="${r}" fill="#dcdcd6"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="url(#face)" stroke="rgba(0,0,0,.06)"/>
+      <g clip-path="url(#c)">${art}${title}</g>
+    </g>`;
   // no halo on the preview
   document.querySelectorAll(".gy-halo").forEach((el) => el.remove());
 </script>
