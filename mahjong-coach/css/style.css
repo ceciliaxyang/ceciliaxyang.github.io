@@ -852,9 +852,6 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
      doesn't read as one of your tiles */
   .coach { right: calc(var(--edge-r) - 6px); bottom: calc(2px + env(safe-area-inset-bottom)); }
   .coach .coach-tile { --w: 52px; }
-  /* over the right player's tiles it's a little see-through, so their tiles show; with an insight it's solid again */
-  .coach .coach-tile { opacity: .7; transition: opacity .3s ease; }
-  .coach.has-note .coach-tile, .coach:hover .coach-tile { opacity: 1; }
   .bubble { right: var(--edge-r); bottom: calc(52px * 1.63 + 22px + env(safe-area-inset-bottom)); }
   /* the coach's card uses the full height of the screen, just left of the Coach */
   .pane { top: calc(10px + env(safe-area-inset-top)); bottom: calc(10px + env(safe-area-inset-bottom)); right: calc(var(--edge-r) + 72px); max-height: none; }
