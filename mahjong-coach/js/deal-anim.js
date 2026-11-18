@@ -257,7 +257,6 @@ export async function introDeal(startNew, hooks = {}) {
   btn.textContent = "Start new game";
   btn.style.top = `${pile.cy + pile.ry + 36}px`;
   layer.appendChild(btn);
-  btn.focus({ preventScroll: true });
   await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
   btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {

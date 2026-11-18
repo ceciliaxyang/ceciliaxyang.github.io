@@ -604,6 +604,8 @@ span.scope { cursor: default; }
   }
   .sheet-div { order: 1; margin: 0; border: 0; height: 1px; background: var(--hair); }
   .sheet > .bar { order: 0; height: auto; min-height: 0; gap: 24px; padding: 0; border-radius: 0; background: none; }
+  /* just an instruction (no tile, no button): it fills the space above your tiles and sits centred in it */
+  .sheet > .bar.solo { flex: 1; justify-content: center; }
   .sheet > .me { order: 2; margin: 0; }
   .sheet > .me-plate { order: -1; margin: 0; align-self: center; }
   /* grabber: tap or drag down to tuck the sheet away, leaving just the grabber above the buttons */
@@ -642,7 +644,8 @@ span.scope { cursor: default; }
   .sheet { --sheet-peek: calc(84px + env(safe-area-inset-bottom)); min-height: min(452px, 58vh); justify-content: space-between;
     padding: 36px 24px calc(24px + env(safe-area-inset-bottom)); }
   /* a thin divider between the white box's buttons and your tiles, sitting just above your tiles */
-  .sheet-div { display: block; margin-top: auto; }
+  /* as wide as a full row of your tiles (they run 8px from the screen edges, past the sheet's 24px padding) */
+  .sheet-div { display: block; margin: auto -16px 0; }
   .sheet > .me { margin-top: 4px; }  /* your tiles sit 12px closer to the divider */
   /* Figma 2350:25132: the players' labels leave the seats and sit together in the sheet as a compass */
   .seat .who { display: none; }
