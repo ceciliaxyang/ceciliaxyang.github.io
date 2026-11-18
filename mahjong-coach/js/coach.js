@@ -357,7 +357,7 @@ export function hint(state) {
     const rec = recommendClaim(state, 0, state.claim.options[0]);
     const pick = rec.pick;
     const k = rec.ev.k;
-    if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>This finishes your hand. Take it and win.</p>` };
+    if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>This finishes your hand.</p>` };
     if (pick.type === "pass") {
       return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still be ${away(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
     }
