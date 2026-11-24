@@ -4,6 +4,7 @@
 // underneath until the last tile lands. Skipped entirely for people who prefer reduced motion.
 
 import { clack, shuffleRattle } from "./sound.js";
+import { faceSvg } from "./tiles.js";
 
 const GHOST_W = 40;  // every flying tile is drawn at this width and scaled to fit where it is or goes
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -74,6 +75,11 @@ function makeGhost(layer, p, html, back) {
   const g = { el, x: p.x, y: p.y, rot: p.rot, s: p.w / GHOST_W };
   el.style.transform = transform(g);
   return g;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
 }
 
 /* Scatter n tiles (w wide, 1.5w tall) at any angle across an rx × ry oval with none touching. */
@@ -249,8 +255,24 @@ export async function introDeal(startNew, hooks = {}) {
   if (hooks.beforePile) await hooks.beforePile();
   const layer = newLayer();
   const pile = pileLayout(60);
-  const ghosts = pile.slots.map((p) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, "", true));
+  // the tiles start face up, like a set just tipped out of its box (a fair random mix of the 136 playable tiles)
+  const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
+  const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
   ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
+  // then, one here and one there, they get turned face down, as people do before the shuffle, until none show
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let hurry = false;
+  const turning = (async () => {
+    if (still) { ghosts.forEach((g) => { g.el.className = "tile back"; g.el.innerHTML = ""; }); return; }  // no motion: just face down
+    await wait(900);
+    const order = shuffle([...ghosts.keys()]);
+    const flips = [];
+    for (const [n, i] of order.entries()) {
+      if (!hurry) await wait(45 + Math.random() * 70 + (n < 6 ? 120 : 0));  // a slow start, then hands speed up
+      flips.push(flip(ghosts[i], "", true));
+    }
+    return Promise.all(flips);
+  })();
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn deal-start";
@@ -258,6 +280,8 @@ export async function introDeal(startNew, hooks = {}) {
   btn.style.top = `${pile.cy + pile.ry + 36}px`;
   layer.appendChild(btn);
   await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
+  hurry = true;  // pressed before they're all face down: turn the rest over at once
+  await turning;
   btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
     startNew();
