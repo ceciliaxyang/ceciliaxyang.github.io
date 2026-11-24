@@ -43,6 +43,8 @@ function roleOf(k, c, unseen) {
       text: `a single ${isDragon(k) ? "dragon" : "wind"}. It can't be part of a run${left === 0 ? ", and no copies are left" : ""}`,
     };
   }
+  const run = runWith(k, c);
+  if (run) return { kind: "seq", text: `part of your ${run.seq} run` };
   const near = [];
   for (const d of [-2, -1, 1, 2]) {
     const x = k + d;
@@ -61,7 +63,17 @@ function roleOf(k, c, unseen) {
   const gone = waits.length * 4 - left - waits.reduce((n, w) => n + (c[w] || 0), 0);
   const deadNote = left === 0 ? ", but those are all gone"
     : left <= 2 && gone > 0 ? `, and only ${left} ${left === 1 ? "is" : "are"} left` : "";
-  return { kind: "shape", text: `next to your ${near.map((x) => numOf(x)).join(" and ")}. It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run${deadNote}` };
+  return { kind: "shape", dead: left === 0, text: `next to your ${near.map((x) => numOf(x)).join(" and ")}. It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run${deadNote}` };
+}
+
+/* A finished run in hand c that uses tile k (k-2..k, k-1..k+1 or k..k+2), or null. */
+function runWith(k, c) {
+  if (!isSuited(k)) return null;
+  const s = suitOf(k), has = (x) => x >= 0 && x < 27 && suitOf(x) === s && c[x] > 0;
+  for (const lo of [k - 2, k - 1, k]) {
+    if (has(lo) && has(lo + 1) && has(lo + 2)) return { lo, seq: [lo, lo + 1, lo + 2].map(numOf).join("-") };
+  }
+  return null;
 }
 
 /* Why a tile is fine to throw away. For most tiles this is just its job (a lone wind, a lone 1...), but for a
@@ -77,6 +89,21 @@ function throwReason(k, c, unseen) {
       const [a, b] = runs[0], seq = [a, b, k].sort((x, y) => x - y).map(numOf).join("-");
       return { kind: "spare", text: `a spare: your ${seq} run only needs one ${numOf(k)}` };
     }
+  }
+  // the end of a finished run: say what the two tiles left behind still need
+  const run = n === 1 && runWith(k, c);
+  if (run && k !== run.lo + 1) {
+    const rest = [run.lo, run.lo + 1, run.lo + 2].filter((x) => x !== k);
+    const cc = c.slice(); cc[k]--;
+    const still = runWith(rest[0], cc) || runWith(rest[1], cc);
+    if (still) return { kind: "spare", text: `a spare: your ${still.seq} run doesn't need it` };
+    const s = suitOf(k);
+    const waits = [rest[0] - 1, rest[1] + 1].filter((w) => w >= 0 && w < 27 && suitOf(w) === s && unseen[w] > 0);
+    const restTxt = rest.map(numOf).join(" and ");
+    return {
+      kind: "run-end",
+      text: `the end of your ${run.seq} run. Without it, your ${restTxt} can still make a run${waits.length ? ` with a ${waits.map(numOf).join(" or ")}` : ""}, and your other tiles get more chances`,
+    };
   }
   if (n === 4) return { kind: "spare", text: "your fourth copy, and a group of three only needs three" };
   if (n === 3) return { kind: "spare", text: "a spare copy: throwing one still leaves you a pair of them" };
@@ -175,6 +202,7 @@ export function reviewAct(before, action) {
 function tipFor(roleBest, roleMine, state) {
   if (roleBest.kind === "lone-honor") return "Tip: throw single winds and dragons early. They can't make runs.";
   if (roleBest.kind === "lone-terminal") return "Tip: 1s and 9s are hard to use. Middle numbers (3 to 7) fit more runs.";
+  if (roleMine.kind === "shape" && roleMine.dead) return "Tip: a pair of tiles waiting for a number that's all gone can't make a run. Those are good to throw.";
   if (roleMine.kind === "seq" || roleMine.kind === "shape") return "Tip: keep tiles that sit next to each other, like 4 and 5.";
   if (roleMine.kind === "pair") return "Tip: a winning hand is four groups of three plus one pair. Keep a pair.";
   return "Tip: a winning hand is four groups of three plus one pair. Throw the tile that helps least.";

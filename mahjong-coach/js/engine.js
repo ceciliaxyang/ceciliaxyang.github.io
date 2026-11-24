@@ -36,8 +36,13 @@ const memo = new Map();
 // tile only changes one group, so analysing a whole hand mostly hits the cache.
 const groupMemo = new Map();
 
-function groupOptions(vec, honors) {
-  const key = (honors ? "h" : "s") + vec.join("");
+// `live[i]` (optional) says whether tile i of this group can still be drawn. A partial set is only
+// counted when a tile that finishes it is still live: 6 and 8 aren't a partial run once all four 7s are
+// gone, and a pair can't grow into three of a kind when both other copies are. (A pair still counts as
+// the hand's pair: it needs nothing more.)
+function groupOptions(vec, honors, live = null) {
+  const key = (honors ? "h" : "s") + vec.join("") + (live ? "|" + live.map((x) => (x ? 1 : 0)).join("") : "");
+  const ok = (j) => !live || (j >= 0 && j < len && live[j]);
   const hit = groupMemo.get(key);
   if (hit) return hit;
   const len = vec.length;
@@ -58,12 +63,12 @@ function groupOptions(vec, honors) {
     if (v[i] >= 2) {
       v[i] -= 2;
       if (!p) dfs(i, m, t, 1);
-      if (t < 4) dfs(i, m, t + 1, p);
+      if (t < 4 && ok(i)) dfs(i, m, t + 1, p);
       v[i] += 2;
     }
     if (!honors && t < 4) {
-      if (i <= 7 && v[i + 1]) { v[i]--; v[i + 1]--; dfs(i, m, t + 1, p); v[i]++; v[i + 1]++; }
-      if (i <= 6 && v[i + 2]) { v[i]--; v[i + 2]--; dfs(i, m, t + 1, p); v[i]++; v[i + 2]++; }
+      if (i <= 7 && v[i + 1] && (ok(i - 1) || ok(i + 2))) { v[i]--; v[i + 1]--; dfs(i, m, t + 1, p); v[i]++; v[i + 1]++; }
+      if (i <= 6 && v[i + 2] && ok(i + 1)) { v[i]--; v[i + 2]--; dfs(i, m, t + 1, p); v[i]++; v[i + 2]++; }
     }
     v[i]--; dfs(i, m, t, p); v[i]++;
   }
@@ -75,16 +80,16 @@ function groupOptions(vec, honors) {
   return pruned;
 }
 
-function standardShanten(c, open) {
-  const key = c.join("") + "|" + open;
+function standardShanten(c, open, live) {
+  const key = c.join("") + "|" + open + (live ? "|" + live.map((x) => (x ? 1 : 0)).join("") : "");
   const hit = memo.get(key);
   if (hit !== undefined) return hit;
   const need = 4 - open;
   const groups = [
-    groupOptions(c.slice(0, 9), false),
-    groupOptions(c.slice(9, 18), false),
-    groupOptions(c.slice(18, 27), false),
-    groupOptions(c.slice(27, 34), true),
+    groupOptions(c.slice(0, 9), false, live && live.slice(0, 9)),
+    groupOptions(c.slice(9, 18), false, live && live.slice(9, 18)),
+    groupOptions(c.slice(18, 27), false, live && live.slice(18, 27)),
+    groupOptions(c.slice(27, 34), true, live && live.slice(27, 34)),
   ];
   let best = 8;
   for (const a of groups[0]) for (const b of groups[1]) for (const d of groups[2]) for (const e of groups[3]) {
@@ -121,8 +126,11 @@ function orphansShanten(c) {
   return 13 - kinds - pair;
 }
 
-export function shanten(c, open = 0) {
-  let s = standardShanten(c, open);
+/* `unseen` (optional): copies of each kind still out there. When given, partial sets that can no longer
+   be finished don't count, so a hand holding only dead shapes is honestly further from winning. */
+export function shanten(c, open = 0, unseen = null) {
+  const live = unseen ? unseen.map((x) => x > 0) : null;
+  let s = standardShanten(c, open, live);
   if (open === 0) s = Math.min(s, sevenPairsShanten(c), orphansShanten(c));
   return s;
 }
@@ -131,13 +139,13 @@ export function shanten(c, open = 0) {
    `unseen[k]` = copies of k the player can't see anywhere (not in their own hand,
    not discarded, not in anyone's melds). */
 export function acceptance(c, open, unseen) {
-  const s0 = shanten(c, open);
+  const s0 = shanten(c, open, unseen);
   const tiles = [];
   let count = 0;
   for (let k = 0; k < 34; k++) {
     if (unseen[k] <= 0 || c[k] >= 4) continue;
     c[k]++;
-    if (shanten(c, open) < s0) { tiles.push(k); count += unseen[k]; }
+    if (shanten(c, open, unseen) < s0) { tiles.push(k); count += unseen[k]; }
     c[k]--;
   }
   return { shanten: s0, tiles, count };

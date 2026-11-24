@@ -38,7 +38,9 @@ Then open http://localhost:3000/mahjong-coach/
 
 - **Discards**: shanten (how many tiles from ready) and how many unseen tiles would improve the
   hand after each possible discard. It flags yours when it set you back a step, or when another
-  discard had clearly more ways in (at least 4 more, and 25% or more).
+  discard had clearly more ways in (at least 4 more, and 25% or more). Dead shapes don't count:
+  a 6-8 waiting on a 7 (or a pair waiting on a third copy) is ignored once every copy it needs is
+  discarded or called, so throwing it is never flagged as a step back.
 - **Defence**: when an opponent shows three sets and you're 2+ from ready, it flags discards
   that aren't safe against them.
 - **Claims**: passing on a scoring peng (dragons, your seat wind, the round wind), passing on a
