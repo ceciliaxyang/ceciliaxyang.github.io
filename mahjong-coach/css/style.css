@@ -387,6 +387,10 @@ span.scope { cursor: default; }
 }
 .me-row { display: flex; align-items: flex-end; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .hand { display: flex; align-items: flex-end; justify-content: center; gap: var(--tgap); min-height: calc(var(--lg) * var(--tile-r) + 20px); padding-top: 18px; }
+/* your winning hand: its groups side by side with a little space between, the winning tile outlined */
+#hand.won { --lg: min(var(--lg-max, 56px), calc((100cqw - 13 * var(--tgap) - 40px) / 14)); gap: 10px; justify-content: center; }
+.hand.won .won-group { display: inline-flex; gap: var(--tgap); }
+.hand .tile.won-tile { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .6), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c2c2ba, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
 .hand .tile { --w: var(--lg); cursor: default; transition: transform .25s var(--spring), box-shadow .2s ease; }
 .hand.live .tile { cursor: pointer; }
 @media (hover: hover) { .hand.live .tile:hover { transform: translateY(-6px); } }

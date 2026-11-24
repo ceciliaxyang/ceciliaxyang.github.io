@@ -60,8 +60,25 @@ function save() {
 
 /* ---------------- game loop ---------------- */
 
+/* A winning tile (drawn, or thrown by someone) wins for you straight away: no Mahjong button to press. */
+function canAutoWin() {
+  if (myTurn()) { const o = G.actOptions(state, 0); return !!(o.tsumo && o.tsumo.legal); }
+  return G.claimPendingFor(state, 0) && !!state.claim.options[0].win;
+}
+function autoWin() {
+  if (myTurn()) act({ type: "tsumo" }); else claim({ type: "win" });
+  celebrate();
+}
+/* Your win: tiles from your winning hand burst out of the winning tile (the big one in the white box). */
+function celebrate() {
+  const el = document.querySelector("#bar .inplay .tile") || document.querySelector("#hand .won-tile");
+  const me = state.players[0];
+  tileConfetti(el ? el.getBoundingClientRect() : null, [...me.hand.map(kindOf), ...me.melds.flatMap((m) => m.tiles.map(kindOf))]);
+}
+
 function delay() {
   const ph = state.phase;
+  if (!AUTO && canAutoWin()) return 450;  // a moment to see the tile arrive, then the win
   if (ph === "draw") return state.current === 0 ? 280 : 260;
   if (AUTO && ph !== "over") return 120;
   if (ph === "act") return state.current === 0 ? null : 720;
@@ -103,6 +120,7 @@ function tick() {
   const ph = state.phase;
   if (AUTO && (myTurn() || G.claimPendingFor(state, 0))) return autoMove();
   if (AUTO && ph === "over") { (state.noFlowers = prefs.noFlowers, G.nextHand(state)); return update(); }
+  if (canAutoWin()) return autoWin();
   if (ph === "draw") G.drawTurn(state);
   else if (ph === "act" && state.current !== 0) {
     const p = state.current;
@@ -607,6 +625,32 @@ function handOrder(hand) {
   return ids;
 }
 
+/* Your concealed tiles split into the winning hand's groups (sets, then the pair), each tile with its id so the
+   winning one can be marked. Special hands (seven pairs, thirteen orphans) group as pairs / one row. */
+function wonGroups(pl, r) {
+  const left = pl.hand.slice();
+  const take = (k) => {
+    // the winning tile goes in the first group that needs its kind, so it's always shown
+    let i = left.findIndex((id) => id === r.tile && kindOf(id) === k);
+    if (i < 0) i = left.findIndex((id) => kindOf(id) === k);
+    return { k, id: left.splice(i, 1)[0] };
+  };
+  const arr = r.arrangement;
+  let groups;
+  if (arr && !arr.special) {
+    groups = arr.sets.map((st) => (st.type === "pung" ? [st.k, st.k, st.k] : [st.k, st.k + 1, st.k + 2]));
+    groups.push([arr.pair, arr.pair]);
+  } else if (arr && arr.special === "sevenPairs") {
+    const ks = [...new Set(pl.hand.map(kindOf))].sort((a, b) => a - b);
+    groups = ks.map((k) => [k, k]);
+  } else {
+    groups = [pl.hand.map(kindOf).sort((a, b) => a - b)];
+  }
+  const out = groups.map((g) => g.map(take));
+  if (left.length) out.push(left.map((id) => ({ k: kindOf(id), id })));  // anything unexpected still shows
+  return out;
+}
+
 function renderMe() {
   const pl = state.players[0];
   $("mePlate").innerHTML = PHONE.matches || LANDSCAPE.matches ? compassHtml() : plateHtml(0);
@@ -622,6 +666,16 @@ function renderMe() {
   const isNew = drawn !== null && drawn !== lastDrawn;
   lastDrawn = drawn;
   const el = $("hand");
+  // your win: the hand laid out in its winning groups, the winning tile (drawn or taken) with a thin dark outline
+  const r = state.phase === "over" && state.result;
+  if (r && r.type !== "draw" && r.winner === 0) {
+    el.classList.remove("live", "spread", "manual");
+    el.classList.add("won");
+    el.innerHTML = wonGroups(pl, r).map((g) => `<span class="won-group">${g.map(({ k, id }) =>
+      tileHtml(k, { size: "lg", cls: id === r.tile ? "won-tile" : "" })).join("")}</span>`).join("");
+    return;
+  }
+  el.classList.remove("won");
   el.classList.toggle("live", live || picking);
   el.innerHTML = ids.map((id) => tileHtml(kindOf(id), {
     size: "lg", id, button: true,
@@ -674,8 +728,7 @@ function renderBar() {
         say = `You drew <b>${tileName(k)}</b>.<span class="say-more"> You got Mahjong!</span>`;
         play = tileHtml(k, { size: "lg", cls: arrive(`w${state.drawn}`) });
       }
-      btns.length = 0;
-      btns.push(`<button type="button" class="btn red" data-act="mahjong">Mahjong</button>`);
+      btns.length = 0;  // no button: the win happens by itself a moment later
     }
   } else if (G.claimPendingFor(state, 0)) {
     const ld = state.lastDiscard;
@@ -689,7 +742,6 @@ function renderBar() {
     play = set.map((t) => t.id === null
       ? tileHtml(t.k, { size: "lg", cls: arrive(`d${ld.id}`) }).replace('<span class="tile', `<span data-fly-id="${ld.id}" class="tile`)
       : `<button type="button" class="inplay-pick" data-unpick="${t.id}" aria-label="Put back ${tileName(t.k)}">${tileHtml(t.k, { size: "lg", title: false, cls: `mine ${arrive(`m${ld.id}-${t.id}`)}` })}</button>`).join("");
-    if (o.win) btns.push(`<button type="button" class="btn red" data-mahjong>Mahjong</button>`);
     // one button: Continue, which becomes Call once you've lifted tiles from your hand
     // after any call that doesn't work, Call becomes Undo: it puts the lifted tiles back in your hand
     // (when the discard wins it for you, Mahjong is the only button)
@@ -699,7 +751,7 @@ function renderBar() {
       : callPick.length
       ? `<button type="button" class="btn" data-call>${callLabel()}</button>`
       : `<button type="button" class="btn" data-claim="pass">Continue</button>`);
-  } else if (state.phase === "over" && (resultClosed || resultHeld)) {
+  } else if (state.phase === "over" && (resultClosed || resultHeld || !cardShown())) {
     // the results card was closed: say how the hand ended and offer the card again (a secondary grey button;
     // the main next step is the New game button, which turns black while the hand is over)
     const r = state.result;
@@ -714,7 +766,14 @@ function renderBar() {
       say = `${how}<span class="say-more"> ${got}</span>`;
       play = tileHtml(k, { size: "lg" });
     }
-    if (!resultHeld) btns.push(`<button type="button" class="btn light" data-open-result>${r.type === "draw" ? "See result" : "View winning hand"}</button>`);
+    if (prefs.showScores) {
+      if (!resultHeld) btns.push(`<button type="button" class="btn light" data-open-result>${r.type === "draw" ? "See result" : "View winning hand"}</button>`);
+    } else if (!resultHeld) {
+      // playing without points there's no results card: your own winning hand is laid out below, and
+      // another player's can be looked at on request
+      if (r.type !== "draw" && r.winner !== 0) btns.push(`<button type="button" class="btn light" data-open-result>See their hand</button>`);
+      btns.push(`<button type="button" class="btn" data-new-game>Start new game</button>`);
+    }
   } else if (state.phase === "claim" && state.lastDiscard?.robbing) {
     // someone adding to a kong can still be robbed: show it while the others decide
     const ld = state.lastDiscard;
@@ -728,9 +787,11 @@ function renderBar() {
   // just words, no tile or button: the compact box centres them instead of setting them to the left
   bar.classList.toggle("solo", !play && !btns.length);
   // when the hand is over, starting a new game is the main thing to do: the New game button turns black
-  $("newBtn").classList.toggle("primary", state.phase === "over");
+  // (playing without points the white box has its own Start new game, so this one stays quiet)
+  const overMain = state.phase === "over" && prefs.showScores;
+  $("newBtn").classList.toggle("primary", overMain);
   document.body.classList.toggle("hand-over", state.phase === "over");
-  $("newBtn").classList.toggle("light", state.phase !== "over");
+  $("newBtn").classList.toggle("light", !overMain);
   bar.innerHTML = `<div class="act-left">
       <div class="say ${why ? "nudge" : ""}" ${why ? 'role="status"' : ""}>${why ? nudge.html : say}</div>
       <div class="inplay">${play}</div>
@@ -830,7 +891,9 @@ function renderPane() {
 /* ---------------- modals ---------------- */
 
 let guideOpen = false;
-let resultClosed = false;  // the results card was closed to look at the table (the bar can bring it back)
+let resultClosed = false;
+let resultAsked = false;  // playing without points: the card shows only when you ask to see another player's hand
+const cardShown = () => prefs.showScores || resultAsked;  // the results card was closed to look at the table (the bar can bring it back)
 // When someone else wins (or the wall runs out), the table holds for a moment first, showing who won and the
 // tile that did it, before the results card comes up. (Your own win already pauses: you tap Mahjong.)
 const RESULT_HOLD = 1500;
@@ -848,7 +911,7 @@ function renderModal() {
     card.innerHTML = guideHtml();
     return;
   }
-  if (state.phase !== "over" || resultClosed || resultHeld) { m.hidden = true; return; }
+  if (state.phase !== "over" || resultClosed || resultHeld || !cardShown()) { m.hidden = true; return; }
   m.hidden = false;
   card.innerHTML = resultHtml();
 }
@@ -931,6 +994,7 @@ $("hand").addEventListener("click", (e) => {
 $("bar").addEventListener("click", (e) => {
   if (announce && e.target.closest("[data-ann-ok]")) { announce = null; return update(); }
   if (e.target.closest("[data-open-result]")) return openResult();
+  if (e.target.closest("#bar [data-new-game]")) return newGame();
   const a = e.target.closest("[data-act]");
   if (a && myTurn()) {
     if (a.dataset.act === "discard" && selected !== null) act({ type: "discard", id: selected });
@@ -979,8 +1043,8 @@ $("modal").addEventListener("click", (e) => {
   if (state.phase === "over" && !guideOpen && (e.target.closest("[data-close-result]") || e.target === $("modal"))) closeResult();
 });
 
-function closeResult() { resultClosed = true; render(); }
-function openResult() { resultClosed = false; render(); }
+function closeResult() { resultClosed = true; resultAsked = false; render(); }
+function openResult() { resultClosed = false; resultAsked = true; render(); }
 
 $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(); });
 $("settingsClose").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(false); $("settingsBtn").focus(); });
@@ -1138,6 +1202,7 @@ async function startNextHand() {
   announce = null;
   selected = null;
   resultClosed = false;
+  resultAsked = false;
   $("modal").hidden = true;
   let roundDone = false;
   await dealAnimation(() => {
@@ -1160,6 +1225,7 @@ async function newGame() {
   announce = null;
   guideOpen = false;
   resultClosed = false;
+  resultAsked = false;
   nudge = null;
   selected = null;
   closePane();
