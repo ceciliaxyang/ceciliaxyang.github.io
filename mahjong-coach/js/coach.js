@@ -182,10 +182,20 @@ export function reviewAct(before, action) {
     });
   }
   // the two boxes above already say how close each throw leaves you, so the text starts with why
-  p.push(`<p><b>Why:</b> ${t(best.k)} is ${roleBest.text}. Your ${t(k)} was ${roleMine.text}.</p>`);
+  // both tiles come from pairs: describing each one's job ("a pair") doesn't say which to break up, so compare
+  const bothPairs = c[best.k] === 2 && c[k] === 2;
+  const pairCount = c.filter((n) => n === 2).length;
+  if (bothPairs) {
+    p.push(`<p><b>Why:</b> ${t(best.k)} and ${t(k)} are both pairs. You have ${pairCount} pairs and a winning hand only needs one, so one of them can go.</p>`);
+    p.push(worseShape
+      ? `<p>Breaking up your ${t(best.k)} is the better choice. It leaves you closer to winning: ${moreTiles(best.shanten)} to win, instead of ${moreTiles(mine.shanten)}.</p>`
+      : `<p>Breaking up your ${t(best.k)} is the better choice. It leaves more tiles that can help you: ${best.ukeire} instead of ${mine.ukeire}.</p>`);
+  } else {
+    p.push(`<p><b>Why:</b> ${t(best.k)} is ${roleBest.text}. Your ${t(k)} was ${roleMine.text}.</p>`);
+  }
   // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so leave it out
   if (best.tiles.length <= 8) p.push(`<p>Throwing ${t(best.k)}, you'd hope to pick up one of these (the number is how many are left):</p>${tileStrip(best.tiles, unseen)}`);
-  p.push(`<p class="tip">${tipFor(roleBest, roleMine, before)}</p>`);
+  p.push(`<p class="tip">${bothPairs ? `Tip: you only need one pair. When you have extra, break up the one that ${worseShape ? "keeps you closest to winning" : "leaves you the most useful tiles"}.` : tipFor(roleBest, roleMine, before)}</p>`);
   return note(before, {
     kind: "discard",
     title: `${tileName(best.k)} was the better tile to throw away`,
