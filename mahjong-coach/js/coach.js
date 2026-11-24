@@ -1,7 +1,7 @@
 // The coach: compares each of your decisions with the best move it can find and, when yours
 // was clearly worse, writes a note explaining why. Notes are plain objects rendered by ui.js.
 // Voice: written for a first-time player. Short, plain sentences, one idea each ("You need two more X to
-// claim a peng."). No jargon without saying what it means ("points", not "fan"; "tiles away from winning").
+// claim a peng."). No jargon without saying what it means ("points", not "fan"; "2 more tiles to win").
 import { kindOf, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
 import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
@@ -13,13 +13,11 @@ const callName = (type) => (type === "pung" ? "peng" : type);
 const t = (k, size = "xs") => tileHtml(k, { size, title: true });
 const WIND_EN = ["East", "South", "West", "North"];
 
-/* How far a hand is from winning, in plain words: the number of good tiles you still need to draw. */
-function away(s) {
-  if (s < 0) return "a winning hand";
-  if (s === 0) return "1 tile away from winning";
-  return `${s + 1} tiles away from winning`;
-}
-const awayShort = (s) => (s < 0 ? "Winning hand" : `${s + 1} away`);
+/* How far a hand is from winning, in plain words: the fewest good tiles you still need to pick up.
+   toWin reads on its own ("2 more tiles to win"); `needing` fits after "you need" / "left you needing". */
+const moreTiles = (s) => `${s + 1} more tile${s === 0 ? "" : "s"}`;
+const toWin = (s) => (s < 0 ? "Winning hand" : `${moreTiles(s)} to win`);
+const needing = (s) => (s < 0 ? "nothing more: it's a winning hand" : `${moreTiles(s)} to win`);
 const helps = (n) => `${n} useful tile${n === 1 ? "" : "s"} left`;
 
 function tileStrip(kinds, unseen) {
@@ -172,7 +170,7 @@ export function reviewAct(before, action) {
   const p = [];
   if (unsafe && !worseShape && !fewer) {
     const q = ranked.threats.map((x) => before.players[x].name).join(" and ");
-    p.push(`<p>${q} ${ranked.threats.length > 1 ? "have" : "has"} three groups showing, so ${ranked.threats.length > 1 ? "they" : "they"} may be close to winning. You're still ${away(mine.shanten)}.</p>`);
+    p.push(`<p>${q} ${ranked.threats.length > 1 ? "have" : "has"} three groups showing, so ${ranked.threats.length > 1 ? "they" : "they"} may be close to winning. You still need ${needing(mine.shanten)}.</p>`);
     p.push(`<p>If you throw the tile they need, they win. ${t(best.k)} was safer: ${best.danger === 0 ? "they already threw one away, so it can't win for them" : "it's less likely to be what they need"}. ${t(k)} ${mine.danger >= 5 ? "is a middle number, and those are often what people need" : "could be what they need"}.</p>`);
     p.push(`<p class="tip">Tip: when someone looks close to winning, throw tiles they've already thrown.</p>`);
     return note(before, {
@@ -193,7 +191,7 @@ export function reviewAct(before, action) {
     title: `${tileName(best.k)} was the better tile to throw away`,
     bubble: worseShape ? `That moved you further from winning.` : `There was a better tile to throw.`,
     compare: worseShape
-      ? { mine: { k, label: "You threw", sub: awayShort(mine.shanten) }, best: { k: best.k, label: "Better", sub: awayShort(best.shanten) } }
+      ? { mine: { k, label: "You threw", sub: toWin(mine.shanten) }, best: { k: best.k, label: "Better", sub: toWin(best.shanten) } }
       : { mine: { k, label: "You threw", sub: helps(mine.ukeire) }, best: { k: best.k, label: "Better", sub: helps(best.ukeire) } },
     html: p.join(""),
   });
@@ -271,12 +269,12 @@ export function reviewClaim(before, resp) {
     const call = pick.type === "pung" ? "peng" : pick.type;
     if (rec.reason === "value") {
       p.push(`<p>This peng earns <b>1 point</b>${isDragon(k) ? ". Dragons always score" : `, because ${k - 27 === seatWind(before, 0) ? "it's your wind" : "it's this round's wind"}`}. You need points to win.</p>`);
-      p.push(`<p>Taking it ${pick.shanten < ev.base.shanten ? `would also have moved you to <b>${away(pick.shanten)}</b>` : `would have kept you ${away(pick.shanten)}`}.</p>`);
+      p.push(`<p>Taking it ${pick.shanten < ev.base.shanten ? `would also have left you needing just <b>${needing(pick.shanten)}</b>` : `would have kept you at ${needing(pick.shanten)}`}.</p>`);
       p.push(`<p class="tip">Tip: if you have two dragons, or two of your wind, take the third.</p>`);
     } else {
-      p.push(`<p>This ${call} would have left you <b>${away(pick.shanten)}</b>. Without it you stayed ${away(ev.base.shanten)}.</p>`);
+      p.push(`<p>This ${call} would have left you needing <b>${needing(pick.shanten)}</b>. Without it you still needed ${moreTiles(ev.base.shanten)}.</p>`);
       if (pick.shanten <= 0) p.push(`<p>Then any of these would win (the number is how many are left):</p>${tileStrip(pick.tiles, unseen)}`);
-      p.push(`<p class="tip">Tip: if taking a tile gets you 1 away from winning, take it.</p>`);
+      p.push(`<p class="tip">Tip: if taking a tile leaves you needing just 1 more tile to win, take it.</p>`);
     }
     return note(before, {
       kind: "claim",
@@ -293,7 +291,7 @@ export function reviewClaim(before, resp) {
     const mine = ev.choices.find((ch) => ch.type === resp.type && (resp.type !== "chow" || String(ch.chow) === String(resp.chow)));
     if (!mine) return null;
     const p = [];
-    p.push(`<p>Taking ${resp.type === "chow" ? chowTiles(resp.chow, k) : t(k)} left you <b>${away(mine.shanten)}</b>. ${mine.shanten > ev.base.shanten ? `Before, you were ${away(ev.base.shanten)}.` : `That's no closer than before.`}</p>`);
+    p.push(`<p>Taking ${resp.type === "chow" ? chowTiles(resp.chow, k) : t(k)} left you needing <b>${needing(mine.shanten)}</b>. ${mine.shanten > ev.base.shanten ? `Before, you needed ${moreTiles(ev.base.shanten)}.` : `That's no closer than before.`}</p>`);
     if (ev.closed && before.points !== false) p.push(`<p>It also showed your tiles to everyone, and you lost the <b>1 point</b> for never taking a tile.</p>`);
     if (!mine.fanPath && before.points !== false) p.push(`<p>Nothing in your hand earns points yet, so winning is now harder.</p>`);
     p.push(before.points === false
@@ -346,7 +344,7 @@ export function hint(state) {
     const { ranked, c, habit, top0, near, best } = coachPick(state);
     const top = [best, ...ranked.list.filter((r) => r !== best)].slice(0, 3);
     const role = throwReason(best.k, ranked.counts, ranked.unseen);
-    const rows = top.map((r) => `<li>${t(r.k)}<span>${awayShort(r.shanten)}</span><span>${helps(r.ukeire)}</span></li>`).join("");
+    const rows = top.map((r) => `<li>${t(r.k)}<span>${toWin(r.shanten)}</span><span>${helps(r.ukeire)}</span></li>`).join("");
     // single winds or dragons the coach is keeping because they can earn points: say so, since beginners expect
     // lone honors to go first
     const kept = ranked.list.filter((r) => r.k !== best.k && isHonor(r.k) && ranked.counts[r.k] === 1 && isValueTile(state, 0, r.k)).map((r) => r.k);
@@ -387,14 +385,14 @@ export function hint(state) {
     const k = rec.ev.k;
     if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>This finishes your hand.</p>` };
     if (pick.type === "pass") {
-      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still be ${away(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
+      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still need ${needing(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
     }
     // the card names the call and shows the whole set: your own tiles (drawn a little see-through) and the thrown-away one
     const set = callSet(pick, k);
     // the green box already shows the set, so the sentence just names the call
     const call = pick.type === "pung" ? "peng" : pick.type;
     return { title: "Here's what I'd do", pick: { k, label: `Claim a ${call}`, set },
-      html: `<p>This ${call} would get you to ${away(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
+      html: `<p>This ${call} would leave you needing ${needing(pick.shanten)}.${rec.reason === "value" ? " It also earns a point." : ""}</p>` };
   }
   return { title: "Waiting", html: `<p>It's not your turn yet. I'll speak up if I spot something.</p>` };
 }
