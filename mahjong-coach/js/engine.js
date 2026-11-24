@@ -135,6 +135,16 @@ export function shanten(c, open = 0, unseen = null) {
   return s;
 }
 
+/* Which hand shape a concealed hand is closest to: "orphans", "sevenPairs" or "standard". */
+export function closestShape(c, open = 0, unseen = null) {
+  if (open > 0) return "standard";
+  const std = standardShanten(c, 0, unseen ? unseen.map((x) => x > 0) : null);
+  const o = orphansShanten(c), sp = sevenPairsShanten(c);
+  if (o < std && o <= sp) return "orphans";
+  if (sp < std) return "sevenPairs";
+  return "standard";
+}
+
 /* Tiles that would move a hand (between turns, 13-tile shape) one step closer.
    `unseen[k]` = copies of k the player can't see anywhere (not in their own hand,
    not discarded, not in anyone's melds). */

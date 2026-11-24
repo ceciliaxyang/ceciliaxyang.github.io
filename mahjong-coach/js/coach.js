@@ -2,7 +2,7 @@
 // was clearly worse, writes a note explaining why. Notes are plain objects rendered by ui.js.
 // Voice: written for a first-time player. Short, plain sentences, one idea each ("You need two more X to
 // claim a peng."). No jargon without saying what it means ("points", not "fan"; "2 more tiles to win").
-import { kindOf, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
+import { kindOf, closestShape, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
 import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
 import { rankDiscards, recommendClaim, isValueTile } from "./strategy.js";
@@ -292,6 +292,7 @@ export function reviewClaim(before, resp) {
     if (!mine) return null;
     const p = [];
     p.push(`<p>Taking ${resp.type === "chow" ? chowTiles(resp.chow, k) : t(k)} left you needing <b>${needing(mine.shanten)}</b>. ${mine.shanten > ev.base.shanten ? `Before, you needed ${moreTiles(ev.base.shanten)}.` : `That's no closer than before.`}</p>`);
+    p.push(`<p><b>Why:</b> ${claimWhy(before, resp.type, resp.chow, k)}</p>`);
     if (ev.closed && before.points !== false) p.push(`<p>It also showed your tiles to everyone, and you lost the <b>1 point</b> for never taking a tile.</p>`);
     if (!mine.fanPath && before.points !== false) p.push(`<p>Nothing in your hand earns points yet, so winning is now harder.</p>`);
     p.push(before.points === false
@@ -313,6 +314,43 @@ function callSet(pick, k) {
   const mine = pick.type === "chow" ? pick.chow : pick.type === "kong" ? [k, k, k] : [k, k];
   const set = [...mine.map((x) => ({ k: x, mine: true })), { k, mine: false }];
   return pick.type === "chow" ? set.sort((a, b) => a.k - b.k) : set;
+}
+
+/* Why a call didn't get you closer to winning: the tiles it used were already doing a job in your hand
+   (a finished run, three of a kind, your only pair), so it swapped one group for another.
+   c = your hand before the call, type = "pung" | "kong" | "chow", chow = your two tiles for a chow. */
+function claimWhy(state, type, chow, k) {
+  const pl = state.players[0];
+  const c = handCounts(pl);
+  // closest to a hand you can only make without taking tiles: any call ends it
+  const shape = closestShape(c, pl.melds.length, unseenFor(state, 0));
+  if (shape === "orphans") return `Your hand is closest to <b>Thirteen orphans</b> (one of every 1, 9, wind and dragon), and that hand can only be made without taking tiles.`;
+  if (shape === "sevenPairs") return `Your hand is closest to <b>Seven pairs</b>, and that hand can only be made without taking tiles.`;
+  const used = type === "chow" ? chow : [k];
+  const pairs = c.filter((n) => n === 2).length;  // three of a kind is a finished group, not a pair
+  if (type !== "chow" && c[k] >= 3)
+    return `You already had three ${t(k)}, which is a finished group. Another one doesn't make a new group.`;
+  if (type !== "chow" && c[k] === 2 && runWith(k, c))
+    return `One of your two ${t(k)} was already part of your ${runWith(k, c).seq} run. Making three of them breaks that run, so you've swapped one group for another.`;
+  if (type !== "chow" && c[k] === 2 && pairs === 1)
+    return `Your two ${t(k)} were your only pair. Every winning hand needs a pair, so turning them into three just means you need a new one.`;
+  for (const x of used) {
+    const run = runWith(x, c);
+    if (!run || c[x] !== 1) continue;
+    const both = used.length === 2 && used.every((y) => y >= run.lo && y <= run.lo + 2 && c[y] === 1);
+    if (run)
+      return `Your ${both ? `${t(used[0])} and ${t(used[1])} were` : `${t(x)} was`} already part of your ${run.seq} run. Using ${both ? "them" : "it"} here breaks that run, so you've swapped one group for another.`;
+  }
+  if (type === "chow") {
+    for (const x of used) {
+      if (c[x] >= 3) return `Using your ${t(x)} broke up your three ${t(x)}, so you've swapped one group for another.`;
+      if (c[x] === 2 && pairs === 1) return `Using your ${t(x)} broke up your only pair, and every winning hand needs one.`;
+    }
+    const inPairs = used.filter((x) => c[x] === 2);
+    if (inPairs.length === 2) return `Your ${t(inPairs[0])} and ${t(inPairs[1])} were each one of a pair. Using them breaks up those pairs, so you've swapped one shape for another.`;
+    if (inPairs.length === 1) return `Your ${t(inPairs[0])} was one of a pair. Using it breaks up that pair, so you've swapped one shape for another.`;
+  }
+  return `The tiles you used were already close to making a group, so this just swapped one group you were building for another.`;
 }
 
 function chowTiles(ch, k) {
@@ -385,7 +423,17 @@ export function hint(state) {
     const k = rec.ev.k;
     if (pick.type === "win") return { title: "Here's what I'd do", pick: { k, label: "Take it and win" }, html: `<p>This finishes your hand.</p>` };
     if (pick.type === "pass") {
-      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still need ${needing(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>` };
+      // explain using the call you'd most likely try: a peng if you can, otherwise the first chow
+      const o = state.claim.options[0];
+      if (rec.reason === "keep-closed") {
+        const best = rec.ev.choices.filter((ch) => ch.type !== "win").sort((x, y) => x.shanten - y.shanten)[0];
+        return { title: "Here's what I'd do", pick: { k, label: "Let it go" },
+          html: `<p>Taking it would leave you needing ${needing(best.shanten)}, a step closer. But you'd show your tiles and give up the <b>1 point</b> for never taking a tile, and you're still far from winning. Waiting is the better choice.</p>` };
+      }
+      const why = o.pung ? claimWhy(state, "pung", null, k)
+        : o.chows?.length ? claimWhy(state, "chow", o.chows[0], k) : "";
+      return { title: "Here's what I'd do", pick: { k, label: "Let it go" }, html: `<p>Taking it won't get you closer. You'd still need ${needing(rec.ev.base.shanten)}.${rec.ev.closed && state.points !== false ? " Never taking a tile also earns 1 point." : ""}</p>`
+          + (why ? `<p><b>Why:</b> ${why}</p>` : "") };
     }
     // the card names the call and shows the whole set: your own tiles (drawn a little see-through) and the thrown-away one
     const set = callSet(pick, k);
