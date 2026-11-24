@@ -259,20 +259,6 @@ export async function introDeal(startNew, hooks = {}) {
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
   const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
   ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
-  // then, one here and one there, they get turned face down, as people do before the shuffle, until none show
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let hurry = false;
-  const turning = (async () => {
-    if (still) { ghosts.forEach((g) => { g.el.className = "tile back"; g.el.innerHTML = ""; }); return; }  // no motion: just face down
-    await wait(900);
-    const order = shuffle([...ghosts.keys()]);
-    const flips = [];
-    for (const [n, i] of order.entries()) {
-      if (!hurry) await wait(45 + Math.random() * 70 + (n < 6 ? 120 : 0));  // a slow start, then hands speed up
-      flips.push(flip(ghosts[i], "", true));
-    }
-    return Promise.all(flips);
-  })();
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn deal-start";
@@ -280,8 +266,6 @@ export async function introDeal(startNew, hooks = {}) {
   btn.style.top = `${pile.cy + pile.ry + 36}px`;
   layer.appendChild(btn);
   await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
-  hurry = true;  // pressed before they're all face down: turn the rest over at once
-  await turning;
   btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
     startNew();
@@ -290,5 +274,8 @@ export async function introDeal(startNew, hooks = {}) {
     body.classList.remove("dealing", "dealing-hide");
     return;
   }
+  // the pile flips face down in a wave, as a new game's shuffle does, then the deal
+  await Promise.all(ghosts.map((g, i) => flip(g, "", true, Math.min(i * 6, 360))));
+  await wait(150);
   await dealFromPile(layer, ghosts, pile, startNew, hooks);
 }
