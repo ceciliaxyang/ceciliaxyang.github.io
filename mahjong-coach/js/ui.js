@@ -766,12 +766,18 @@ function renderBar() {
       say = `${how}<span class="say-more"> ${got}</span>`;
       play = tileHtml(k, { size: "lg" });
     }
-    if (prefs.showScores) {
+    const mine = r.type !== "draw" && r.winner === 0;
+    if (mine) {
+      // your win: playing for points, the points are one tap away (that card has Start new game); otherwise start over
+      btns.push(prefs.showScores
+        ? `<button type="button" class="btn" data-open-result>View points</button>`
+        : `<button type="button" class="btn" data-new-game>Start new game</button>`);
+    } else if (prefs.showScores) {
       if (!resultHeld) btns.push(`<button type="button" class="btn light" data-open-result>${r.type === "draw" ? "See result" : "View winning hand"}</button>`);
     } else if (!resultHeld) {
       // playing without points there's no results card: your own winning hand is laid out below, and
       // another player's can be looked at on request
-      if (r.type !== "draw" && r.winner !== 0) btns.push(`<button type="button" class="btn light" data-open-result>See their hand</button>`);
+      if (r.type !== "draw") btns.push(`<button type="button" class="btn light" data-open-result>See their hand</button>`);
       btns.push(`<button type="button" class="btn" data-new-game>Start new game</button>`);
     }
   } else if (state.phase === "claim" && state.lastDiscard?.robbing) {
@@ -788,7 +794,7 @@ function renderBar() {
   bar.classList.toggle("solo", !play && !btns.length);
   // when the hand is over, starting a new game is the main thing to do: the New game button turns black
   // (playing without points the white box has its own Start new game, so this one stays quiet)
-  const overMain = state.phase === "over" && prefs.showScores;
+  const overMain = state.phase === "over" && prefs.showScores && !(state.result && state.result.type !== "draw" && state.result.winner === 0);
   $("newBtn").classList.toggle("primary", overMain);
   document.body.classList.toggle("hand-over", state.phase === "over");
   $("newBtn").classList.toggle("light", !overMain);
@@ -892,8 +898,10 @@ function renderPane() {
 
 let guideOpen = false;
 let resultClosed = false;
-let resultAsked = false;  // playing without points: the card shows only when you ask to see another player's hand
-const cardShown = () => prefs.showScores || resultAsked;  // the results card was closed to look at the table (the bar can bring it back)
+let resultAsked = false;  // the card was asked for (View points, See their hand)
+// The results card comes up by itself only for another player's win (or a draw) when playing for points.
+// Your own win never pops it up: the white box shows it, with View points when playing for points.
+const cardShown = () => resultAsked || (prefs.showScores && !(state.result && state.result.type !== "draw" && state.result.winner === 0));  // the results card was closed to look at the table (the bar can bring it back)
 // When someone else wins (or the wall runs out), the table holds for a moment first, showing who won and the
 // tile that did it, before the results card comes up. (Your own win already pauses: you tap Mahjong.)
 const RESULT_HOLD = 1500;
