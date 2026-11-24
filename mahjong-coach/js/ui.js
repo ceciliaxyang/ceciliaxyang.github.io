@@ -651,7 +651,12 @@ function renderBar() {
     play = a.tiles.map((k) => tileHtml(k, { size: "lg" })).join("");
     btns.push(`<button type="button" class="btn" data-ann-ok>Continue</button>`);
   } else if (myTurn()) {
-    say = state.afterClaim ? "Now discard a tile." : selected !== null ? "Press Discard, or tap the tile again to put it back." : "Your turn. Tap a tile to pick your discard.";
+    // name the tile you just drew (it's still in your hand), so you don't have to hunt for it
+    const justDrew = state.drawn !== null && state.drawn !== undefined && state.players[0].hand.includes(state.drawn);
+    say = state.afterClaim ? "Now discard a tile."
+      : selected !== null ? "Press Discard, or tap the tile again to put it back."
+      : justDrew ? `You just drew <b>${tileName(kindOf(state.drawn))}</b>. Tap a tile to pick your discard.`
+      : "Your turn. Tap a tile to pick your discard.";
     if (selected !== null) {
       // the tile you picked shows in the tile-in-play spot. Only Discard throws it; tapping the tile puts it back
       const k = kindOf(selected);
