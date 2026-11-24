@@ -656,6 +656,13 @@ function wonGroups(pl, r) {
   return out;
 }
 
+/* One sentence for a win: "Player 1 drew 5 Circles and got Mahjong." / "You took Player 3's 6 Bamboo and got Mahjong!" */
+function winSay(p, selfDraw, from, k) {
+  const who = p === 0 ? "You" : `<b>${state.players[p].name}</b>`;
+  const whose = selfDraw ? "" : from === 0 ? "your" : `<b>${state.players[from].name}</b>'s`;
+  return `${who} ${selfDraw ? "drew" : `took ${whose}`} <b>${tileName(k)}</b> and got Mahjong${p === 0 ? "!" : "."}`;
+}
+
 function renderMe() {
   const pl = state.players[0];
   $("mePlate").innerHTML = PHONE.matches || LANDSCAPE.matches ? compassHtml() : plateHtml(0);
@@ -730,7 +737,7 @@ function renderBar() {
       play = "";
       if (state.drawn !== null && state.drawn !== undefined) {
         const k = kindOf(state.drawn);
-        say = `You drew <b>${tileName(k)}</b>.<span class="say-more"> You got Mahjong!</span>`;
+        say = winSay(0, true, null, k);
         play = tileHtml(k, { size: "lg", cls: arrive(`w${state.drawn}`) });
       }
       btns.length = 0;  // no button: the win happens by itself a moment later
@@ -741,7 +748,7 @@ function renderBar() {
     const who = state.players[ld.from].name;
     const o = state.claim.options[0];
     say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.${ld.robbing ? "" : `<span class="say-more"> Continue or add tiles to call it.</span>`}`;
-    if (o.win) say = `<b>${who}</b> ${ld.robbing ? `is adding <b>${tileName(k)}</b> to a kong` : `discarded <b>${tileName(k)}</b>`}.<span class="say-more"> You got Mahjong!</span>`;
+    if (o.win) say = winSay(0, false, ld.from, k);
     // the set you're forming: the discard plus every tile you've lifted, in order (tap one of yours to drop it)
     const set = [{ k, id: null }, ...callPick.map((id) => ({ k: kindOf(id), id }))].sort((a, b) => a.k - b.k || (a.id === null ? -1 : 1));
     play = set.map((t) => t.id === null
@@ -767,8 +774,7 @@ function renderBar() {
     else {
       // the same words and tile as when the win came up: the tile drawn, or the discard it was won off
       const k = kindOf(r.tile);
-      const how = r.selfDraw ? `${who} drew <b>${tileName(k)}</b>.` : `<b>${r.from === 0 ? "You" : state.players[r.from].name}</b> discarded <b>${tileName(k)}</b>.`;
-      say = `${how}<span class="say-more"> ${got}</span>`;
+      say = winSay(r.winner, r.selfDraw, r.from, k);
       play = tileHtml(k, { size: "lg" });
     }
     const mine = r.type !== "draw" && r.winner === 0;
@@ -780,9 +786,8 @@ function renderBar() {
     } else if (prefs.showScores) {
       if (!resultHeld) btns.push(`<button type="button" class="btn light" data-open-result>${r.type === "draw" ? "See result" : "View winning hand"}</button>`);
     } else if (!resultHeld) {
-      // playing without points there's no results card: your own winning hand is laid out below, and
-      // another player's can be looked at on request
-      if (r.type !== "draw") btns.push(`<button type="button" class="btn light" data-open-result>See their hand</button>`);
+      // playing without points there's no results card: your winning hand is laid out below, and another
+      // player's is face up at their seat
       btns.push(`<button type="button" class="btn" data-new-game>Start new game</button>`);
     }
   } else if (state.phase === "claim" && state.lastDiscard?.robbing) {
