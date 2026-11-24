@@ -549,7 +549,12 @@ function meldsHtml(pl, size) {
 function renderSeat(p) {
   const pl = state.players[p];
   const el = document.querySelector(`.seat[data-p="${p}"]`);
-  const backs = Array.from({ length: pl.hand.length }, () => backHtml("xs")).join("");
+  // when this player has won, their tiles turn face up (in their winning groups), the winning tile outlined
+  const r = state.phase === "over" && state.result;
+  const won = r && r.type !== "draw" && r.winner === p;
+  const backs = won
+    ? wonGroups(pl, r).flat().map(({ k, id }) => tileHtml(k, { size: "xs", cls: id === r.tile ? "won-tile" : "" })).join("")
+    : Array.from({ length: pl.hand.length }, () => backHtml("xs")).join("");
   // one line per player, like a real table: called sets and flowers face-up first, then the face-down hand
   el.innerHTML = `${plateHtml(p)}<div class="line">${meldsHtml(pl, "xs")}<span class="backs" title="${pl.hand.length} tiles in hand">${backs}</span></div>`;
 }
