@@ -90,6 +90,7 @@ function pushShuffle(ghosts, pile) {
   const norm = (g) => Math.hypot((g.x - pile.cx) / pile.rx, (g.y - pile.cy) / pile.ry);
   const spread = () => ghosts.reduce((m, g) => m + norm(g), 0) / n;
   const spread0 = spread();
+  const edge0 = Math.max(...ghosts.map(norm));  // the pile's edge as it started
 
   /* how far b must move to be clear of a ({ x, y }), or null if they don't touch (separating-axis test) */
   function overlap(a, b) {
@@ -168,8 +169,28 @@ function pushShuffle(ghosts, pile) {
   function newHand(busy, others) {
     let a0, hand, tang, dist;
     const spin = (Math.random() - 0.5) * 30;
+    // which way the pile as a whole has drifted (px), and any tile that has strayed past its edge
+    const free = [...ghosts.keys()].filter((i) => !busy.has(i));
+    const mx = ghosts.reduce((m, g) => m + g.x, 0) / n - pile.cx, my = ghosts.reduce((m, g) => m + g.y, 0) / n - pile.cy;
+    const drift = Math.hypot(mx, my);
+    const strays = free.filter((i) => norm(ghosts[i]) > edge0 * 1.02).sort((i, j) => norm(ghosts[j]) - norm(ghosts[i]));
     for (let attempt = 0; attempt < 6; attempt++) {
-      if (spread() > spread0 * 1.04 && Math.random() < 0.75) {
+      if (strays.length && attempt < 3) {
+        // a stray first: brought straight back inside the pile's edge
+        const out = ghosts[strays[Math.min(attempt, strays.length - 1)]];
+        hand = { x: out.x, y: out.y };
+        tang = Math.atan2(pile.cy - out.y, pile.cx - out.x) + (Math.random() - 0.5) * 0.3;
+        dist = Math.min(4, Math.max(1.8, (norm(out) - edge0 * 0.8) * Math.min(pile.rx, pile.ry) / pile.w)) * pile.w;
+      } else if (drift > pile.w * 0.4) {
+        // the pile has drifted one way: tiles on that side are pushed back towards the middle
+        const ux = mx / drift, uy = my / drift;
+        const side = free.slice().sort((i, j) => ((ghosts[j].x - pile.cx) * ux + (ghosts[j].y - pile.cy) * uy) - ((ghosts[i].x - pile.cx) * ux + (ghosts[i].y - pile.cy) * uy));
+        const g = ghosts[side[Math.floor(Math.random() * Math.min(6, side.length))]];
+        if (!g) return null;
+        hand = { x: g.x, y: g.y };
+        tang = Math.atan2(-uy, -ux) + (Math.random() - 0.5) * 0.5;
+        dist = (2 + Math.random()) * pile.w;
+      } else if (spread() > spread0 * 1.04 && Math.random() < 0.75) {
         // gathering: once the mixing has loosened the pile, a hand sweeps stray tiles at its edge back in
         const out = ghosts.filter((g, i) => !busy.has(i)).sort((a, b) => norm(b) - norm(a))[Math.floor(Math.random() * 4)];
         if (!out) return null;
@@ -183,7 +204,15 @@ function pushShuffle(ghosts, pile) {
         const rr = 0.2 + Math.random() * 0.6;
         hand = { x: pile.cx + Math.cos(a0) * rr * pile.rx, y: pile.cy + Math.sin(a0) * rr * pile.ry };
         const side = (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2) * (1.15 - rr) + (Math.random() - 0.5) * 0.6;
-        tang = a0 + Math.PI + side;  // from straight in (side 0) to round the pile (side ±90°)
+        // from straight in (side 0) to round the pile (side ±90°); if the pile has drawn in tighter than it started,
+        // from straight out instead, so it keeps its size both ways
+        tang = a0 + (spread() < spread0 * 0.94 ? 0 : Math.PI) + side;
+        if (drift > pile.w * 0.15) {
+          // lean the push against any drift, so mixing never carries the pile off one way
+          const lean = Math.min(1.2, drift / pile.w);
+          const vx = Math.cos(tang) - (mx / drift) * lean, vy = Math.sin(tang) - (my / drift) * lean;
+          tang = Math.atan2(vy, vx);
+        }
         dist = (1.8 + Math.random() * 1.4) * pile.w;
       }
       if (others.every((o) => Math.hypot(o.x - hand.x, o.y - hand.y) > pile.w * 5)) break;
