@@ -25,20 +25,49 @@ function tileStrip(kinds, unseen) {
   return `<div class="strip">${kinds.map((k) => `<span class="strip-item">${t(k)}<small>×${unseen[k]}</small></span>`).join("")}</div>`;
 }
 
+/* Where every copy of a tile went, in words, for "those are all gone": e.g. "Player 3 has all four in a kong",
+   "two were thrown away and Player 1 has a peng of them". `skipMine`: leave out the copies in your own hand
+   (when the sentence already counts them, as for your pair). */
+const NUM = ["no", "one", "two", "three", "all four"];
+function goneWhere(state) {
+  return (k, skipMine = false) => {
+    const parts = [];
+    const mine = state.players[0].hand.filter((id) => kindOf(id) === k).length
+      + state.players[0].melds.reduce((n, m) => n + m.tiles.filter((id) => kindOf(id) === k).length, 0);
+    if (mine && !skipMine) parts.push({ n: mine, text: (w) => `you have ${w}` });
+    state.players.forEach((pl, q) => {
+      if (q === 0) return;
+      for (const m of pl.melds) {
+        const n = m.tiles.filter((id) => kindOf(id) === k).length;
+        if (!n) continue;
+        const what = m.type === "kong" ? (m.concealed ? "a hidden kong" : "a kong") : m.type === "pung" ? "a peng" : "a run";
+        parts.push({ n, text: (w) => `${pl.name} has ${w} in ${what}` });
+      }
+    });
+    const thrown = state.players.reduce((n, pl) => n + pl.discards.filter((d) => !d.taken && kindOf(d.id) === k).length, 0);
+    if (thrown) parts.push({ n: thrown, text: (w) => `${w} ${thrown === 1 ? "was" : "were"} thrown away` });
+    if (!parts.length) return "";
+    const say = parts.map((p) => p.text(parts.length === 1 && p.n === 4 ? "all four" : NUM[p.n]));
+    return say.length === 1 ? say[0] : `${say.slice(0, -1).join(", ")} and ${say[say.length - 1]}`;
+  };
+}
+const goneNote = (unseen, k, skipMine) => { const w = unseen.where && unseen.where(k, skipMine); return w ? `: ${w}` : ""; };
+
 /* What job a tile was doing in hand c (14-tile shape including it). */
 function roleOf(k, c, unseen) {
   const n = c[k];
   if (n >= 3) return { kind: "set", text: "already part of a group of three" };
   if (n === 2) {
     const dead = unseen[k] === 0;  // both other copies are already discarded or called
-    if (isHonor(k)) return { kind: "pair", text: dead ? "a pair that can't become three (the others are gone)" : "a pair that could become three of a kind" };
-    return { kind: "pair", text: `a pair, and every winning hand needs one${dead ? " (the others are gone)" : ""}` };
+    const where = dead ? goneNote(unseen, k, true) : "";
+    if (isHonor(k)) return { kind: "pair", text: dead ? `a pair that can't become three (the other two are gone${where})` : "a pair that could become three of a kind" };
+    return { kind: "pair", text: `a pair, and every winning hand needs one${dead ? ` (the other two are gone${where})` : ""}` };
   }
   if (isHonor(k)) {
     const left = unseen[k];
     return {
       kind: "lone-honor",
-      text: `a single ${isDragon(k) ? "dragon" : "wind"}. It can't be part of a run${left === 0 ? ", and no copies are left" : ""}`,
+      text: `a single ${isDragon(k) ? "dragon" : "wind"}. It can't be part of a run${left === 0 ? `, and no copies are left${goneNote(unseen, k, true)}` : ""}`,
     };
   }
   const run = runWith(k, c);
@@ -59,7 +88,7 @@ function roleOf(k, c, unseen) {
   const waits = (hi - lo === 2 ? [lo + 1] : [lo - 1, hi + 1]).filter((w) => w >= 0 && w < 27 && suitOf(w) === suitOf(k));
   const left = waits.reduce((n, w) => n + unseen[w], 0);
   const gone = waits.length * 4 - left - waits.reduce((n, w) => n + (c[w] || 0), 0);
-  const deadNote = left === 0 ? ", but those are all gone"
+  const deadNote = left === 0 ? `, but those are all gone${waits.length === 1 ? goneNote(unseen, waits[0]) : ""}`
     : left <= 2 && gone > 0 ? `, and only ${left} ${left === 1 ? "is" : "are"} left` : "";
   return { kind: "shape", dead: left === 0, text: `next to your ${near.map((x) => numOf(x)).join(" and ")}. It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run${deadNote}` };
 }
@@ -120,6 +149,7 @@ function throwReason(k, c, unseen) {
    - then, within a couple of useful tiles of the top move, prefer lone winds and dragons, then lone 1s and 9s. */
 function coachPick(state) {
   const ranked = rankDiscards(state, 0);
+  ranked.unseen.where = goneWhere(state);  // so "all gone" can say where they went
   const c = ranked.counts;
   const pairCount = c.filter((n) => n >= 2).length;
   const habit = (r) => (c[r.k] >= 3 || (c[r.k] === 2 && pairCount === 1) ? 3 : r.tier);

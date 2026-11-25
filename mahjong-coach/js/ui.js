@@ -598,7 +598,8 @@ function meldsHtml(pl, size) {
   const melds = pl.melds.map((m) => {
     const tiles = m.tiles.map((id, i) => {
       const k = kindOf(id);
-      const hidden = m.concealed && (i === 0 || i === 3);
+      // a concealed kong keeps its ends face down during play; when the hand is over all four are shown
+      const hidden = m.concealed && (i === 0 || i === 3) && state.phase !== "over";
       return tileHtml(k, { size, cls: `${hidden ? "face-down" : ""} ${id === m.claimed ? "claimed" : ""}` });
     });
     return `<span class="meld" title="${m.concealed ? "Concealed kong" : m.type === "pung" ? "peng" : m.type}">${tiles.join("")}</span>`;
