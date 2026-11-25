@@ -77,59 +77,14 @@ function makeGhost(layer, p, html, back) {
   return g;
 }
 
-/* PROTOTYPE landing animations for the face-up pile on the start screen. Returns { stop }, which resolves
-   once any ongoing motion has settled (so the flip-down can start from where the tiles are). */
-function landing(style, ghosts, pile, kinds) {
-  const order = shuffle([...ghosts.keys()]);
-  const none = { stop: async () => {} };
-  if (style === "drop") {
-    // tipped out of the box: each tile falls from above the screen, tumbling, and lands with a small bounce
-    order.forEach((gi, n) => {
-      const g = ghosts[gi];
-      const from = transform({ ...g, y: g.y - innerHeight * (0.7 + Math.random() * 0.3), rot: g.rot + (Math.random() * 540 - 270) });
-      const delay = 150 + n * 28 + Math.random() * 40;
-      g.el.animate([
-        { transform: from, opacity: 1 },
-        { transform: `${transform(g)} translateY(3px)`, offset: 0.82, easing: "ease-out" },
-        { transform: `${transform(g)} translateY(-2px)`, offset: 0.92 },
-        { transform: transform(g) },
-      ], { duration: 620, delay, easing: "cubic-bezier(.45, 0, .85, .4)", fill: "backwards" });
-      clack((delay + 510) / 1000, 0.12 + Math.random() * 0.1);
-    });
-    return none;
-  }
-  if (style === "burst") {
-    // out of one point in the middle, springing to their places (nearest first)
-    const byDist = [...ghosts.keys()].sort((a, b) => Math.hypot(ghosts[a].x - pile.cx, ghosts[a].y - pile.cy) - Math.hypot(ghosts[b].x - pile.cx, ghosts[b].y - pile.cy));
-    byDist.forEach((gi, n) => {
-      const g = ghosts[gi];
-      const from = transform({ ...g, x: pile.cx, y: pile.cy, rot: Math.random() * 360, s: g.s * 0.3 });
-      g.el.animate([{ transform: from, opacity: 0 }, { transform: from, opacity: 1, offset: 0.05 }, { transform: transform(g), opacity: 1 }],
-        { duration: 700, delay: 200 + n * 12, easing: "cubic-bezier(.2, 1.3, .35, 1)", fill: "backwards" });
-    });
-    shuffleRattle(0.9, 30);
-    return none;
-  }
-  if (style === "flipin") {
-    // they land face down, then turn face up in a wave across the pile
-    ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
-    const done = Promise.all(order.map((gi, n) => flip(ghosts[gi], faceSvg(kinds[gi]), false, 700 + n * 22)));
-    return { stop: () => done };
-  }
-  ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
-  if (style === "mix") return handShuffle(ghosts, pile);
-  return none;
-}
-
 /* Hands mixing the tiles, like at a real table, where tiles only slide along it and never over or under each other.
-   The tiles lie in loose bands round the middle (irregular gaps and offsets, so it still looks scattered). Each
+   The tiles lie in loose bands round the middle (irregular gaps and offsets, so it still looks scattered), and
    the hands swirl the bands slowly round, neighbouring bands opposite ways, so tiles slide past each other.
    No tile can ever touch another: bands are far enough apart that no tile reaches the next band whatever their
    angles, and tiles within a band keep their spacing as it turns. Runs until stop(); resolves once the tiles
    have glided to a stop. */
 function handShuffle(ghosts, pile) {
   const n = ghosts.length, TAU = Math.PI * 2;
-  const debug = new URLSearchParams(location.search).has("debug");
   const cx = pile.cx, cy = pile.cy;
   const maxR = Math.min(innerWidth / 2 - 16, Math.max(pile.rx, pile.ry) * 1.05);
 
@@ -176,7 +131,6 @@ function handShuffle(ghosts, pile) {
   };
   const draw = () => tiles.forEach((t) => { Object.assign(t.g, pos(t)); t.g.el.style.transform = transform(t.g); });
   draw();
-  if (debug) window.__mix = { ghosts, pile: { ...pile, w } };
 
 
   // the hands swirl the bands slowly and steadily, neighbouring bands opposite ways. Every few seconds a band eases
@@ -380,8 +334,9 @@ export async function dealAnimation(startNew, hooks = {}) {
   top.remove();
 }
 
-/* First visit: the table starts as the face-down swirl with a "Start new game" button under it. Pressing it
-   deals the game (`startNew` renders it underneath). Resolves once the real table is showing. */
+/* First visit: the table starts as a face-up pile, slowly swirling, with a "Start new game" button under it.
+   Pressing it stops the swirl, flips the pile face down and deals the game (`startNew` renders it underneath).
+   Resolves once the real table is showing. */
 export async function introDeal(startNew, hooks = {}) {
   const body = document.body;
   body.classList.add("dealing", "dealing-hide");
@@ -390,9 +345,10 @@ export async function introDeal(startNew, hooks = {}) {
   const pile = pileLayout(60);
   // the tiles start face up, like a set just tipped out of its box (a fair random mix of the 136 playable tiles)
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
-  const style = new URLSearchParams(location.search).get("intro") || "fade";  // PROTOTYPE: which landing animation
-  const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), style === "flipin" ? true : false));
-  const idle = landing(style, ghosts, pile, kinds);
+  const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
+  ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
+  // while it waits, the pile is slowly swirled, as hands mix tiles at a real table
+  const idle = matchMedia("(prefers-reduced-motion: reduce)").matches ? { stop: async () => {} } : handShuffle(ghosts, pile);
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn deal-start";

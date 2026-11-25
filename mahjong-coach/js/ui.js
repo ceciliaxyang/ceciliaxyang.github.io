@@ -23,7 +23,7 @@ const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
 // noFlowers: play without the flower and season tiles (on by default; applies from the next hand dealt)
 const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, lang: "mandarin", ...loadPrefs() };
 setLang(prefs.lang);
-const firstVisit = !load() || QS.has("intro");  // PROTOTYPE: ?intro=… always opens on the start screen  // no saved game: start with the face-down pile and a "Start new game" button
+const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
 let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
 state.points = prefs.showScores;  // Scores on = playing with points (a win needs points); off = any complete hand wins
 G.refreshNames(state);
@@ -1295,7 +1295,7 @@ if (firstVisit && !AUTO) {
   sh.classList.add("away");
   render();
   requestAnimationFrame(() => requestAnimationFrame(() => { sh.style.transition = ""; }));
-  introDeal(() => { if (QS.has("intro") && load()) { state = G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores }); notes = []; } render(); }, dealHooks()).then(() => { dealing = false; update(); });
+  introDeal(() => render(), dealHooks()).then(() => { dealing = false; update(); });
 } else {
   update();
 }
