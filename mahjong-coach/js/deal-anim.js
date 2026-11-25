@@ -77,9 +77,9 @@ function makeGhost(layer, p, html, back) {
   return g;
 }
 
-/* Hands mixing the scattered pile, one push at a time: a hand presses on a group of neighbouring tiles and shoves it
-   a short way (a couple of tile-widths, turning it a little); any tile in its way is pushed aside, and pushes the
-   tiles it meets in turn. Then a pause, and another group somewhere else. Tiles only ever slide along the table:
+/* Hands mixing the scattered pile: a hand presses on a group of neighbouring tiles and shoves it a short way (a
+   couple of tile-widths, turning it a little); any tile in its way is pushed aside, and pushes the tiles it meets
+   in turn. Pushes start every so often in different parts of the pile, overlapping in time. Tiles only ever slide along the table:
    each is a solid w × 1.5w rectangle at its own angle and none ever overlaps another. If the tiles ahead are
    jammed, the hand moves on less (or waits) rather than squeezing them. Pushed tiles keep the angle they lie at,
    and once the mixing has loosened the pile, hands gather the stray tiles at its edge back in, so it keeps its size.
@@ -124,7 +124,7 @@ function pushShuffle(ghosts, pile) {
   /* push every overlapping tile clear. Pushes travel outward from the hand: tiles under it never give way, and
      between two loose tiles the one further from the hand (in steps of touching tiles) gives way. Returns true
      once nothing overlaps. */
-  function settle(held, ux, uy) {
+  function settle(held, dirOf) {
     for (let pass = 0; pass < 40; pass++) {
       const depth = new Array(n).fill(Infinity), queue = [...held];
       held.forEach((i) => { depth[i] = 0; });
@@ -148,6 +148,7 @@ function pushShuffle(ghosts, pile) {
         const hi = held.has(i), hj = held.has(j);
         if (hi || hj) {
           const [h, l] = hi ? [a, b] : [b, a];
+          const [ux, uy] = dirOf(hi ? i : j);
           const t = along(h, l, ux, uy);
           if (t < pile.w * 3) { l.x += ux * t; l.y += uy * t; continue; }
         }
@@ -162,29 +163,36 @@ function pushShuffle(ghosts, pile) {
   const snap = () => ghosts.map((g) => [g.x, g.y, g.rot]);
   const restore = (st) => st.forEach(([x, y, rot], i) => Object.assign(ghosts[i], { x, y, rot }));
 
-  function shove() {
+  /* A new hand: where it presses, which tiles move with it, and which way. Avoids tiles another hand is already
+     moving, and keeps a little away from the other hands. Returns null if there's no room for one right now. */
+  function newHand(busy, others) {
     let a0, hand, tang, dist;
     const spin = (Math.random() - 0.5) * 30;
-    if (spread() > spread0 * 1.04 && Math.random() < 0.75) {
-      // gathering: once the mixing has loosened the pile, a hand sweeps the stray tiles at its edge back in
-      const out = ghosts.slice().sort((a, b) => norm(b) - norm(a))[Math.floor(Math.random() * 4)];
-      hand = { x: out.x, y: out.y };
-      a0 = Math.atan2((out.y - pile.cy) / pile.ry, (out.x - pile.cx) / pile.rx);
-      tang = Math.atan2(pile.cy - out.y, pile.cx - out.x) + (Math.random() - 0.5) * 0.5;
-      dist = Math.min(4, Math.max(1.6, (norm(out) - 0.5) * 5)) * pile.w;
-    } else {
-      // mixing: a spot in the pile, a group pushed a couple of tile-widths, mostly round the pile (nearer the edge,
-      // a little more inward)
-      a0 = Math.random() * Math.PI * 2;
-      const rr = 0.2 + Math.random() * 0.6;
-      hand = { x: pile.cx + Math.cos(a0) * rr * pile.rx, y: pile.cy + Math.sin(a0) * rr * pile.ry };
-      const side = (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2) * (1.15 - rr) + (Math.random() - 0.5) * 0.6;
-      tang = a0 + Math.PI + side;  // from straight in (side 0) to round the pile (side ±90°)
-      dist = (1.8 + Math.random() * 1.4) * pile.w;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      if (spread() > spread0 * 1.04 && Math.random() < 0.75) {
+        // gathering: once the mixing has loosened the pile, a hand sweeps stray tiles at its edge back in
+        const out = ghosts.filter((g, i) => !busy.has(i)).sort((a, b) => norm(b) - norm(a))[Math.floor(Math.random() * 4)];
+        if (!out) return null;
+        hand = { x: out.x, y: out.y };
+        tang = Math.atan2(pile.cy - out.y, pile.cx - out.x) + (Math.random() - 0.5) * 0.5;
+        dist = Math.min(4, Math.max(1.6, (norm(out) - 0.5) * 5)) * pile.w;
+      } else {
+        // mixing: a spot in the pile, a group pushed a couple of tile-widths, mostly round the pile (nearer the
+        // edge, a little more inward)
+        a0 = Math.random() * Math.PI * 2;
+        const rr = 0.2 + Math.random() * 0.6;
+        hand = { x: pile.cx + Math.cos(a0) * rr * pile.rx, y: pile.cy + Math.sin(a0) * rr * pile.ry };
+        const side = (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2) * (1.15 - rr) + (Math.random() - 0.5) * 0.6;
+        tang = a0 + Math.PI + side;  // from straight in (side 0) to round the pile (side ±90°)
+        dist = (1.8 + Math.random() * 1.4) * pile.w;
+      }
+      if (others.every((o) => Math.hypot(o.x - hand.x, o.y - hand.y) > pile.w * 5)) break;
+      if (attempt === 5) return null;
     }
     // everything under the palm moves with it: the few tiles nearest the hand, plus any tile that sits among them
     // (otherwise one left behind in the middle of the group would be squeezed from both sides)
-    const byDist = [...ghosts.keys()].sort((i, j) => Math.hypot(ghosts[i].x - hand.x, ghosts[i].y - hand.y) - Math.hypot(ghosts[j].x - hand.x, ghosts[j].y - hand.y));
+    const byDist = [...ghosts.keys()].filter((i) => !busy.has(i))
+      .sort((i, j) => Math.hypot(ghosts[i].x - hand.x, ghosts[i].y - hand.y) - Math.hypot(ghosts[j].x - hand.x, ghosts[j].y - hand.y));
     let group = byDist.slice(0, 4 + Math.floor(Math.random() * 4));
     for (let grew = true; grew;) {
       const cx0 = group.reduce((m, i) => m + ghosts[i].x, 0) / group.length, cy0 = group.reduce((m, i) => m + ghosts[i].y, 0) / group.length;
@@ -194,48 +202,61 @@ function pushShuffle(ghosts, pile) {
       if (grew) group = group.concat(more).slice(0, 12);
     }
     const k = group.length;
-    const held = new Set(group);
     const from = group.map((i) => ({ x: ghosts[i].x, y: ghosts[i].y, rot: ghosts[i].rot }));
     const gx = from.reduce((m, f) => m + f.x, 0) / k, gy = from.reduce((m, f) => m + f.y, 0) / k;
-    const place = (e) => {
-      // the group moves as one piece: along the push, turning a little about its middle
-      const ph = (spin * e * Math.PI) / 180, c = Math.cos(ph), sn = Math.sin(ph);
-      const ox = Math.cos(tang) * dist * e, oy = Math.sin(tang) * dist * e;
-      group.forEach((gi, m) => {
-        const dx = from[m].x - gx, dy = from[m].y - gy;
-        Object.assign(ghosts[gi], { x: gx + dx * c - dy * sn + ox, y: gy + dx * sn + dy * c + oy, rot: from[m].rot + spin * e });
-      });
-    };
     const dur = 650 + Math.random() * 250;
     shuffleRattle(dur / 1000, 6);
-    let done = 0, state = snap();
-    return new Promise((resolve) => {
-      const t0 = performance.now();
-      const frame = (now) => {
-        const p = Math.min(1, (now - t0) / dur), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-        for (const tryE of [e, done + (e - done) / 2, done + (e - done) / 4]) {
-          restore(state);
-          place(tryE);
-          if (settle(held, Math.cos(tang), Math.sin(tang))) { done = tryE; state = snap(); break; }
-        }
-        restore(state);
-        for (const g of ghosts) g.el.style.transform = transform(g);
-        if (p < 1) requestAnimationFrame(frame); else resolve();
-      };
-      requestAnimationFrame(frame);
-    });
+    return {
+      x: hand.x, y: hand.y, group, dir: [Math.cos(tang), Math.sin(tang)], dur, t0: performance.now(), done: 0,
+      // the group moves as one piece: along the push, turning a little about its middle
+      place(e) {
+        const ph = (spin * e * Math.PI) / 180, c = Math.cos(ph), sn = Math.sin(ph);
+        const ox = Math.cos(tang) * dist * e, oy = Math.sin(tang) * dist * e;
+        group.forEach((gi, m) => {
+          const dx = from[m].x - gx, dy = from[m].y - gy;
+          Object.assign(ghosts[gi], { x: gx + dx * c - dy * sn + ox, y: gy + dx * sn + dy * c + oy, rot: from[m].rot + spin * e });
+        });
+      },
+    };
   }
 
-  let running = true, current = Promise.resolve();
-  (async () => {
-    await wait(800);  // let the tiles finish fading in
-    while (running) {
-      current = shove();
-      await current;
-      if (running) await wait(350 + Math.random() * 450);
+  // Several hands at once: a new push starts every so often, often before the last has finished (at most three
+  // going at a time). Every frame each hand moves on as far as it can without squeezing any tile, so if two
+  // groups would run into each other, one of them simply waits.
+  const hands = [];
+  let running = true, nextStart = performance.now() + 800, stopped;
+  const finished = new Promise((r) => { stopped = r; });
+  let state = snap();
+  const frame = (now) => {
+    if (running && now >= nextStart && hands.length < 3) {
+      const busy = new Set(hands.flatMap((h) => h.group));
+      const h = newHand(busy, hands);
+      if (h) hands.push(h);
+      nextStart = now + 280 + Math.random() * 420;
     }
-  })();
-  return { stop: () => { running = false; return current; } };
+    const owner = new Map();
+    hands.forEach((h) => h.group.forEach((i) => owner.set(i, h)));
+    const held = new Set(owner.keys());
+    const dirOf = (i) => owner.get(i).dir;
+    for (const h of shuffle(hands.slice())) {
+      const p = Math.min(1, (now - h.t0) / h.dur), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+      for (const tryE of [e, h.done + (e - h.done) / 2, h.done + (e - h.done) / 4]) {
+        restore(state);
+        h.place(tryE);
+        // two hands' groups can't push each other: if this one would touch another's, it waits
+        const blocked = h.group.some((i) => hands.some((o) => o !== h && o.group.some((j) => near(ghosts[i], ghosts[j]) && overlap(ghosts[i], ghosts[j]))));
+        if (!blocked && settle(held, dirOf)) { h.done = tryE; state = snap(); break; }
+      }
+      restore(state);
+      if (p >= 1) h.over = true;
+    }
+    for (let q = hands.length - 1; q >= 0; q--) if (hands[q].over) hands.splice(q, 1);
+    for (const g of ghosts) g.el.style.transform = transform(g);
+    if (running || hands.length) requestAnimationFrame(frame); else stopped();
+  };
+  requestAnimationFrame(frame);
+  // Start pressed: no new hands; the pushes already going finish
+  return { stop: () => { running = false; return finished; } };
 }
 
 /* NOT USED right now (kept for another time): the swirl.
