@@ -651,6 +651,8 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 @media (max-width: 600px) {
   :root { --tgap: 2px; --ggap: 8px; }
   .page { padding-bottom: calc(var(--sheet-h, 480px) + 16px); }
+  /* sheet open: the page stays put (see placeSheet) */
+  html.lock-scroll, html.lock-scroll body { overflow: hidden; overscroll-behavior: none; }
   .felt { background: none; padding: 12px 12px 0; }
   .felt-div { display: none; }
   .sheet {

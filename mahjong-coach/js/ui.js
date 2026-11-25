@@ -337,8 +337,12 @@ function placeSheet() {
     if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
     // the sheet's full height (even while tucked away): the coach's sheet is at least this tall, so it covers it
     document.documentElement.style.setProperty("--sheet-full", `${sheet.offsetHeight}px`);
-    // keep the page scrollable past the sheet so nothing above it is hidden for good
-    if (sheet.classList.contains("collapsed")) {
+    // While the sheet is open the page doesn't scroll, so the table (every player's tiles) always stays in view;
+    // to see what's behind the sheet, collapse it. Collapsed, the page scrolls if the table is still too tall.
+    const open = !sheet.classList.contains("collapsed");
+    document.documentElement.classList.toggle("lock-scroll", open);
+    if (open && scrollY) scrollTo(0, 0);
+    if (!open) {
       // collapsed: show down to just below your row of tiles (which now sits right under the compass)
       const peek = Math.round(me.offsetTop + me.offsetHeight + 16);
       sheet.style.setProperty("--sheet-peek", `${peek}px`);
@@ -348,6 +352,7 @@ function placeSheet() {
       document.documentElement.style.setProperty("--sheet-h", `${sheet.offsetHeight}px`);
     }
   } else if (bar.parentElement === sheet) {
+    document.documentElement.classList.remove("lock-scroll");
     felt.append(bar);
     center.append(me);
     me.append(plate);
