@@ -121,95 +121,73 @@ function landing(style, ghosts, pile, kinds) {
   return none;
 }
 
-/* Hands mixing the tiles, like at a real table: two palms take turns sweeping arcs through the pile. Tiles under
-   a palm are dragged along with it (turning as they go, more at its edge), and push the tiles they run into, so
-   the pile moves in clumps rather than one tile at a time. Runs until stop(), then the tiles settle. */
+/* Hands mixing the tiles, like at a real table. Each stroke, a hand gathers a clump of neighbouring tiles and
+   slides it in one firm sweep round the pile to the far side, while the clump that was there is pushed back the
+   other way (one passes outside the other, so they don't collide). Tiles in a clump keep their places relative
+   to each other and turn only as much as the sweep turns them: no wobble, and every stroke really moves tiles a
+   long way, so a few strokes mix the pile. Runs until stop(); resolves once the stroke in progress has landed. */
 function handShuffle(ghosts, pile) {
-  const n = ghosts.length, w = pile.w, R = w * 2.4;  // palm radius: about a hand's worth of tiles
-  // spacing: tiles never get closer than `hard` (centre to centre), and gently keep about `soft` apart, while a
-  // light pull towards the middle keeps it one even pile (no holes, no crowding at the rim)
-  const hard = w * 1.35, soft = w * 2.2, REP = 560, PULL = 42;
-  const vel = ghosts.map(() => ({ x: 0, y: 0, r: 0 }));
-  const hands = [0, 1].map((h) => ({ h, active: false, x: 0, y: 0, vx: 0, vy: 0, next: 700 + h * 650 }));
-  let running = true, last = performance.now(), t0 = last, done;
-  const finished = new Promise((r) => { done = r; });
+  const n = ghosts.length;
+  const TAU = Math.PI * 2;
+  // positions in the pile's own round coordinates (the pile is an oval)
+  const polar = (x, y) => { const u = (x - pile.cx) / pile.rx, v = (y - pile.cy) / pile.ry; return { a: Math.atan2(v, u), r: Math.hypot(u, v) }; };
+  const at = (a, r) => ({ x: pile.cx + Math.cos(a) * r * pile.rx, y: pile.cy + Math.sin(a) * r * pile.ry });
+  const nearest = (p, k, skip) => [...ghosts.keys()].filter((i) => !skip.has(i))
+    .sort((i, j) => Math.hypot(ghosts[i].x - p.x, ghosts[i].y - p.y) - Math.hypot(ghosts[j].x - p.x, ghosts[j].y - p.y)).slice(0, k);
+  let running = true, current = Promise.resolve();
 
-  function stroke(hand, now) {
-    // a sweep around the middle of the pile, starting where this hand happens to be
-    const a0 = Math.random() * Math.PI * 2, dir = Math.random() < 0.75 ? 1 : -1;  // mostly the same way round, like mixing
-    const span = (0.9 + Math.random() * 0.9) * dir, rad = 0.35 + Math.random() * 0.45;
-    Object.assign(hand, { active: true, a0, span, rad, start: now, dur: 800 + Math.random() * 500 });
-    shuffleRattle(hand.dur / 1000, 7);
+  function slide(gi, to, dir, bow, delay, dur) {
+    const g = ghosts[gi];
+    const s0 = polar(g.x, g.y), s1 = polar(to.x, to.y);
+    let da = s1.a - s0.a;
+    da = dir > 0 ? ((da % TAU) + TAU) % TAU : -(((-da % TAU) + TAU) % TAU);  // go round the way the hand goes
+    // the tile turns with the sweep, and ends up lying the way the tile it replaces did (give or take full turns)
+    const want = g.rot + (da * 180) / Math.PI;
+    const rot1 = to.rot + 360 * Math.round((want - to.rot) / 360);
+    const frames = [];
+    for (let f = 0; f <= 12; f++) {
+      const p = f / 12, e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+      const r = (s0.r + (s1.r - s0.r) * e) * (1 + bow * Math.sin(Math.PI * e));
+      const pt = at(s0.a + da * e, r);
+      frames.push({ transform: transform({ x: pt.x, y: pt.y, rot: g.rot + (rot1 - g.rot) * e, s: g.s * (1 + 0.05 * Math.sin(Math.PI * p)) }) });
+    }
+    g.el.style.zIndex = bow > 0 ? "2" : "1";  // lifted a touch as it's pushed along
+    const anim = g.el.animate(frames, { duration: dur, delay, easing: "linear", fill: "forwards" });
+    Object.assign(g, { x: to.x, y: to.y, rot: rot1 });
+    return anim.finished.then(() => { g.el.style.transform = transform(g); g.el.style.zIndex = ""; anim.cancel(); });
   }
 
-  function frame(now) {
-    const dt = Math.min(0.033, (now - last) / 1000);
-    last = now;
-    const t = now - t0;
-    for (const hand of hands) {
-      if (!hand.active) { if (running && t > hand.next) stroke(hand, t); else continue; }
-      const p = Math.min(1, (t - hand.start) / hand.dur);
-      const e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;  // ease in and out, like a hand pushing
-      const a = hand.a0 + hand.span * e, rr = hand.rad * (1 + 0.25 * Math.sin(p * Math.PI));
-      const x = pile.cx + Math.cos(a) * pile.rx * rr, y = pile.cy + Math.sin(a) * pile.ry * rr;
-      if (p > 0) { hand.vx = (x - hand.x) / dt; hand.vy = (y - hand.y) / dt; }
-      hand.x = x; hand.y = y;
-      if (p >= 1) { hand.active = false; hand.next = t + 250 + Math.random() * 600; continue; }
-      if (p === 0) continue;
-      // drag the tiles under the palm: full speed under its middle, less towards the edge, and a turn
-      for (let i = 0; i < n; i++) {
-        const g = ghosts[i], dx = g.x - x, dy = g.y - y, d = Math.hypot(dx, dy);
-        if (d > R) continue;
-        const k = (1 - d / R) ** 0.6;
-        vel[i].x += (hand.vx - vel[i].x) * k * 0.5;
-        vel[i].y += (hand.vy - vel[i].y) * k * 0.5;
-        const spin = ((dx * hand.vy - dy * hand.vx) / (R * R)) * 30;  // deg/s: tiles off to one side turn
-        vel[i].r += (spin - vel[i].r) * k * 0.5;
-      }
-    }
-    // move, with friction (tiles stop soon after the hand lets go)
-    for (let i = 0; i < n; i++) {
-      const g = ghosts[i], v = vel[i];
-      g.x += v.x * dt; g.y += v.y * dt; g.rot += v.r * dt;
-      const f = Math.exp(-dt * 9);
-      v.x *= f; v.y *= f; v.r *= Math.exp(-dt * 6);
-      // stay inside the pile's oval
-      const ex = (g.x - pile.cx) / pile.rx, ey = (g.y - pile.cy) / pile.ry, e2 = ex * ex + ey * ey;
-      if (e2 > 1) { const s = 1 / Math.sqrt(e2); g.x = pile.cx + (g.x - pile.cx) * s; g.y = pile.cy + (g.y - pile.cy) * s; v.x *= -0.3; v.y *= -0.3; }
-    }
-    // personal space and the pull to the middle
-    for (let i = 0; i < n; i++) {
-      const g = ghosts[i];
-      vel[i].x -= ((g.x - pile.cx) / pile.rx) * PULL * dt * 60 * dt;
-      vel[i].y -= ((g.y - pile.cy) / pile.ry) * PULL * dt * 60 * dt;
-      for (let j = i + 1; j < n; j++) {
-        const b = ghosts[j], dx = b.x - g.x, dy = b.y - g.y, d = Math.hypot(dx, dy) || 0.01;
-        if (d >= soft) continue;
-        const f = ((soft - d) / soft) * REP * dt, ux = dx / d, uy = dy / d;
-        vel[i].x -= ux * f; vel[i].y -= uy * f; vel[j].x += ux * f; vel[j].y += uy * f;
-      }
-    }
-    // tiles that run into each other push apart (two passes keeps clumps moving together)
-    for (let pass = 0; pass < 2; pass++) {
-      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
-        const a = ghosts[i], b = ghosts[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, m = hard;
-        if (d >= m) continue;
-        const push = (m - d) / 2, ux = dx / d, uy = dy / d;
-        a.x -= ux * push; a.y -= uy * push; b.x += ux * push; b.y += uy * push;
-        // pass a little of the motion on, so neighbours get carried too
-        const sx = (vel[i].x - vel[j].x) * 0.25, sy = (vel[i].y - vel[j].y) * 0.25;
-        vel[j].x += sx; vel[j].y += sy; vel[i].x -= sx; vel[i].y -= sy;
-      }
-    }
-    for (const g of ghosts) g.el.style.transform = transform(g);
-    const moving = hands.some((hd) => hd.active) || vel.some((v) => Math.abs(v.x) + Math.abs(v.y) > 6);
-    if (running || moving) requestAnimationFrame(frame);
-    else done();
+  async function stroke() {
+    // where the hand starts, and the far side it sweeps to (a third to a half of the way round)
+    const a = Math.random() * TAU, dir = Math.random() < 0.7 ? 1 : -1;
+    const turn = (TAU / 3 + Math.random() * TAU / 6) * dir;
+    const k = 6 + Math.floor(Math.random() * 3);
+    const A = nearest(at(a, 0.45 + Math.random() * 0.3), k, new Set());
+    const B = nearest(at(a + turn, 0.45 + Math.random() * 0.3), k, new Set(A));
+    // each tile takes the place of the matching tile in the other clump (matched by where it sits in its clump,
+    // so the clump keeps its shape as it travels)
+    const order = (ids) => { const c = ids.reduce((m, i) => ({ x: m.x + ghosts[i].x / ids.length, y: m.y + ghosts[i].y / ids.length }), { x: 0, y: 0 });
+      return ids.slice().sort((i, j) => Math.atan2(ghosts[i].y - c.y, ghosts[i].x - c.x) - Math.atan2(ghosts[j].y - c.y, ghosts[j].x - c.x)); };
+    const oa = order(A), ob = order(B);
+    const spotsA = oa.map((i) => ({ x: ghosts[i].x, y: ghosts[i].y, rot: ghosts[i].rot }));
+    const spotsB = ob.map((i) => ({ x: ghosts[i].x, y: ghosts[i].y, rot: ghosts[i].rot }));
+    const dur = 900 + Math.random() * 250;
+    shuffleRattle(dur / 1000, 9);
+    await Promise.all([
+      ...oa.map((gi, m) => slide(gi, spotsB[m], dir, 0.3, m * 18, dur)),        // the hand's clump, round the outside
+      ...ob.map((gi, m) => slide(gi, spotsA[m], -dir, -0.4, 60 + m * 18, dur)),  // pushed back through the middle
+    ]);
   }
-  // let the tiles finish fading in first
-  setTimeout(() => requestAnimationFrame((now) => { last = now; t0 = now; frame(now); }), 500);
-  // Start pressed: the hands lift straight away and the tiles come to rest
-  return { stop: () => { running = false; hands.forEach((hd) => { hd.active = false; }); return finished; } };
+
+  (async () => {
+    await wait(700);  // let the tiles finish fading in
+    while (running) {
+      current = stroke();
+      await current;
+      if (running) await wait(250 + Math.random() * 450);
+    }
+  })();
+  return { stop: () => { running = false; return current; } };
 }
 
 function shuffle(a) {
