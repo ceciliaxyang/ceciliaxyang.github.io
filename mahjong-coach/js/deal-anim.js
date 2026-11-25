@@ -142,8 +142,8 @@ function handShuffle(ghosts, pile) {
     let cap = 0;
     for (let k = 0; cap < n; k++) {
       const rho = P * 0.9 + k * P, min = 2 * Math.asin(Math.min(1, f / (rho - jit / 2))) * 1.03;
-      const room = Math.floor(TAU / (min * 1.12));  // room for this many, with space to spare for hops
-      bands.push({ rho, min, room, phi: 0 });
+      const room = Math.floor(TAU / (min * 1.25));  // spare room, so pushed tiles have somewhere to go  // room for this many, with space to spare for hops
+      bands.push({ rho, min, room, phi: 0, dir: k % 2 ? -1 : 1 });  // neighbouring bands drift opposite ways
       cap += room;
     }
     return { f, jit, bands, outer: bands[bands.length - 1].rho + jit / 2 + f };
@@ -190,17 +190,42 @@ function handShuffle(ghosts, pile) {
     requestAnimationFrame(frame);
   });
 
-  // the hands swirl the bands: neighbours mostly turn opposite ways, each by 2 to 5 tile-widths round
+  // a hand pushes a few neighbouring tiles in one band a short way along it; the tile ahead is nudged on only when
+  // they reach it (and so on), so tiles never close up past touching. Two hands at once, in different bands.
+  const gapAhead = (a, b, dir) => (((dir * (b.th - a.th)) % TAU) + TAU) % TAU;  // angle from a to b going `dir`
+  function push(k, dir, onEach) {
+    const B = bands[k];
+    const ang = (t) => ((t.th % TAU) + TAU) % TAU;
+    const row = tiles.filter((t) => t.band === k).sort((a, b) => dir * (ang(a) - ang(b)));  // round the band, the way of the push
+    const m = row.length;
+    if (m < 2) return null;
+    const start = Math.floor(Math.random() * m), g = Math.min(m - 1, 2 + Math.floor(Math.random() * 3));
+    // the group (back to front), then every tile ahead of it in turn: each gap's spare room soaks up some of the push
+    const seq = Array.from({ length: m }, (_, q) => row[(start + q) % m]);
+    const lead = seq[g - 1];
+    const ahead = seq.slice(g);
+    const spare = [];
+    let prev = lead;
+    for (const t of ahead) { spare.push(Math.max(0, gapAhead(prev, t, dir) - B.min)); prev = t; }
+    const total = spare.reduce((a, b) => a + b, 0);
+    const want = ((0.8 + Math.random() * 1.2) * w) / B.rho;
+    const D = Math.min(want, total * 0.9);  // never more than the room there is
+    if (D <= 0) return null;
+    return (e) => {
+      const d = D * e;
+      seq.slice(0, g).forEach((t) => onEach(t, dir * d));
+      let carry = d;
+      ahead.forEach((t, q) => { carry = Math.max(0, carry - spare[q]); onEach(t, dir * carry); });
+    };
+  }
   function swirl() {
-    const sign = Math.random() < 0.5 ? 1 : -1;
-    const turns = bands.map((b, k) => {
-      if (Math.random() < 0.2) return 0;  // this band is left alone this time
-      const dir = (k % 2 ? -1 : 1) * sign * (Math.random() < 0.85 ? 1 : -1);
-      return (dir * (2 + Math.random() * 3) * w) / b.rho;
-    });
-    const start = bands.map((b) => b.phi);
-    shuffleRattle(1.1, 10);
-    return animate(1100 + Math.random() * 300, (e) => bands.forEach((b, k) => { b.phi = start[k] + turns[k] * e; }));
+    const ks = shuffle(bands.map((_, k) => k)).slice(0, 3);  // three hands at work, each in its own band
+    ks.forEach((k) => { if (Math.random() < 0.08) bands[k].dir *= -1; });  // now and then a hand reverses
+    const base = new Map(tiles.map((t) => [t, { th: t.th, rot: t.rot0 }]));
+    const moves = ks.map((k) => push(k, bands[k].dir, (t, off) => { const b0 = base.get(t); t.th = b0.th + off; t.rot0 = b0.rot + (off * 180) / Math.PI; })).filter(Boolean);
+    if (!moves.length) return Promise.resolve();
+    shuffleRattle(0.7, 6);
+    return animate(550 + Math.random() * 200, (e) => moves.forEach((mv) => mv(e)));
   }
 
   // a tile slips into a gap in the next band, if there is one where it is and the way there is clear
@@ -224,7 +249,8 @@ function handShuffle(ghosts, pile) {
       const r0 = t.r, rot0 = t.rot0, from = t.band;
       // switch bands now (the tile keeps its place and angle), then slide across
       t.band = to; t.th = th; t.rot0 = rot0 + ((bands[from].phi - B.phi) * 180) / Math.PI;
-      return animate(450, (e) => { t.r = r0 + (r - r0) * e; });
+      if (debug) window.__mixHops = (window.__mixHops || 0) + 1;
+      return animate(320, (e) => { t.r = r0 + (r - r0) * e; });
     }
     return Promise.resolve();
   }
@@ -235,11 +261,11 @@ function handShuffle(ghosts, pile) {
     while (running) {
       current = (async () => {
         await swirl();
-        const hops = 2 + Math.floor(Math.random() * 3);
+        const hops = 3 + Math.floor(Math.random() * 3);
         for (let h = 0; h < hops && running; h++) await hop();
       })();
       await current;
-      if (running) await wait(150 + Math.random() * 300);
+      if (running) await wait(80 + Math.random() * 150);
     }
   })();
   return { stop: () => { running = false; return current; } };
