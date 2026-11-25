@@ -253,7 +253,7 @@ function pushShuffle(ghosts, pile) {
   // going at a time). Every frame each hand moves on as far as it can without squeezing any tile, so if two
   // groups would run into each other, one of them simply waits.
   const hands = [];
-  let running = true, nextStart = performance.now() + 800, stopped;
+  let running = true, nextStart = performance.now() + 350, stopped;
   const finished = new Promise((r) => { stopped = r; });
   let state = snap();
   const frame = (now) => {
@@ -560,8 +560,19 @@ export async function introDeal(startNew, hooks = {}) {
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
   const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
   ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
-  // while it waits, hands mix the pile: one group of tiles at a time is pushed into the others
-  const idle = matchMedia("(prefers-reduced-motion: reduce)").matches ? { stop: async () => {} } : pushShuffle(ghosts, pile);
+  // a moment face up, then the pile is turned face down in a wave and hands start mixing it, as at a real table
+  const idle = matchMedia("(prefers-reduced-motion: reduce)").matches ? { stop: async () => {} } : (() => {
+    let mixing = null, stopping = false;
+    const ready = (async () => {
+      await wait(1300);
+      await Promise.all(ghosts.map((g, i) => flip(g, "", true, Math.min(i * 6, 360))));
+      // hand the tiles back from the flip's animation to their own position, so the mixing can move them
+      ghosts.forEach((g) => { g.el.style.transform = transform(g); g.el.getAnimations().forEach((a) => a.cancel()); });
+      if (!stopping) mixing = pushShuffle(ghosts, pile);
+    })();
+    // Start pressed: let a flip in progress finish, and the pushes already going land
+    return { stop: async () => { stopping = true; await ready; if (mixing) await mixing.stop(); } };
+  })();
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn deal-start";
@@ -578,8 +589,8 @@ export async function introDeal(startNew, hooks = {}) {
     body.classList.remove("dealing", "dealing-hide");
     return;
   }
-  // the pile flips face down in a wave, as a new game's shuffle does, then the deal
-  await Promise.all(ghosts.map((g, i) => flip(g, "", true, Math.min(i * 6, 360))));
+  // any tiles still face up flip face down in a wave (if Start came before the mixing began), then the deal
+  await Promise.all(ghosts.map((g, i) => (g.el.classList.contains("back") ? null : flip(g, "", true, Math.min(i * 6, 360)))));
   await wait(150);
   await dealFromPile(layer, ghosts, pile, startNew, hooks);
 }
