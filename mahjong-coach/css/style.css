@@ -80,6 +80,7 @@ p { text-wrap: pretty; }
 .fab-btn.light { background: rgba(221, 221, 221, .55); color: var(--text); }
 /* Icon-only FAB (Settings gear): a circle the same height as the pill buttons */
 .fab-btn.icon { width: 48px; padding: 0; display: inline-grid; place-items: center; }
+.fab-btn:disabled { opacity: .35; pointer-events: none; }  /* Undo with nothing to undo */
 /* New game, armed: it turns black (like Coach) and reads Confirm until you tap again (or anywhere else) */
 .fab-btn.light.confirm, .fab-btn.light.confirm:hover { background: #000; color: #fff; }
 .fab-btn.light:hover { background: rgba(210, 210, 210, .7); }

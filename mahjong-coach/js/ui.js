@@ -28,6 +28,7 @@ let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.s
 state.points = prefs.showScores;  // Scores on = playing with points (a win needs points); off = any complete hand wins
 G.refreshNames(state);
 let notes = [];            // coach notes this session; `snapshot` = state before your move
+let history = [];          // Undo: { state, notes } before each of your moves this hand, latest last
 let selected = null;       // tile id raised in your hand
 let dealing = false;       // the shuffle-and-deal animation is playing: nothing else moves
 let announce = null;       // a bot just called a peng / chow / kong: shown in the white box until you press Continue
@@ -147,6 +148,7 @@ function myTurn() { return state.phase === "act" && state.current === 0; }
 
 function act(action) {
   const before = clone(state);
+  remember(before, action.type !== "tsumo");
   const n = Coach.reviewAct(before, action);
   if (action.type === "discard") G.discard(state, 0, action.id);
   else if (action.type === "tsumo") G.tsumo(state, 0);
@@ -175,6 +177,7 @@ function resolveClaims() {
 function claim(resp) {
   if (!G.claimPendingFor(state, 0)) return;
   const before = clone(state);
+  remember(before, resp.type !== "win");
   const n = Coach.reviewClaim(before, resp);
   nudge = null;
   callPick = [];
@@ -269,11 +272,32 @@ function addNote(n, before) {
   if (pane.open) { pane.view = "note"; pane.id = n.id; n.read = true; }
 }
 
+/* Undo: the state before each of your moves this hand (and how many coach notes there were then). A win isn't
+   kept as a step, so Undo never takes back a win. */
+function remember(before, undoable) {
+  if (undoable) history.push({ state: before, notes: notes.length });
+}
+function undo() {
+  const h = history.pop();
+  if (!h || dealing) return;
+  epoch++;  // cancel any bot move still waiting
+  state = clone(h.state);
+  notes = notes.slice(0, h.notes);
+  announce = null; selected = null; callPick = []; nudge = null; pane.hint = null;
+  resultClosed = false; resultAsked = false;
+  hideBubble();
+  update();
+}
+
 function takeBack(id) {
   announce = null;
   const i = notes.findIndex((x) => x.id === id);
   if (i < 0) return;
   const n = notes[i];
+  // Undo steps from this move on are gone too
+  const hi = history.findIndex((h) => h.state === n.snapshot);
+  if (hi >= 0) history = history.slice(0, hi);
+  epoch++;
   state = clone(n.snapshot);
   notes = notes.slice(0, i);
   selected = null;
@@ -808,6 +832,9 @@ function renderBar() {
   $("newBtn").classList.toggle("primary", overMain);
   document.body.classList.toggle("hand-over", state.phase === "over");
   $("newBtn").classList.toggle("light", !overMain);
+  // Undo: anything of yours to take back this hand (not after you've won)
+  const won = state.phase === "over" && state.result && state.result.type !== "draw" && state.result.winner === 0;
+  $("undoBtn").disabled = !history.length || dealing || won;
   bar.innerHTML = `<div class="act-left">
       <div class="say ${why ? "nudge" : ""}" ${why ? 'role="status"' : ""}>${why ? nudge.html : say}</div>
       <div class="inplay">${play}</div>
@@ -1065,6 +1092,7 @@ function closeResult() { resultClosed = true; resultAsked = false; render(); }
 function openResult() { resultClosed = false; resultAsked = true; render(); }
 
 $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(); });
+$("undoBtn").addEventListener("click", (e) => { e.stopPropagation(); undo(); });
 $("settingsClose").addEventListener("click", (e) => { e.stopPropagation(); toggleSettings(false); $("settingsBtn").focus(); });
 document.addEventListener("click", (e) => { if (!$("settings").hidden && !e.target.closest(".settings-wrap")) toggleSettings(false); });
 $("sortBtn").addEventListener("click", () => {
@@ -1225,6 +1253,7 @@ async function startNextHand() {
   let roundDone = false;
   await dealAnimation(() => {
     roundDone = (state.noFlowers = prefs.noFlowers, G.nextHand(state));
+    history = [];
     render();
     save();
   }, dealHooks());
@@ -1251,6 +1280,7 @@ async function newGame() {
   await dealAnimation(() => {
     state = G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
     notes = [];
+    history = [];
     render();
     save();
   }, dealHooks());
