@@ -81,6 +81,13 @@ p { text-wrap: pretty; }
 /* Icon-only FAB (Settings gear): a circle the same height as the pill buttons */
 .fab-btn.icon { width: 48px; padding: 0; display: inline-grid; place-items: center; }
 .fab-btn[hidden] { display: none; }
+/* Undo slides out from behind Settings when there's first a move to take back */
+#undoBtn:not([hidden]) { animation: undo-in .34s var(--spring) both; }
+@keyframes undo-in {
+  from { opacity: 0; transform: translateX(-14px) scale(.7); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { #undoBtn:not([hidden]) { animation: none; } }
 /* New game, armed: it turns black (like Coach) and reads Confirm until you tap again (or anywhere else) */
 .fab-btn.light.confirm, .fab-btn.light.confirm:hover { background: #000; color: #fff; }
 .fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
