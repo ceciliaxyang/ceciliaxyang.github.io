@@ -834,7 +834,7 @@ function renderBar() {
   $("newBtn").classList.toggle("light", !overMain);
   // Undo: anything of yours to take back this hand (not after you've won)
   const won = state.phase === "over" && state.result && state.result.type !== "draw" && state.result.winner === 0;
-  $("undoBtn").disabled = !history.length || dealing || won;
+  $("undoBtn").hidden = !history.length || dealing || won;  // only there once there's a move to take back
   bar.innerHTML = `<div class="act-left">
       <div class="say ${why ? "nudge" : ""}" ${why ? 'role="status"' : ""}>${why ? nudge.html : say}</div>
       <div class="inplay">${play}</div>
