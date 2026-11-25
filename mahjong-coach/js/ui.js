@@ -336,7 +336,8 @@ const PHONE = window.matchMedia("(max-width: 600px)");
 const LANDSCAPE = window.matchMedia("(orientation: landscape) and (max-height: 500px) and (min-width: 601px)");
 LANDSCAPE.addEventListener("change", () => render());
 let sheetMinH = 0;
-// a new screen size starts the steady height over
+// a new screen size, or a new hand, starts the steady height over
+function resetSheetHeight() { sheetMinH = 0; $("sheet").style.minHeight = ""; }
 window.addEventListener("resize", () => { sheetMinH = 0; $("sheet").style.minHeight = ""; if (PHONE.matches) placeSheet(); });
 function placeSheet() {
   const sheet = $("sheet"), bar = $("bar"), me = $("me"), plate = $("mePlate"), felt = document.querySelector(".felt"), center = document.querySelector(".center");
@@ -345,7 +346,8 @@ function placeSheet() {
     if (plate.parentElement !== sheet) sheet.prepend(plate);  // "You" label sits at the top of the sheet
     // Steady height: the sheet never shrinks back between turns. If a turn needs more room (a longer
     // prompt, extra called sets) it grows once and stays at that height, so the floating buttons don't bob.
-    if (sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
+    // (the end-of-hand screen doesn't count: it can be taller for a moment without keeping the next hand's sheet tall)
+    if (state.phase !== "over" && sheet.offsetHeight > sheetMinH) { sheetMinH = sheet.offsetHeight; sheet.style.minHeight = `${sheetMinH}px`; }
     // the sheet's full height (even while tucked away): the coach's sheet is at least this tall, so it covers it
     document.documentElement.style.setProperty("--sheet-full", `${sheet.offsetHeight}px`);
     // While the sheet is open the page doesn't scroll, so the table (every player's tiles) always stays in view;
@@ -1291,6 +1293,7 @@ async function startNextHand() {
   await dealAnimation(() => {
     roundDone = (state.noFlowers = prefs.noFlowers, G.nextHand(state));
     history = []; moves = []; tookBack = 0;
+    resetSheetHeight();
     render();
     save();
   }, dealHooks());
@@ -1319,6 +1322,7 @@ async function newGame() {
     notes = [];
     history = [];
     moves = []; tookBack = 0;
+    resetSheetHeight();
     render();
     save();
   }, dealHooks());
