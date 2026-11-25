@@ -68,7 +68,17 @@ function canAutoWin() {
 }
 function autoWin() {
   if (myTurn()) act({ type: "tsumo" }); else claim({ type: "win" });
-  celebrate();
+  celebrateSoon(celebrate);
+}
+/* The confetti comes a beat after the win, once the winning hand has settled on screen (and not at all if
+   the hand has moved on by then, say New game was pressed). */
+const CONFETTI_DELAY = 600;
+function celebrateSoon(burst) {
+  const hand = state.handNo;
+  setTimeout(() => {
+    const r = state.result;
+    if (state.handNo === hand && state.phase === "over" && r && r.type !== "draw" && r.winner === 0) burst();
+  }, CONFETTI_DELAY);
 }
 /* Your win: tiles from your winning hand burst out of the winning tile (the big one in the white box). */
 function celebrate() {
@@ -235,14 +245,14 @@ function mahjongOnDiscard() {
   if (!state.claim.options[0].win) return;
   const burst = celebrateFrom(kindOf(state.lastDiscard.id));
   claim({ type: "win" });
-  burst();
+  celebrateSoon(burst);
 }
 function mahjongOnTurn(from = null) {
   const o = G.actOptions(state, 0);
   if (!(o.tsumo && o.tsumo.legal)) return;
   const burst = celebrateFrom(null, from);
   act({ type: "tsumo" });
-  burst();
+  celebrateSoon(burst);
 }
 /* Your win: tiles from your hand burst out of the Mahjong button as confetti. Where the button is has to be
    measured before the win re-renders the bar, so this measures first and returns the burst to fire after. */
