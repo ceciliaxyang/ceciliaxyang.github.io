@@ -2,7 +2,7 @@
 // was clearly worse, writes a note explaining why. Notes are plain objects rendered by ui.js.
 // Voice: written for a first-time player. Short, plain sentences, one idea each ("You need two more X to
 // claim a peng."). No jargon without saying what it means ("points", not "fan"; "2 more tiles to win").
-import { kindOf, closestShape, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
+import { kindOf, closestShape, ORPHANS, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
 import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
 import { rankDiscards, recommendClaim, isValueTile } from "./strategy.js";
@@ -185,17 +185,24 @@ export function reviewAct(before, action) {
   // both tiles come from pairs: describing each one's job ("a pair") doesn't say which to break up, so compare
   const bothPairs = c[best.k] === 2 && c[k] === 2;
   const pairCount = c.filter((n) => n === 2).length;
+  // both tiles on their own: "on its own" would read as a reason to throw either, so say what each could become
+  const LONE = ["lone", "lone-terminal", "lone-honor"];
+  const bothLone = !bothPairs && LONE.includes(roleBest.kind) && LONE.includes(roleMine.kind);
   if (bothPairs) {
     p.push(`<p><b>Why:</b> ${t(best.k)} and ${t(k)} are both pairs. You have ${pairCount} pairs and a winning hand only needs one, so one of them can go.</p>`);
     p.push(worseShape
       ? `<p>Breaking up your ${t(best.k)} is the better choice. It leaves you closer to winning: ${moreTiles(best.shanten)} to win, instead of ${moreTiles(mine.shanten)}.</p>`
       : `<p>Breaking up your ${t(best.k)} is the better choice. It leaves more tiles that can help you: ${best.ukeire} instead of ${mine.ukeire}.</p>`);
+  } else if (bothLone) {
+    p.push(`<p><b>Why:</b> ${loneWhy(best, mine, before)}</p>`);
   } else {
     p.push(`<p><b>Why:</b> ${t(best.k)} is ${roleBest.text}. Your ${t(k)} was ${roleMine.text}.</p>`);
   }
   // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so leave it out
   if (best.tiles.length <= 8) p.push(`<p>Throwing ${t(best.k)}, you'd hope to pick up one of these (the number is how many are left):</p>${tileStrip(best.tiles, unseen)}`);
-  p.push(`<p class="tip">${bothPairs ? `Tip: you only need one pair. When you have extra, break up the one that ${worseShape ? "keeps you closest to winning" : "leaves you the most useful tiles"}.` : tipFor(roleBest, roleMine, before)}</p>`);
+  p.push(`<p class="tip">${bothPairs ? `Tip: you only need one pair. When you have extra, break up the one that ${worseShape ? "keeps you closest to winning" : "leaves you the most useful tiles"}.`
+    : bothLone && roleBest.kind === "lone" && roleMine.kind === "lone" ? "Tip: when two tiles are both on their own, keep the one that fits more runs. Middle numbers (3 to 7) fit the most."
+    : tipFor(roleBest, roleMine, before)}</p>`);
   return note(before, {
     kind: "discard",
     title: `${tileName(best.k)} was the better tile to throw away`,
@@ -205,6 +212,40 @@ export function reviewAct(before, action) {
       : { mine: { k, label: "You threw", sub: helps(mine.ukeire) }, best: { k: best.k, label: "Better", sub: helps(best.ukeire) } },
     html: p.join(""),
   });
+}
+
+/* The runs a single suited tile could still become part of, e.g. 2 → ["1-2-3", "2-3-4"]. */
+function runsFor(k) {
+  const n = numOf(k), out = [];
+  for (let s = Math.max(1, n - 2); s <= Math.min(7, n); s++) out.push(`${s}-${s + 1}-${s + 2}`);
+  return out;
+}
+const kindWord = (k) => (isDragon(k) ? "dragon" : "wind");
+
+/* Why one lone tile is a better throw than another lone tile: what each could still grow into. */
+function loneWhy(best, mine, state) {
+  const b = best.k, m = mine.k;
+  const lead = `${t(b)} and ${t(m)} are both on their own, so either could go.`;
+  // a hand heading for a special hand wants different tiles: say so
+  const pl = state.players[0];
+  const shape = closestShape(handCounts(pl), pl.melds.length, unseenFor(state, 0));
+  if (shape === "orphans" && ORPHANS.includes(m) && !ORPHANS.includes(b))
+    return `${lead} But your hand is closest to <b>Thirteen orphans</b> (one of every 1, 9, wind and dragon), so your ${t(m)} is one of the tiles it needs and ${t(b)} isn't.`;
+  if (mine.shanten > best.shanten)
+    return `${lead} But throwing ${t(b)} leaves you closer to winning: ${moreTiles(best.shanten)} to win, instead of ${moreTiles(mine.shanten)}.`;
+  if (isHonor(b) && !isHonor(m)) {
+    const rm = runsFor(m);
+    return `${lead} But a single ${kindWord(b)} only becomes a group if you pick up two more of it, while your ${t(m)} can also grow into a run (${rm.join(" or ")}). Keep the ${numOf(m)}.`;
+  }
+  if (!isHonor(b) && !isHonor(m)) {
+    const rb = runsFor(b), rm = runsFor(m);
+    if (rm.length > rb.length) {
+      const fits = rb.length === 1 ? `fits only one (${rb[0]})` : `fits only ${rb.length} (${rb.join(" or ")})`;
+      return `${lead} But a lone ${numOf(m)} can still grow into ${rm.length} different runs (${rm.join(", ")}), while a lone ${numOf(b)} ${fits}. Keeping the ${numOf(m)} gives you more ways to make a group.`;
+    }
+  }
+  // same shape on both sides: the difference is how many of the tiles each needs are still out there
+  return `${lead} But more of the tiles that would help your ${t(m)} are still out there, so keeping it leaves you more ways in: ${best.ukeire} useful tiles instead of ${mine.ukeire}.`;
 }
 
 function tipFor(roleBest, roleMine, state) {
