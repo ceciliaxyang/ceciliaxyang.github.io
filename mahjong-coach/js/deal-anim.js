@@ -123,11 +123,10 @@ function landing(style, ghosts, pile, kinds) {
 
 /* Hands mixing the tiles, like at a real table, where tiles only slide along it and never over or under each other.
    The tiles lie in loose bands round the middle (irregular gaps and offsets, so it still looks scattered). Each
-   stroke the hands swirl the bands round, neighbouring bands mostly opposite ways, so tiles slide past each other;
-   between strokes a few tiles slip into a gap in the next band in or out. No tile can ever touch another: bands
-   are far enough apart that no tile reaches the next band whatever their angles, tiles within a band keep their
-   spacing as it turns, and a tile only changes band along a path that is clear. Runs until stop(); resolves
-   once the step in progress has finished. */
+   the hands swirl the bands slowly round, neighbouring bands opposite ways, so tiles slide past each other.
+   No tile can ever touch another: bands are far enough apart that no tile reaches the next band whatever their
+   angles, and tiles within a band keep their spacing as it turns. Runs until stop(); resolves once the tiles
+   have glided to a stop. */
 function handShuffle(ghosts, pile) {
   const n = ghosts.length, TAU = Math.PI * 2;
   const debug = new URLSearchParams(location.search).has("debug");
@@ -142,7 +141,7 @@ function handShuffle(ghosts, pile) {
     let cap = 0;
     for (let k = 0; cap < n; k++) {
       const rho = P * 0.9 + k * P, min = 2 * Math.asin(Math.min(1, f / (rho - jit / 2))) * 1.03;
-      const room = Math.floor(TAU / (min * 1.25));  // spare room, so pushed tiles have somewhere to go  // room for this many, with space to spare for hops
+      const room = Math.floor(TAU / (min * 1.12));  // room for this many, with space to spare for hops
       bands.push({ rho, min, room, phi: 0, dir: k % 2 ? -1 : 1 });  // neighbouring bands drift opposite ways
       cap += room;
     }
@@ -179,96 +178,36 @@ function handShuffle(ghosts, pile) {
   draw();
   if (debug) window.__mix = { ghosts, pile: { ...pile, w } };
 
-  const animate = (dur, step) => new Promise((resolve) => {
-    const t0 = performance.now();
-    const frame = (now) => {
-      const p = Math.min(1, (now - t0) / dur), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-      step(e);
-      draw();
-      if (p < 1) requestAnimationFrame(frame); else resolve();
-    };
-    requestAnimationFrame(frame);
-  });
 
-  // a hand pushes a few neighbouring tiles in one band a short way along it; the tile ahead is nudged on only when
-  // they reach it (and so on), so tiles never close up past touching. Two hands at once, in different bands.
-  const gapAhead = (a, b, dir) => (((dir * (b.th - a.th)) % TAU) + TAU) % TAU;  // angle from a to b going `dir`
-  function push(k, dir, onEach) {
-    const B = bands[k];
-    const ang = (t) => ((t.th % TAU) + TAU) % TAU;
-    const row = tiles.filter((t) => t.band === k).sort((a, b) => dir * (ang(a) - ang(b)));  // round the band, the way of the push
-    const m = row.length;
-    if (m < 2) return null;
-    const start = Math.floor(Math.random() * m), g = Math.min(m - 1, 2 + Math.floor(Math.random() * 3));
-    // the group (back to front), then every tile ahead of it in turn: each gap's spare room soaks up some of the push
-    const seq = Array.from({ length: m }, (_, q) => row[(start + q) % m]);
-    const lead = seq[g - 1];
-    const ahead = seq.slice(g);
-    const spare = [];
-    let prev = lead;
-    for (const t of ahead) { spare.push(Math.max(0, gapAhead(prev, t, dir) - B.min)); prev = t; }
-    const total = spare.reduce((a, b) => a + b, 0);
-    const want = ((0.8 + Math.random() * 1.2) * w) / B.rho;
-    const D = Math.min(want, total * 0.9);  // never more than the room there is
-    if (D <= 0) return null;
-    return (e) => {
-      const d = D * e;
-      seq.slice(0, g).forEach((t) => onEach(t, dir * d));
-      let carry = d;
-      ahead.forEach((t, q) => { carry = Math.max(0, carry - spare[q]); onEach(t, dir * carry); });
-    };
-  }
-  function swirl() {
-    const ks = shuffle(bands.map((_, k) => k)).slice(0, 3);  // three hands at work, each in its own band
-    ks.forEach((k) => { if (Math.random() < 0.08) bands[k].dir *= -1; });  // now and then a hand reverses
-    const base = new Map(tiles.map((t) => [t, { th: t.th, rot: t.rot0 }]));
-    const moves = ks.map((k) => push(k, bands[k].dir, (t, off) => { const b0 = base.get(t); t.th = b0.th + off; t.rot0 = b0.rot + (off * 180) / Math.PI; })).filter(Boolean);
-    if (!moves.length) return Promise.resolve();
-    shuffleRattle(0.7, 6);
-    return animate(550 + Math.random() * 200, (e) => moves.forEach((mv) => mv(e)));
-  }
-
-  // a tile slips into a gap in the next band, if there is one where it is and the way there is clear
-  function hop() {
-    for (const t of shuffle(tiles.slice())) {
-      const to = t.band + (Math.random() < 0.5 ? -1 : 1);
-      if (to < 0 || to >= bands.length) continue;
-      const B = bands[to], a = t.th + bands[t.band].phi, th = a - B.phi, r = B.rho + (Math.random() - 0.5) * jit;
-      const crowd = tiles.filter((u) => u !== t && u.band === to);
-      if (crowd.length >= B.room) continue;
-      const gap = (u) => { const d = Math.abs((((u.th - th) % TAU) + TAU + Math.PI) % TAU - Math.PI); return d; };
-      if (crowd.some((u) => gap(u) < B.min)) continue;
-      // the path straight in or out must stay clear of every other tile
-      const others = tiles.filter((u) => u !== t).map(pos);
-      let clear = true;
-      for (let q = 0; q <= 20 && clear; q++) {
-        const rr = t.r + ((r - t.r) * q) / 20, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
-        clear = others.every((o) => Math.hypot(o.x - x, o.y - y) >= 2 * f);
+  // the hands swirl the bands slowly and steadily, neighbouring bands opposite ways. Every few seconds a band eases
+  // to a new pace (now and then slowing to a stop and turning back), so the swirl never looks mechanical.
+  // Speeds are in tile-widths a second along the band.
+  const speed = bands.map((b, k) => ({ v: 0, target: (k % 2 ? -1 : 1) * (0.5 + Math.random() * 0.5), next: 0 }));
+  let running = true, done;
+  const finished = new Promise((r) => { done = r; });
+  let last = 0, t = 0;
+  function frame(now) {
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+    last = now; t += dt;
+    let moving = false;
+    bands.forEach((b, k) => {
+      const sp = speed[k];
+      if (running && t > sp.next) {
+        const keep = Math.random() < 0.85 ? Math.sign(sp.target) || 1 : -Math.sign(sp.target);
+        sp.target = keep * (0.4 + Math.random() * 0.6);
+        sp.next = t + 2.5 + Math.random() * 3;
       }
-      if (!clear) continue;
-      const r0 = t.r, rot0 = t.rot0, from = t.band;
-      // switch bands now (the tile keeps its place and angle), then slide across
-      t.band = to; t.th = th; t.rot0 = rot0 + ((bands[from].phi - B.phi) * 180) / Math.PI;
-      if (debug) window.__mixHops = (window.__mixHops || 0) + 1;
-      return animate(320, (e) => { t.r = r0 + (r - r0) * e; });
-    }
-    return Promise.resolve();
+      const goal = running ? sp.target : 0;
+      sp.v += (goal - sp.v) * Math.min(1, dt * (running ? 0.8 : 5));  // ease to the new pace (quickly to a stop)
+      b.phi += ((sp.v * w) / b.rho) * dt;
+      if (Math.abs(sp.v) > 0.01) moving = true;
+    });
+    draw();
+    if (running || moving) requestAnimationFrame(frame); else done();
   }
-
-  let running = true, current = Promise.resolve();
-  (async () => {
-    await wait(700);  // let the tiles finish fading in
-    while (running) {
-      current = (async () => {
-        await swirl();
-        const hops = 3 + Math.floor(Math.random() * 3);
-        for (let h = 0; h < hops && running; h++) await hop();
-      })();
-      await current;
-      if (running) await wait(80 + Math.random() * 150);
-    }
-  })();
-  return { stop: () => { running = false; return current; } };
+  // let the tiles finish fading in, then start swirling (it builds up gently from still)
+  setTimeout(() => requestAnimationFrame(frame), 500);
+  return { stop: () => { running = false; return finished; } };
 }
 
 function shuffle(a) {
