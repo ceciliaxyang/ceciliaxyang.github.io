@@ -77,13 +77,176 @@ function makeGhost(layer, p, html, back) {
   return g;
 }
 
-/* Hands mixing the tiles, like at a real table, where tiles only slide along it and never over or under each other.
+/* Hands mixing the scattered pile, one push at a time: a hand presses on a group of neighbouring tiles and shoves it
+   a short way (a couple of tile-widths, turning it a little); any tile in its way is pushed aside, and pushes the
+   tiles it meets in turn. Then a pause, and another group somewhere else. Tiles only ever slide along the table:
+   each is a solid w × 1.5w rectangle at its own angle and none ever overlaps another. If the tiles ahead are
+   jammed, the hand moves on less (or waits) rather than squeezing them. Pushed tiles keep the angle they lie at,
+   and once the mixing has loosened the pile, hands gather the stray tiles at its edge back in, so it keeps its size.
+   Runs until stop(); resolves once the push in progress ends. */
+function pushShuffle(ghosts, pile) {
+  const n = ghosts.length, GAP = 1, EPS = 0.01;  // px kept clear between tiles; rounding tolerance
+  const hw = pile.w / 2 + GAP / 2, hh = pile.w * 0.75 + GAP / 2;
+  const norm = (g) => Math.hypot((g.x - pile.cx) / pile.rx, (g.y - pile.cy) / pile.ry);
+  const spread = () => ghosts.reduce((m, g) => m + norm(g), 0) / n;
+  const spread0 = spread();
+
+  /* how far b must move to be clear of a ({ x, y }), or null if they don't touch (separating-axis test) */
+  function overlap(a, b) {
+    const ra = (a.rot * Math.PI) / 180, rb = (b.rot * Math.PI) / 180;
+    const axes = [[Math.cos(ra), Math.sin(ra)], [-Math.sin(ra), Math.cos(ra)], [Math.cos(rb), Math.sin(rb)], [-Math.sin(rb), Math.cos(rb)]];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    let best = Infinity, bx = 0, by = 0;
+    for (const [ux, uy] of axes) {
+      const ext = (r) => hw * Math.abs(Math.cos(r) * ux + Math.sin(r) * uy) + hh * Math.abs(-Math.sin(r) * ux + Math.cos(r) * uy);
+      const d = dx * ux + dy * uy, o = ext(ra) + ext(rb) - Math.abs(d);
+      if (o <= EPS) return null;  // touching (or a rounding error's worth) is fine
+      if (o < best) { best = o; const sg = d < 0 ? -1 : 1, p = o + EPS; bx = ux * p * sg; by = uy * p * sg; }
+    }
+    return { x: bx, y: by };
+  }
+  const near = (a, b) => Math.abs(a.x - b.x) < pile.w * 2 && Math.abs(a.y - b.y) < pile.w * 2;
+  /* how far b must move along (ux, uy) to be clear of a, or Infinity if moving that way can't clear it */
+  function along(a, b, ux, uy) {
+    const ra = (a.rot * Math.PI) / 180, rb = (b.rot * Math.PI) / 180;
+    const axes = [[Math.cos(ra), Math.sin(ra)], [-Math.sin(ra), Math.cos(ra)], [Math.cos(rb), Math.sin(rb)], [-Math.sin(rb), Math.cos(rb)]];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    let best = Infinity;
+    for (const [ax, ay] of axes) {
+      const ext = (r) => hw * Math.abs(Math.cos(r) * ax + Math.sin(r) * ay) + hh * Math.abs(-Math.sin(r) * ax + Math.cos(r) * ay);
+      const d = dx * ax + dy * ay, o = ext(ra) + ext(rb) - Math.abs(d);
+      const rate = (ux * ax + uy * ay) * (d < 0 ? -1 : 1);  // how fast moving along u opens this gap
+      if (rate > 0.05) best = Math.min(best, (o + EPS) / rate);
+    }
+    return best;
+  }
+
+  /* push every overlapping tile clear. Pushes travel outward from the hand: tiles under it never give way, and
+     between two loose tiles the one further from the hand (in steps of touching tiles) gives way. Returns true
+     once nothing overlaps. */
+  function settle(held, ux, uy) {
+    for (let pass = 0; pass < 40; pass++) {
+      const depth = new Array(n).fill(Infinity), queue = [...held];
+      held.forEach((i) => { depth[i] = 0; });
+      for (let q = 0; q < queue.length; q++) {
+        const i = queue[q];
+        for (let j = 0; j < n; j++) {
+          if (depth[j] !== Infinity || !near(ghosts[i], ghosts[j]) || !overlap(ghosts[i], ghosts[j])) continue;
+          depth[j] = depth[i] + 1; queue.push(j);
+        }
+      }
+      let moved = false;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+        if (held.has(i) && held.has(j)) continue;
+        const a = ghosts[i], b = ghosts[j];
+        if (!near(a, b)) continue;
+        const m = overlap(a, b);
+        if (!m) continue;
+        moved = true;
+        // a tile the hand's group runs into is pushed on the way the hand is going (as a palm shoves it), so it
+        // can't get wedged between two of the group's tiles; tiles further on are pushed the shortest way clear
+        const hi = held.has(i), hj = held.has(j);
+        if (hi || hj) {
+          const [h, l] = hi ? [a, b] : [b, a];
+          const t = along(h, l, ux, uy);
+          if (t < pile.w * 3) { l.x += ux * t; l.y += uy * t; continue; }
+        }
+        if (depth[i] < depth[j]) { b.x += m.x; b.y += m.y; }
+        else if (depth[j] < depth[i]) { a.x -= m.x; a.y -= m.y; }
+        else { a.x -= m.x / 2; a.y -= m.y / 2; b.x += m.x / 2; b.y += m.y / 2; }
+      }
+      if (!moved) return true;
+    }
+    return false;
+  }
+  const snap = () => ghosts.map((g) => [g.x, g.y, g.rot]);
+  const restore = (st) => st.forEach(([x, y, rot], i) => Object.assign(ghosts[i], { x, y, rot }));
+
+  function shove() {
+    let a0, hand, tang, dist;
+    const spin = (Math.random() - 0.5) * 30;
+    if (spread() > spread0 * 1.04 && Math.random() < 0.75) {
+      // gathering: once the mixing has loosened the pile, a hand sweeps the stray tiles at its edge back in
+      const out = ghosts.slice().sort((a, b) => norm(b) - norm(a))[Math.floor(Math.random() * 4)];
+      hand = { x: out.x, y: out.y };
+      a0 = Math.atan2((out.y - pile.cy) / pile.ry, (out.x - pile.cx) / pile.rx);
+      tang = Math.atan2(pile.cy - out.y, pile.cx - out.x) + (Math.random() - 0.5) * 0.5;
+      dist = Math.min(4, Math.max(1.6, (norm(out) - 0.5) * 5)) * pile.w;
+    } else {
+      // mixing: a spot in the pile, a group pushed a couple of tile-widths, mostly round the pile (nearer the edge,
+      // a little more inward)
+      a0 = Math.random() * Math.PI * 2;
+      const rr = 0.2 + Math.random() * 0.6;
+      hand = { x: pile.cx + Math.cos(a0) * rr * pile.rx, y: pile.cy + Math.sin(a0) * rr * pile.ry };
+      const side = (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2) * (1.15 - rr) + (Math.random() - 0.5) * 0.6;
+      tang = a0 + Math.PI + side;  // from straight in (side 0) to round the pile (side ±90°)
+      dist = (1.8 + Math.random() * 1.4) * pile.w;
+    }
+    // everything under the palm moves with it: the few tiles nearest the hand, plus any tile that sits among them
+    // (otherwise one left behind in the middle of the group would be squeezed from both sides)
+    const byDist = [...ghosts.keys()].sort((i, j) => Math.hypot(ghosts[i].x - hand.x, ghosts[i].y - hand.y) - Math.hypot(ghosts[j].x - hand.x, ghosts[j].y - hand.y));
+    let group = byDist.slice(0, 4 + Math.floor(Math.random() * 4));
+    for (let grew = true; grew;) {
+      const cx0 = group.reduce((m, i) => m + ghosts[i].x, 0) / group.length, cy0 = group.reduce((m, i) => m + ghosts[i].y, 0) / group.length;
+      const reach = Math.max(...group.map((i) => Math.hypot(ghosts[i].x - cx0, ghosts[i].y - cy0))) + pile.w * 0.6;
+      const more = byDist.filter((i) => !group.includes(i) && Math.hypot(ghosts[i].x - cx0, ghosts[i].y - cy0) < reach);
+      grew = more.length > 0 && group.length < 12;
+      if (grew) group = group.concat(more).slice(0, 12);
+    }
+    const k = group.length;
+    const held = new Set(group);
+    const from = group.map((i) => ({ x: ghosts[i].x, y: ghosts[i].y, rot: ghosts[i].rot }));
+    const gx = from.reduce((m, f) => m + f.x, 0) / k, gy = from.reduce((m, f) => m + f.y, 0) / k;
+    const place = (e) => {
+      // the group moves as one piece: along the push, turning a little about its middle
+      const ph = (spin * e * Math.PI) / 180, c = Math.cos(ph), sn = Math.sin(ph);
+      const ox = Math.cos(tang) * dist * e, oy = Math.sin(tang) * dist * e;
+      group.forEach((gi, m) => {
+        const dx = from[m].x - gx, dy = from[m].y - gy;
+        Object.assign(ghosts[gi], { x: gx + dx * c - dy * sn + ox, y: gy + dx * sn + dy * c + oy, rot: from[m].rot + spin * e });
+      });
+    };
+    const dur = 650 + Math.random() * 250;
+    shuffleRattle(dur / 1000, 6);
+    let done = 0, state = snap();
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const p = Math.min(1, (now - t0) / dur), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+        for (const tryE of [e, done + (e - done) / 2, done + (e - done) / 4]) {
+          restore(state);
+          place(tryE);
+          if (settle(held, Math.cos(tang), Math.sin(tang))) { done = tryE; state = snap(); break; }
+        }
+        restore(state);
+        for (const g of ghosts) g.el.style.transform = transform(g);
+        if (p < 1) requestAnimationFrame(frame); else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  let running = true, current = Promise.resolve();
+  (async () => {
+    await wait(800);  // let the tiles finish fading in
+    while (running) {
+      current = shove();
+      await current;
+      if (running) await wait(350 + Math.random() * 450);
+    }
+  })();
+  return { stop: () => { running = false; return current; } };
+}
+
+/* NOT USED right now (kept for another time): the swirl.
+   Hands mixing the tiles, like at a real table, where tiles only slide along it and never over or under each other.
    The tiles lie in loose bands round the middle (irregular gaps and offsets, so it still looks scattered), and
    the hands swirl the bands slowly round, neighbouring bands opposite ways, so tiles slide past each other.
    No tile can ever touch another: bands are far enough apart that no tile reaches the next band whatever their
    angles, and tiles within a band keep their spacing as it turns. Runs until stop(); resolves once the tiles
    have glided to a stop. */
-function handShuffle(ghosts, pile) {
+// eslint-disable-next-line no-unused-vars
+function swirlShuffle(ghosts, pile) {
   const n = ghosts.length, TAU = Math.PI * 2;
   const cx = pile.cx, cy = pile.cy;
   const maxR = Math.min(innerWidth / 2 - 16, Math.max(pile.rx, pile.ry) * 1.05);
@@ -347,8 +510,8 @@ export async function introDeal(startNew, hooks = {}) {
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
   const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
   ghosts.forEach((g, i) => g.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: i * 6, fill: "backwards" }));
-  // while it waits, the pile is slowly swirled, as hands mix tiles at a real table
-  const idle = matchMedia("(prefers-reduced-motion: reduce)").matches ? { stop: async () => {} } : handShuffle(ghosts, pile);
+  // while it waits, hands mix the pile: one group of tiles at a time is pushed into the others
+  const idle = matchMedia("(prefers-reduced-motion: reduce)").matches ? { stop: async () => {} } : pushShuffle(ghosts, pile);
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn deal-start";
