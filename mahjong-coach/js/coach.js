@@ -2,7 +2,7 @@
 // was clearly worse, writes a note explaining why. Notes are plain objects rendered by ui.js.
 // Voice: written for a first-time player. Short, plain sentences, one idea each ("You need two more X to
 // claim a peng."). No jargon without saying what it means ("points", not "fan"; "2 more tiles to win").
-import { kindOf, closestShape, ORPHANS, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
+import { kindOf, shanten, closestShape, ORPHANS, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
 import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
 import { rankDiscards, recommendClaim, isValueTile } from "./strategy.js";
@@ -136,6 +136,62 @@ function coachPick(state) {
 let noteSeq = 0;
 function note(state, fields) {
   return { id: ++noteSeq, handNo: state.handNo, time: Date.now(), ...fields };
+}
+
+/* ---------- End of the hand: how you did ---------- */
+
+/* How far your hand is from winning right now (shanten: 0 = 1 more tile to win), for the summary's "closest". */
+export function distance(state) {
+  const pl = state.players[0];
+  return shanten(handCounts(pl), pl.melds.length, unseenFor(state, 0));
+}
+
+/* The one thing to work on, by the kind of note the coach gave most this hand. */
+const LESSON = {
+  discard: "When choosing what to throw, keep tiles that sit next to each other and let go of lone winds, dragons, 1s and 9s first.",
+  defense: "When someone shows three groups, throw tiles they've already thrown. Those can't win for them.",
+  claim: "Take a thrown tile when it gets you closer to winning (or earns a point), and let it go when it doesn't.",
+  win: "Check whether you can win before you throw a tile.",
+};
+
+/* The coach's last note of a hand. `moves`: your decisions this hand, each { type: "discard" | "claim", ok,
+   away } (ok = the coach agreed; away = how far from winning it left you). `handNotes`: the coach's notes this
+   hand. `tookBack`: how many moves you undid or took back. */
+export function summaryNote(state, moves, handNotes, tookBack) {
+  const r = state.result;
+  const p = [];
+  // how the hand ended, and how close you got
+  const won = r.type !== "draw" && r.winner === 0;
+  const lead = won ? "You won this hand!"
+    : r.type === "draw" ? "Nobody won this hand: the wall ran out."
+    : `${state.players[r.winner].name} won this hand.`;
+  const best = moves.length ? Math.min(...moves.map((m) => m.away)) : null;
+  p.push(`<p><b>${lead}</b>${!won && best !== null ? ` Your closest was ${needing(best)}.` : ""}</p>`);
+  // the score: decisions that matched what the coach would have done
+  const good = moves.filter((m) => m.ok).length;
+  if (moves.length) {
+    p.push(`<p class="summary-score"><span>${good} of your ${moves.length}</span> choice${moves.length === 1 ? "" : "s"} matched what I'd have done.</p>`);
+    const rows = [];
+    const row = (label, list) => { if (list.length) rows.push(`<li><span>${label}</span><span>${list.filter((m) => m.ok).length} of ${list.length} good</span></li>`); };
+    row("Tiles you threw", moves.filter((m) => m.type === "discard"));
+    row("Taking or passing on tiles", moves.filter((m) => m.type === "claim"));
+    const missed = handNotes.filter((n) => n.kind === "win").length;
+    if (missed) rows.push(`<li><span>Missed wins</span><span>${missed}</span></li>`);
+    if (tookBack) rows.push(`<li><span>Moves taken back</span><span>${tookBack}</span></li>`);
+    p.push(`<ul class="fan-list">${rows.join("")}</ul>`);
+  }
+  // one thing to work on (the kind of slip that came up most), or praise
+  const counts = {};
+  handNotes.forEach((n) => { if (LESSON[n.kind]) counts[n.kind] = (counts[n.kind] || 0) + 1; });
+  const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  p.push(`<p class="tip">${top ? `Next time: ${LESSON[top]}` : moves.length ? "Every choice was one I'd have made. Well played!" : "Nothing for me to review this hand."}</p>`);
+  const share = moves.length ? good / moves.length : 1;
+  return note(state, {
+    kind: "summary",
+    title: "How you did this hand",
+    bubble: won ? "Well played! Here's how your hand went." : share >= 0.8 ? "Nicely played. Here's how your hand went." : "Here's how your hand went.",
+    html: p.join(""),
+  });
 }
 
 /* ---------- Your turn: discard / win / kong ---------- */

@@ -28,7 +28,10 @@ let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.s
 state.points = prefs.showScores;  // Scores on = playing with points (a win needs points); off = any complete hand wins
 G.refreshNames(state);
 let notes = [];            // coach notes this session; `snapshot` = state before your move
-let history = [];          // Undo: { state, notes } before each of your moves this hand, latest last
+let history = [];          // Undo: { state, notes, moves } before each of your moves this hand, latest last
+let moves = [];            // the hand summary: each of your decisions this hand, { type, ok, away }
+let tookBack = 0;          // moves undone or taken back this hand
+let summarized = null;     // the result the coach has already summed up
 let selected = null;       // tile id raised in your hand
 let dealing = false;       // the shuffle-and-deal animation is playing: nothing else moves
 let announce = null;       // a bot just called a peng / chow / kong: shown in the white box until you press Continue
@@ -160,7 +163,10 @@ function act(action) {
   const before = clone(state);
   remember(before, action.type !== "tsumo");
   const n = Coach.reviewAct(before, action);
-  if (action.type === "discard") G.discard(state, 0, action.id);
+  if (action.type === "discard") {
+    G.discard(state, 0, action.id);
+    moves.push({ type: "discard", ok: !n, away: Coach.distance(state) });
+  }
   else if (action.type === "tsumo") G.tsumo(state, 0);
   else if (action.type === "kong") G.declareKong(state, 0, action.k, action.kongType);
   selected = null;
@@ -192,6 +198,8 @@ function claim(resp) {
   nudge = null;
   callPick = [];
   G.respond(state, 0, resp);
+  // a real choice (you could have taken it, and didn't win with it) counts towards the summary
+  if (!before.claim.options[0].none && resp.type !== "win") moves.push({ type: "claim", ok: !n, away: Coach.distance(state) });
   botsRespond();
   resolveClaims();
   pane.hint = null;
@@ -285,7 +293,7 @@ function addNote(n, before) {
 /* Undo: the state before each of your moves this hand (and how many coach notes there were then). A win isn't
    kept as a step, so Undo never takes back a win. */
 function remember(before, undoable) {
-  if (undoable) history.push({ state: before, notes: notes.length });
+  if (undoable) history.push({ state: before, notes: notes.length, moves: moves.length });
 }
 function undo() {
   const h = history.pop();
@@ -293,6 +301,8 @@ function undo() {
   epoch++;  // cancel any bot move still waiting
   state = clone(h.state);
   notes = notes.slice(0, h.notes);
+  moves = moves.slice(0, h.moves);
+  tookBack++;
   announce = null; selected = null; callPick = []; nudge = null; pane.hint = null;
   resultClosed = false; resultAsked = false;
   hideBubble();
@@ -306,7 +316,8 @@ function takeBack(id) {
   const n = notes[i];
   // Undo steps from this move on are gone too
   const hi = history.findIndex((h) => h.state === n.snapshot);
-  if (hi >= 0) history = history.slice(0, hi);
+  if (hi >= 0) { moves = moves.slice(0, history[hi].moves); history = history.slice(0, hi); }
+  tookBack++;
   epoch++;
   state = clone(n.snapshot);
   notes = notes.slice(0, i);
@@ -439,6 +450,15 @@ window.addEventListener("scroll", () => markPlateOverTiles(), { passive: true })
 function render() {
   if (state.phase === "over" && state.result && state.result !== heldResult) {
     heldResult = state.result;
+    // the coach sums up the hand, once the win (and its confetti) or the result has had its moment
+    const r = state.result;
+    if (!AUTO) setTimeout(() => {
+      if (state.result !== r || summarized === r) return;
+      summarized = r;
+      const handNotes = notes.filter((x) => x.handNo === state.handNo && x.kind !== "summary");
+      addNote(Coach.summaryNote(state, moves, handNotes, tookBack), null);
+      render();
+    }, r.type !== "draw" && r.winner === 0 ? 2200 : RESULT_HOLD + 400);
     if (state.result.type === "draw" || state.result.winner !== 0) {
       resultHeld = true;
       setTimeout(() => { resultHeld = false; render(); }, RESULT_HOLD);
@@ -846,6 +866,8 @@ function renderBar() {
   const overMain = state.phase === "over" && prefs.showScores && !(state.result && state.result.type !== "draw" && state.result.winner === 0);
   $("newBtn").classList.toggle("primary", overMain);
   document.body.classList.toggle("hand-over", state.phase === "over");
+  // ...but stays once it has summed the hand up, so you can read how you did
+  document.body.classList.toggle("has-summary", state.phase === "over" && notes.some((x) => x.kind === "summary" && x.handNo === state.handNo));
   $("newBtn").classList.toggle("light", !overMain);
   // Undo: anything of yours to take back this hand (not after you've won)
   const won = state.phase === "over" && state.result && state.result.type !== "draw" && state.result.winner === 0;
@@ -1268,7 +1290,7 @@ async function startNextHand() {
   let roundDone = false;
   await dealAnimation(() => {
     roundDone = (state.noFlowers = prefs.noFlowers, G.nextHand(state));
-    history = [];
+    history = []; moves = []; tookBack = 0;
     render();
     save();
   }, dealHooks());
@@ -1296,6 +1318,7 @@ async function newGame() {
     state = G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
     notes = [];
     history = [];
+    moves = []; tookBack = 0;
     render();
     save();
   }, dealHooks());

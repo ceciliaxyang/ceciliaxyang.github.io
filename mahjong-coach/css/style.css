@@ -453,7 +453,7 @@ span.scope { cursor: default; }
 /* when the hand is over the Coach steps away (nothing left to coach, and New game is the one thing to do);
    it comes back with the next game */
 .coach { transition: opacity .3s ease, visibility 0s; }
-body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .3s ease, visibility 0s .3s; }
+body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .3s ease, visibility 0s .3s; }
 .coach-badge {
   position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--red); color: #fff;
   font-size: 12px; line-height: 22px; font-weight: 600; box-shadow: 0 0 0 2px #fff;
@@ -546,6 +546,8 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 .strip-item small { font-size: 11px; color: var(--muted); font-weight: 500; }
 .groups { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
 .group { display: inline-flex; gap: var(--tgap); }
+/* the hand summary's score line: the count stands out */
+.summary-score span { font-size: 22px; font-weight: 700; color: var(--text); }
 .fan-list { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--hair); }
 .fan-list li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: 14px; line-height: 20px; }
 .fan-list li span:last-child { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
