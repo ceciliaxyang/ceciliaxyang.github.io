@@ -121,70 +121,125 @@ function landing(style, ghosts, pile, kinds) {
   return none;
 }
 
-/* Hands mixing the tiles, like at a real table. Each stroke, a hand gathers a clump of neighbouring tiles and
-   slides it in one firm sweep round the pile to the far side, while the clump that was there is pushed back the
-   other way (one passes outside the other, so they don't collide). Tiles in a clump keep their places relative
-   to each other and turn only as much as the sweep turns them: no wobble, and every stroke really moves tiles a
-   long way, so a few strokes mix the pile. Runs until stop(); resolves once the stroke in progress has landed. */
+/* Hands mixing the tiles, like at a real table, where tiles only slide along it and never over or under each other.
+   The tiles lie in loose bands round the middle (irregular gaps and offsets, so it still looks scattered). Each
+   stroke the hands swirl the bands round, neighbouring bands mostly opposite ways, so tiles slide past each other;
+   between strokes a few tiles slip into a gap in the next band in or out. No tile can ever touch another: bands
+   are far enough apart that no tile reaches the next band whatever their angles, tiles within a band keep their
+   spacing as it turns, and a tile only changes band along a path that is clear. Runs until stop(); resolves
+   once the step in progress has finished. */
 function handShuffle(ghosts, pile) {
-  const n = ghosts.length;
-  const TAU = Math.PI * 2;
-  // positions in the pile's own round coordinates (the pile is an oval)
-  const polar = (x, y) => { const u = (x - pile.cx) / pile.rx, v = (y - pile.cy) / pile.ry; return { a: Math.atan2(v, u), r: Math.hypot(u, v) }; };
-  const at = (a, r) => ({ x: pile.cx + Math.cos(a) * r * pile.rx, y: pile.cy + Math.sin(a) * r * pile.ry });
-  const nearest = (p, k, skip) => [...ghosts.keys()].filter((i) => !skip.has(i))
-    .sort((i, j) => Math.hypot(ghosts[i].x - p.x, ghosts[i].y - p.y) - Math.hypot(ghosts[j].x - p.x, ghosts[j].y - p.y)).slice(0, k);
-  let running = true, current = Promise.resolve();
+  const n = ghosts.length, TAU = Math.PI * 2;
+  const debug = new URLSearchParams(location.search).has("debug");
+  const cx = pile.cx, cy = pile.cy;
+  const maxR = Math.min(innerWidth / 2 - 16, Math.max(pile.rx, pile.ry) * 1.05);
 
-  function slide(gi, to, dir, bow, delay, dur) {
-    const g = ghosts[gi];
-    const s0 = polar(g.x, g.y), s1 = polar(to.x, to.y);
-    let da = s1.a - s0.a;
-    da = dir > 0 ? ((da % TAU) + TAU) % TAU : -(((-da % TAU) + TAU) % TAU);  // go round the way the hand goes
-    // the tile turns with the sweep, and ends up lying the way the tile it replaces did (give or take full turns)
-    const want = g.rot + (da * 180) / Math.PI;
-    const rot1 = to.rot + 360 * Math.round((want - to.rot) / 360);
-    const frames = [];
-    for (let f = 0; f <= 12; f++) {
-      const p = f / 12, e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-      const r = (s0.r + (s1.r - s0.r) * e) * (1 + bow * Math.sin(Math.PI * e));
-      const pt = at(s0.a + da * e, r);
-      frames.push({ transform: transform({ x: pt.x, y: pt.y, rot: g.rot + (rot1 - g.rot) * e, s: g.s * (1 + 0.05 * Math.sin(Math.PI * p)) }) });
+  // the bands for tile width w: f = a tile's reach from its centre (half its diagonal, plus a hair), each band
+  // `jit` deep, bands 2f apart so nothing in one can reach the next
+  const plan = (w) => {
+    const f = Math.hypot(w / 2, w * 0.75) * 1.04, jit = w * 0.3, P = 2 * f + jit;
+    const bands = [];
+    let cap = 0;
+    for (let k = 0; cap < n; k++) {
+      const rho = P * 0.9 + k * P, min = 2 * Math.asin(Math.min(1, f / (rho - jit / 2))) * 1.03;
+      const room = Math.floor(TAU / (min * 1.12));  // room for this many, with space to spare for hops
+      bands.push({ rho, min, room, phi: 0 });
+      cap += room;
     }
-    g.el.style.zIndex = bow > 0 ? "2" : "1";  // lifted a touch as it's pushed along
-    const anim = g.el.animate(frames, { duration: dur, delay, easing: "linear", fill: "forwards" });
-    Object.assign(g, { x: to.x, y: to.y, rot: rot1 });
-    return anim.finished.then(() => { g.el.style.transform = transform(g); g.el.style.zIndex = ""; anim.cancel(); });
+    return { f, jit, bands, outer: bands[bands.length - 1].rho + jit / 2 + f };
+  };
+  let w = pile.w * 1.15, P0;
+  while ((P0 = plan(w)).outer > maxR && w > 8) w -= 0.25;
+  const { f, jit, bands } = P0;
+  pile.bottom = cy + P0.outer;  // the Start button goes below this
+  const s = w / GHOST_W;
+
+  // share the tiles out (in proportion to room) and lay each band out with random gaps
+  const total = bands.reduce((m, b) => m + b.room, 0);
+  let left = n;
+  const tiles = ghosts.map((g) => ({ g, band: 0, th: 0, r: 0, rot0: g.rot }));
+  let ti = 0;
+  bands.forEach((b, k) => {
+    const m = k === bands.length - 1 ? left : Math.min(left, Math.round((b.room / total) * n));
+    left -= m;
+    const slack = TAU - m * b.min;
+    const cuts = Array.from({ length: m }, () => Math.random());
+    const sum = cuts.reduce((a, c) => a + c, 0) || 1;
+    let th = Math.random() * TAU;
+    for (let q = 0; q < m; q++) {
+      Object.assign(tiles[ti++], { band: k, th, r: b.rho + (Math.random() - 0.5) * jit });
+      th += b.min + (slack * cuts[q]) / sum;
+    }
+  });
+  const pos = (t) => {
+    const b = bands[t.band], a = t.th + b.phi;
+    return { x: cx + Math.cos(a) * t.r, y: cy + Math.sin(a) * t.r, rot: t.rot0 + (b.phi * 180) / Math.PI, s };
+  };
+  const draw = () => tiles.forEach((t) => { Object.assign(t.g, pos(t)); t.g.el.style.transform = transform(t.g); });
+  draw();
+  if (debug) window.__mix = { ghosts, pile: { ...pile, w } };
+
+  const animate = (dur, step) => new Promise((resolve) => {
+    const t0 = performance.now();
+    const frame = (now) => {
+      const p = Math.min(1, (now - t0) / dur), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+      step(e);
+      draw();
+      if (p < 1) requestAnimationFrame(frame); else resolve();
+    };
+    requestAnimationFrame(frame);
+  });
+
+  // the hands swirl the bands: neighbours mostly turn opposite ways, each by 2 to 5 tile-widths round
+  function swirl() {
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    const turns = bands.map((b, k) => {
+      if (Math.random() < 0.2) return 0;  // this band is left alone this time
+      const dir = (k % 2 ? -1 : 1) * sign * (Math.random() < 0.85 ? 1 : -1);
+      return (dir * (2 + Math.random() * 3) * w) / b.rho;
+    });
+    const start = bands.map((b) => b.phi);
+    shuffleRattle(1.1, 10);
+    return animate(1100 + Math.random() * 300, (e) => bands.forEach((b, k) => { b.phi = start[k] + turns[k] * e; }));
   }
 
-  async function stroke() {
-    // where the hand starts, and the far side it sweeps to (a third to a half of the way round)
-    const a = Math.random() * TAU, dir = Math.random() < 0.7 ? 1 : -1;
-    const turn = (TAU / 3 + Math.random() * TAU / 6) * dir;
-    const k = 6 + Math.floor(Math.random() * 3);
-    const A = nearest(at(a, 0.45 + Math.random() * 0.3), k, new Set());
-    const B = nearest(at(a + turn, 0.45 + Math.random() * 0.3), k, new Set(A));
-    // each tile takes the place of the matching tile in the other clump (matched by where it sits in its clump,
-    // so the clump keeps its shape as it travels)
-    const order = (ids) => { const c = ids.reduce((m, i) => ({ x: m.x + ghosts[i].x / ids.length, y: m.y + ghosts[i].y / ids.length }), { x: 0, y: 0 });
-      return ids.slice().sort((i, j) => Math.atan2(ghosts[i].y - c.y, ghosts[i].x - c.x) - Math.atan2(ghosts[j].y - c.y, ghosts[j].x - c.x)); };
-    const oa = order(A), ob = order(B);
-    const spotsA = oa.map((i) => ({ x: ghosts[i].x, y: ghosts[i].y, rot: ghosts[i].rot }));
-    const spotsB = ob.map((i) => ({ x: ghosts[i].x, y: ghosts[i].y, rot: ghosts[i].rot }));
-    const dur = 900 + Math.random() * 250;
-    shuffleRattle(dur / 1000, 9);
-    await Promise.all([
-      ...oa.map((gi, m) => slide(gi, spotsB[m], dir, 0.3, m * 18, dur)),        // the hand's clump, round the outside
-      ...ob.map((gi, m) => slide(gi, spotsA[m], -dir, -0.4, 60 + m * 18, dur)),  // pushed back through the middle
-    ]);
+  // a tile slips into a gap in the next band, if there is one where it is and the way there is clear
+  function hop() {
+    for (const t of shuffle(tiles.slice())) {
+      const to = t.band + (Math.random() < 0.5 ? -1 : 1);
+      if (to < 0 || to >= bands.length) continue;
+      const B = bands[to], a = t.th + bands[t.band].phi, th = a - B.phi, r = B.rho + (Math.random() - 0.5) * jit;
+      const crowd = tiles.filter((u) => u !== t && u.band === to);
+      if (crowd.length >= B.room) continue;
+      const gap = (u) => { const d = Math.abs((((u.th - th) % TAU) + TAU + Math.PI) % TAU - Math.PI); return d; };
+      if (crowd.some((u) => gap(u) < B.min)) continue;
+      // the path straight in or out must stay clear of every other tile
+      const others = tiles.filter((u) => u !== t).map(pos);
+      let clear = true;
+      for (let q = 0; q <= 20 && clear; q++) {
+        const rr = t.r + ((r - t.r) * q) / 20, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+        clear = others.every((o) => Math.hypot(o.x - x, o.y - y) >= 2 * f);
+      }
+      if (!clear) continue;
+      const r0 = t.r, rot0 = t.rot0, from = t.band;
+      // switch bands now (the tile keeps its place and angle), then slide across
+      t.band = to; t.th = th; t.rot0 = rot0 + ((bands[from].phi - B.phi) * 180) / Math.PI;
+      return animate(450, (e) => { t.r = r0 + (r - r0) * e; });
+    }
+    return Promise.resolve();
   }
 
+  let running = true, current = Promise.resolve();
   (async () => {
     await wait(700);  // let the tiles finish fading in
     while (running) {
-      current = stroke();
+      current = (async () => {
+        await swirl();
+        const hops = 2 + Math.floor(Math.random() * 3);
+        for (let h = 0; h < hops && running; h++) await hop();
+      })();
       await current;
-      if (running) await wait(250 + Math.random() * 450);
+      if (running) await wait(150 + Math.random() * 300);
     }
   })();
   return { stop: () => { running = false; return current; } };
@@ -377,7 +432,7 @@ export async function introDeal(startNew, hooks = {}) {
   btn.type = "button";
   btn.className = "btn deal-start";
   btn.textContent = "Start new game";
-  btn.style.top = `${pile.cy + pile.ry + 36}px`;
+  btn.style.top = `${Math.max(pile.cy + pile.ry + 36, (pile.bottom || 0) + 24)}px`;
   layer.appendChild(btn);
   await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
   await idle.stop();
