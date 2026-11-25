@@ -82,7 +82,7 @@ p { text-wrap: pretty; }
 .fab-btn.icon { width: 48px; padding: 0; display: inline-grid; place-items: center; }
 .fab-btn[hidden] { display: none; }
 /* Undo slides out from behind Settings when there's first a move to take back */
-#undoBtn:not([hidden]) { animation: undo-in .34s var(--spring) both; }
+#undoBtn:not([hidden]) { animation: undo-in .22s var(--spring) both; }
 @keyframes undo-in {
   from { opacity: 0; transform: translateX(-14px) scale(.7); }
   to { opacity: 1; transform: none; }
