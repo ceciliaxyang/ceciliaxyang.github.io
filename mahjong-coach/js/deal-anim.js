@@ -27,11 +27,14 @@ function place(t) {
 }
 
 const transform = (g) => `translate(${g.x - GHOST_W / 2}px, ${g.y - GHOST_W * 0.75}px) rotate(${g.rot}deg) scale(${g.s})`;
+/* Put a tile where it is: its position, and its angle for the CSS that keeps its shadow and shading falling the
+   same way as every other tile's (see .deal-layer .tile in style.css). */
+const setPlace = (g) => { g.el.style.transform = transform(g); g.el.style.setProperty("--rot", `${g.rot}deg`); };
 
 function move(g, to, duration, delay = 0, easing = "cubic-bezier(.3, .7, .2, 1)") {
-  const from = transform(g);
+  const from = transform(g), rot0 = `${g.rot}deg`;
   Object.assign(g, to);
-  const anim = g.el.animate([{ transform: from }, { transform: transform(g) }], { duration, delay, easing, fill: "forwards" });
+  const anim = g.el.animate([{ transform: from, "--rot": rot0 }, { transform: transform(g), "--rot": `${g.rot}deg` }], { duration, delay, easing, fill: "forwards" });
   return anim.finished;
 }
 
@@ -73,7 +76,7 @@ function makeGhost(layer, p, html, back) {
   el.innerHTML = back ? "" : html;
   layer.appendChild(el);
   const g = { el, x: p.x, y: p.y, rot: p.rot, s: p.w / GHOST_W };
-  el.style.transform = transform(g);
+  setPlace(g);
   return g;
 }
 
@@ -280,7 +283,7 @@ function pushShuffle(ghosts, pile) {
       if (p >= 1) h.over = true;
     }
     for (let q = hands.length - 1; q >= 0; q--) if (hands[q].over) hands.splice(q, 1);
-    for (const g of ghosts) g.el.style.transform = transform(g);
+    for (const g of ghosts) setPlace(g);
     if (running || hands.length) requestAnimationFrame(frame); else stopped();
   };
   requestAnimationFrame(frame);
@@ -342,7 +345,7 @@ function swirlShuffle(ghosts, pile) {
     const b = bands[t.band], a = t.th + b.phi;
     return { x: cx + Math.cos(a) * t.r, y: cy + Math.sin(a) * t.r, rot: t.rot0 + (b.phi * 180) / Math.PI, s };
   };
-  const draw = () => tiles.forEach((t) => { Object.assign(t.g, pos(t)); t.g.el.style.transform = transform(t.g); });
+  const draw = () => tiles.forEach((t) => { Object.assign(t.g, pos(t)); setPlace(t.g); });
   draw();
 
 
@@ -567,7 +570,7 @@ export async function introDeal(startNew, hooks = {}) {
       await wait(1300);
       await Promise.all(ghosts.map((g, i) => flip(g, "", true, Math.min(i * 6, 360))));
       // hand the tiles back from the flip's animation to their own position, so the mixing can move them
-      ghosts.forEach((g) => { g.el.style.transform = transform(g); g.el.getAnimations().forEach((a) => a.cancel()); });
+      ghosts.forEach((g) => { setPlace(g); g.el.getAnimations().forEach((a) => a.cancel()); });
       if (!stopping) mixing = pushShuffle(ghosts, pile);
     })();
     // Start pressed: let a flip in progress finish, and the pushes already going land

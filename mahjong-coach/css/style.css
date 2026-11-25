@@ -739,6 +739,28 @@ body.hand-over .coach { opacity: 0; visibility: hidden; pointer-events: none; tr
 .deal-layer { position: fixed; inset: 0; z-index: 5; overflow: hidden; }
 .deal-layer.flying { z-index: 60; }
 .deal-layer .tile { position: absolute; left: 0; top: 0; margin: 0; --w: 40px; transform-origin: center; will-change: transform; }
+/* Loose tiles lie at all angles, but the light is the same for all of them: each tile's angle (--rot, set by
+   deal-anim.js) turns its 3D edge, shadow and shading back, so they always fall straight down the screen.
+   (--ux, --uy: "down the screen" in the tile's own turned frame.) */
+@property --rot { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+.deal-layer .tile {
+  --ux: sin(var(--rot)); --uy: cos(var(--rot));
+  --d1: calc(var(--w) * var(--depth)); --d2: calc(var(--w) * var(--depth) + 1px); --d3: calc(var(--w) * (var(--depth) + .04));
+  background: linear-gradient(calc(180deg - var(--rot)), #ffffff, var(--face));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05),
+    calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge),
+    calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #c2c2ba,
+    calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+}
+.deal-layer .tile.back {
+  --hl: max(1px, calc(var(--w) * .033));
+  background: linear-gradient(calc(var(--jade-a) - var(--rot)), #127a5b, #0d6649);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08), inset calc(var(--ux) * var(--hl)) calc(var(--uy) * var(--hl)) 0 rgba(150, 235, 200, .35),
+    inset 0 0 calc(var(--w) * .15) rgba(90, 200, 155, .22),
+    calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 #08493a,
+    calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #053628,
+    calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+}
 /* a tile seen edge-on mid-flip: its thickness, white face layer then green back layer (reversed when turning face up) */
 .deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
 .deal-layer .tile.flip-side.rev { background: linear-gradient(to left, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); }
