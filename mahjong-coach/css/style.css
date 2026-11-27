@@ -17,7 +17,9 @@
   --pill-hover: #e8e8e8;
   --red: #c8302c;
   --face: #f7f7f5;   /* Porcelain white: white faces fading to the faintest grey */
-  --edge: #dcdcd6;   /* cool grey 3D edge (with a #c2c2ba rim) */
+  --edge: #e4e4de;   /* the white body's side (a real tile is white with a green back layer) */
+  --edge-green: #18744f;  /* the green back layer's side */
+  --edge-green-rim: #0a4a33;
   --back: #0e6a4e;   /* dark green backs (#138060 highlight, #08493a edge) */
   --spring: cubic-bezier(.34, 1.56, .64, 1);
   --ease: cubic-bezier(.2, .8, .2, 1);
@@ -177,12 +179,16 @@ span.scope { cursor: default; }
 /* the buttons in the bar (Continue, Call, Discard, Mahjong) match the Coach me floating button */
 .bar .btn { height: 48px; padding: 0 24px; font-size: 14px; line-height: 18px; }
 
-/* Tiles: ivory face, a darker bottom edge for thickness, soft drop shadow */
+/* Tiles: ivory face; seen from above, the bottom edge shows the tile's thickness like a real one: the white body,
+   then its green back layer (face down, the other way round: the green layer, then the white body). --sides is
+   that edge, reused by every state that changes the shadow (selected, picked, dragging, won). */
 .tile {
   --w: var(--md);
+  --white-side: calc(var(--w) * .065);
+  --sides: 0 var(--white-side) 0 var(--edge), 0 calc(var(--w) * var(--depth)) 0 var(--edge-green), 0 calc(var(--w) * var(--depth) + 1px) 0 var(--edge-green-rim);
   position: relative; display: inline-block; flex-shrink: 0; width: var(--w); height: calc(var(--w) * var(--tile-r));
   padding: 0; border: 0; border-radius: calc(var(--w) * .16); background: linear-gradient(#ffffff, var(--face));
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c2c2ba, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), var(--sides), 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
   margin-bottom: calc(var(--w) * var(--depth) + 1px); vertical-align: top;
 }
 .tile svg { display: block; width: 100%; height: 100%; padding: 8% 6%; }
@@ -195,10 +201,11 @@ span.scope { cursor: default; }
    bright line along the top edge. The gradient tips a few degrees differently from tile to tile. */
 .tile.back, .tile.face-down {
   --jade-a: 180deg;
+  --sides: 0 var(--white-side) 0 #0b5a40, 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c9c9c2;
   background: linear-gradient(var(--jade-a), #127a5b, #0d6649);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08), inset 0 max(1px, calc(var(--w) * .033)) 0 rgba(150, 235, 200, .35),
     inset 0 0 calc(var(--w) * .15) rgba(90, 200, 155, .22),
-    0 calc(var(--w) * var(--depth)) 0 #08493a, 0 calc(var(--w) * var(--depth) + 1px) 0 #053628, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+    var(--sides), 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
 }
 .tile.back:nth-child(3n + 1), .tile.face-down:nth-child(3n + 1) { --jade-a: 172deg; }
 .tile.back:nth-child(5n + 2), .tile.face-down:nth-child(5n + 2) { --jade-a: 189deg; }
@@ -265,7 +272,7 @@ span.scope { cursor: default; }
 .show-claimed .seat-right .meld .claimed { transform: translateX(-3px); }
 .show-claimed .seat-top .meld .claimed { transform: translateY(3px); }
 .meld { display: inline-flex; gap: var(--tgap); }
-.show-claimed .meld .claimed { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px rgba(200, 48, 44, .45), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
+.show-claimed .meld .claimed { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px rgba(200, 48, 44, .45), var(--sides), 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
 .flowers { display: inline-flex; gap: var(--tgap); }
 
 /* The white box: everyone's discards on top, a divider, then the latest move */
@@ -396,17 +403,17 @@ span.scope { cursor: default; }
 /* your winning hand: its groups side by side with a little space between, the winning tile outlined */
 #hand.won { --lg: min(var(--lg-max, 56px), calc((100cqw - 13 * var(--tgap) - 40px) / 14)); gap: 10px; justify-content: center; }
 .hand.won .won-group { display: inline-flex; gap: var(--tgap); }
-.hand .tile.won-tile, .seat .tile.won-tile { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .6), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c2c2ba, 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
+.hand .tile.won-tile, .seat .tile.won-tile { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .6), var(--sides), 0 calc(var(--w) * (var(--depth) + .04)) calc(var(--w) * .3) rgba(0, 0, 0, .12); }
 .hand .tile { --w: var(--lg); cursor: default; transition: transform .25s var(--spring), box-shadow .2s ease; }
 .hand.live .tile { cursor: pointer; }
 @media (hover: hover) { .hand.live .tile:hover { transform: translateY(-6px); } }
-.hand .tile.sel, .hand.live .tile.sel:hover { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
+.hand .tile.sel, .hand.live .tile.sel:hover { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), var(--sides), 0 18px 28px rgba(0, 0, 0, .2); }
 .hand .tile.new { animation: rise .45s var(--spring); }
-.hand .tile.picked { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .2); }
+.hand .tile.picked { transform: translateY(-16px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), var(--sides), 0 18px 28px rgba(0, 0, 0, .2); }
 /* Autosort off: drag tiles sideways to arrange them */
 .hand.manual .tile { cursor: grab; touch-action: pan-y; }
 .hand.is-dragging .tile { transition: transform .2s var(--ease); }
-.hand .tile.dragging { z-index: 2; cursor: grabbing; transition: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 18px 28px rgba(0, 0, 0, .22); }
+.hand .tile.dragging { z-index: 2; cursor: grabbing; transition: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), var(--sides), 0 18px 28px rgba(0, 0, 0, .22); }
 @keyframes rise { from { transform: translateY(-24px); opacity: 0; } }
 @media (max-width: 600px) {
   /* your hand fits the middle column (between the side players' 16px columns) and stays the largest */
@@ -430,8 +437,8 @@ span.scope { cursor: default; }
 .coach-tile { --w: 40px; position: relative; display: block; width: var(--w); height: calc(var(--w) * 1.63); }
 .ct-body { position: absolute; inset: 0; animation: ctFloat 3.2s ease-in-out infinite; }
 .ct-face, .ct-edge, .ct-rim { position: absolute; left: 0; width: var(--w); height: calc(var(--w) * 1.5); border-radius: calc(var(--w) * .16); }
-.ct-rim { top: calc(var(--w) * .13); background: #c2c2ba; }
-.ct-edge { top: calc(var(--w) * .13 - 1px); background: #dcdcd6; }
+.ct-rim { top: calc(var(--w) * .13); background: linear-gradient(transparent calc(100% - 1px), var(--edge-green-rim) 0), var(--edge-green); }
+.ct-edge { top: calc(var(--w) * .065); background: var(--edge); }
 .ct-face { top: 0; overflow: hidden; background: linear-gradient(#fff, #f3f3f0); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05); }
 .ct-face svg { display: block; width: 100%; height: 100%; }
 /* the shadow lies on the table in front of the tile (lower on screen, as if nearer you), shifted a little right
@@ -745,11 +752,12 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 @property --rot { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
 .deal-layer .tile {
   --ux: sin(var(--rot)); --uy: cos(var(--rot));
-  --d1: calc(var(--w) * var(--depth)); --d2: calc(var(--w) * var(--depth) + 1px); --d3: calc(var(--w) * (var(--depth) + .04));
+  --d0: var(--white-side); --d1: calc(var(--w) * var(--depth)); --d2: calc(var(--w) * var(--depth) + 1px); --d3: calc(var(--w) * (var(--depth) + .04));
   background: linear-gradient(calc(180deg - var(--rot)), #ffffff, var(--face));
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05),
-    calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge),
-    calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #c2c2ba,
+    calc(var(--ux) * var(--d0)) calc(var(--uy) * var(--d0)) 0 var(--edge),
+    calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge-green),
+    calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 var(--edge-green-rim),
     calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
 }
 .deal-layer .tile.back {
@@ -757,13 +765,14 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
   background: linear-gradient(calc(var(--jade-a) - var(--rot)), #127a5b, #0d6649);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08), inset calc(var(--ux) * var(--hl)) calc(var(--uy) * var(--hl)) 0 rgba(150, 235, 200, .35),
     inset 0 0 calc(var(--w) * .15) rgba(90, 200, 155, .22),
-    calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 #08493a,
-    calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #053628,
+    calc(var(--ux) * var(--d0)) calc(var(--uy) * var(--d0)) 0 #0b5a40,
+    calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge),
+    calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #c9c9c2,
     calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
 }
 /* a tile seen edge-on mid-flip: its thickness, white face layer then green back layer (reversed when turning face up) */
-.deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
-.deal-layer .tile.flip-side.rev { background: linear-gradient(to left, #fff 0 46%, #dcdcd6 46% 50%, var(--back) 50% 100%); }
+.deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 8%, var(--edge) 8% 52%, var(--edge-green) 52% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+.deal-layer .tile.flip-side.rev { background: linear-gradient(to left, #fff 0 8%, var(--edge) 8% 52%, var(--edge-green) 52% 100%); }
 body.dealing .fab, body.dealing .coach, body.dealing .bubble, body.dealing .who, body.dealing #bar > *,
 body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount, body.dealing .sheet-div {
   opacity: 0; pointer-events: none; transition: opacity .25s ease;
