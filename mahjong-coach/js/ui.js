@@ -403,7 +403,8 @@ function setSheet(collapsed) {
   });
 }
 
-const DEPTH = 0.13;  // matches --depth in style.css: a tile's 3D edge as a share of its width
+// a tile's 3D edge as a share of its width, read from --depth in style.css
+const DEPTH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--depth")) || 0.24;
 function fitLayout() {
   const bar = $("bar"), hand = $("hand"), center = document.querySelector(".center");
   if (!bar || !hand) return;
