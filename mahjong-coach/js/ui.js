@@ -25,7 +25,7 @@ const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
 // before that switch was remembered as a choice carry "mandarin" just because it was the old default).
 const savedPrefs = loadPrefs();
 if (!savedPrefs.langChosen) delete savedPrefs.lang;
-const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, lang: "cantonese", ...savedPrefs };
+const prefs = { showScores: false, autoSort: true, difficulty: "normal", sound: true, noFlowers: true, lang: "cantonese", ...savedPrefs };
 setLang(prefs.lang);
 const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
 let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
@@ -527,10 +527,8 @@ function renderSettings() {
   $("sortBtn").setAttribute("aria-checked", String(prefs.autoSort));
   $("scoresBtn").setAttribute("aria-checked", String(prefs.showScores));
   $("flowersBtn").setAttribute("aria-checked", String(prefs.noFlowers));
-  $("claimedBtn").setAttribute("aria-checked", String(prefs.showClaimed));
   $("soundBtn").setAttribute("aria-checked", String(prefs.sound));
   setSoundEnabled(prefs.sound);
-  document.body.classList.toggle("show-claimed", prefs.showClaimed);
   document.querySelectorAll("[data-diff]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.diff === prefs.difficulty)));
   document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.lang === prefs.lang)));
 }
@@ -605,7 +603,7 @@ function meldsHtml(pl, size) {
       const k = kindOf(id);
       // a concealed kong keeps its ends face down during play; when the hand is over all four are shown
       const hidden = m.concealed && (i === 0 || i === 3) && state.phase !== "over";
-      return tileHtml(k, { size, cls: `${hidden ? "face-down" : ""} ${id === m.claimed ? "claimed" : ""}` });
+      return tileHtml(k, { size, cls: hidden ? "face-down" : "" });
     });
     return `<span class="meld" title="${m.concealed ? "Concealed kong" : m.type === "pung" ? "peng" : m.type}">${tiles.join("")}</span>`;
   });
@@ -1223,11 +1221,6 @@ document.querySelectorAll("[data-diff]").forEach((b) => b.addEventListener("clic
 }));
 $("soundBtn").addEventListener("click", () => {
   prefs.sound = !prefs.sound;
-  savePrefs();
-  render();
-});
-$("claimedBtn").addEventListener("click", () => {
-  prefs.showClaimed = !prefs.showClaimed;
   savePrefs();
   render();
 });
