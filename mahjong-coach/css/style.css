@@ -149,7 +149,7 @@ p { text-wrap: pretty; }
 /* "Play with": a small heading over the toggles, each a 16px icon, its name and a switch */
 .set-heading { padding: 12px 14px; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); }
 .set-toggle .set-text b { font-weight: 400; }
-.set-icon { flex-shrink: 0; color: var(--text); }  /* 16px, the Points icon 20px (from their width/height) */
+.set-icon { flex-shrink: 0; width: 16px; height: 16px; color: var(--text); }
 /* the two choices stay on one line beside their names */
 .set-static .set-text b { white-space: nowrap; }
 .set-static .seg button { padding: 6px 10px; }
@@ -322,13 +322,14 @@ span.scope { cursor: default; }
   .seat-right .who { flex-direction: row-reverse; }
   .seat-left { align-items: flex-start; }
   .seat-right { align-items: flex-end; }
+  .table { column-gap: 70px; }  /* 70px between the side players' tiles and the white box */
+  .felt { gap: 35px; }
   /* the Coach tile: as big as a discard while quiet, growing to the size of your tiles when it has something to say */
   :root { --coach-w: calc(var(--lg) * .8); --coach-lift: calc((12px + var(--coach-w) * (1.5 + var(--depth)) + 1px - 48px) / 2); }
   .coach .coach-tile { --w: var(--coach-w); transition: transform .35s var(--spring); transform-origin: 50% 50%; }
   .coach.has-note .coach-tile { transform: scale(calc(56 / 43)); }
   .fab { bottom: calc(26px + var(--coach-lift) + env(safe-area-inset-bottom)); }
   body .me .me-plate { bottom: calc(26px + var(--coach-lift) + env(safe-area-inset-bottom)); }
-  .bar:not(.compact) { padding-bottom: 0; }
 }
 @media (max-width: 1200px) {
   .table { column-gap: 32px; }
