@@ -42,9 +42,11 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* without SF Pro the text is Inter, a touch tighter (titles keep their own tighter spacing) */
+html.no-sf body { font-family: Inter, system-ui, sans-serif; letter-spacing: -0.4px; }
 html, body { margin: 0; background: var(--page); color: var(--fg); }
 body {
-  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   /* app-like touch: no text selection or long-press menus (Copy, Look Up, image previews), no double-tap zoom */
