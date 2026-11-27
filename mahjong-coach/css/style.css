@@ -529,6 +529,8 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 .pane-body h3 { margin: 8px 0 16px; font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: -.8px; text-wrap: balance; }
 .pane-body p { margin: 0 0 14px; font-size: 15px; line-height: 23px; color: var(--text); }
 .pane-body p .tile, .pane-body li .tile { vertical-align: -7px; margin: 0 1px; }
+/* the footnote at the end of every coach card: how far you are from winning */
+.pane-body .pane-foot { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid var(--hair); font-size: 13px; line-height: 18px; color: var(--muted); }
 .pane-body .tip { padding: 14px 16px; border-radius: 16px; background: var(--felt); font-size: 14px; line-height: 21px; }
 /* the coach's portrait at the top of the panel */
 /* the coach in the panel header: no disc behind her, just her soft gold glow; her robe fades out at the bottom */

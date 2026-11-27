@@ -176,6 +176,12 @@ export function distance(state) {
   return shanten(handCounts(pl), pl.melds.length, unseenFor(state, 0));
 }
 
+/* The footnote at the end of every coach card while a hand is on: how far your hand is from winning right now. */
+export function awayNote(state) {
+  const s = distance(state);
+  return s < 0 ? "You have a winning hand." : `You're ${s + 1} tile${s === 0 ? "" : "s"} away from winning.`;
+}
+
 /* The one thing to work on, by the kind of note the coach gave most this hand. */
 const LESSON = {
   discard: "When choosing what to throw, keep tiles that sit next to each other and let go of lone winds, dragons, 1s and 9s first.",

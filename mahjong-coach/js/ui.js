@@ -941,6 +941,8 @@ function renderPane() {
   const pav = $("paneAv");
   if (pav && !pav.firstChild) pav.outerHTML = coachPortraitHtml().replace('class="coach-portrait"', 'id="paneAv" class="coach-portrait head"');
   const body = $("paneBody");
+  // every card ends with how far you are from winning, unless the hand is over
+  const foot = state.phase !== "over" ? `<p class="pane-foot">${Coach.awayNote(state)}</p>` : "";
   if (pane.view === "note") {
     const n = notes.find((x) => x.id === pane.id);
     if (!n) { pane.view = "list"; return renderPane(); }
@@ -950,7 +952,7 @@ function renderPane() {
     </div>` : "";
     const setCard = n.set ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${n.set.label}</span>${setTilesHtml(n.set.tiles, n.set.k)}</div></div>` : "";
     const canUndo = n.snapshot && n.handNo === state.handNo;
-    body.innerHTML = `<h3>${n.title}</h3>${cmp}${setCard}${n.html}
+    body.innerHTML = `<h3>${n.title}</h3>${cmp}${setCard}${n.html}${foot}
       <div class="pane-actions">
         ${canUndo ? `<button type="button" class="btn" data-undo="${n.id}">${UNDO_ICON}Take it back</button>` : ""}
         <button type="button" class="btn light" data-close>Got it</button>
@@ -969,9 +971,9 @@ function renderPane() {
     : ks.length ? `<div class="pick-tiles">${ks.map((k) => `<span class="pick-tile">${tileHtml(k, { size: "md" })}<span class="sub">${tileName(k)}</span></span>`).join("")}</div>` : "";
   const pickCard = h?.pick ? `<div class="compare single"><div class="compare-card best"><span class="lbl">${h.pick.label}</span>${pickTiles}</div></div>` : "";
   const action = h?.win ? `<button type="button" class="btn red" data-pane-mahjong>Mahjong</button>` : `<button type="button" class="btn" data-close>Got it</button>`;
-  const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}<div class="pane-actions">${action}</div>` : "";
+  const suggestion = h ? `<h3>${h.title}</h3>${pickCard}${h.html}${foot}<div class="pane-actions">${action}</div>` : "";
   // not your move: one quiet line so the panel isn't empty
-  body.innerHTML = h ? suggestion : `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>`;
+  body.innerHTML = h ? suggestion : `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>${foot}`;
 }
 
 /* ---------------- modals ---------------- */
