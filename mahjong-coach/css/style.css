@@ -806,7 +806,7 @@ html, body { transition: background-color .5s ease; }
 .deal-layer .deal-start { position: absolute; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); }
 .landing-title {
   position: absolute; left: 0; right: 0; bottom: calc(58px + 48px + 37px + env(safe-area-inset-bottom)); margin: 0;
-  font-family: "Instrument Serif", Georgia, serif; font-weight: 400; color: #1e654c; text-align: center; white-space: nowrap;
+  font-family: "Instrument Serif", Georgia, serif; font-weight: 400; color: #114e38; text-align: center; white-space: nowrap;
   font-size: min(200px, 13.9vw, 24vh); line-height: .96; letter-spacing: -0.04em; pointer-events: none;
 }
 
