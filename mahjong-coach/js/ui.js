@@ -21,7 +21,11 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
 // noFlowers: play without the flower and season tiles (on by default; applies from the next hand dealt)
-const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, lang: "mandarin", ...loadPrefs() };
+// Cantonese by default. A saved language only counts if it was picked with the Language switch (settings saved
+// before that switch was remembered as a choice carry "mandarin" just because it was the old default).
+const savedPrefs = loadPrefs();
+if (!savedPrefs.langChosen) delete savedPrefs.lang;
+const prefs = { showScores: false, autoSort: true, showClaimed: false, difficulty: "normal", sound: true, noFlowers: true, lang: "cantonese", ...savedPrefs };
 setLang(prefs.lang);
 const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
 let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
@@ -1199,6 +1203,7 @@ $("hand").addEventListener("pointercancel", endDrag);
 
 document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
   prefs.lang = b.dataset.lang;
+  prefs.langChosen = true;
   setLang(prefs.lang);
   savePrefs();
   render();

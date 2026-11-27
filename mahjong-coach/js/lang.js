@@ -1,13 +1,13 @@
-// Mandarin or Cantonese (a setting; Mandarin by default). It changes two things:
+// Mandarin or Cantonese (a setting; Cantonese by default). It changes two things:
 //  - the Chinese characters: simplified for Mandarin (东 发 兰 杠), traditional for Cantonese (東 發 蘭 槓)
 //  - how the calls are spelled in the English text: Mandarin pinyin with its tone marks (pèng, gàng, chī) or
 //    the Cantonese-style spellings (pung, kong, chow)
 // The game's text is written with "peng", "kong" and "chow"; localize() swaps those words wherever they
 // show on screen.
 
-let lang = "mandarin";
+let lang = "cantonese";
 export const getLang = () => lang;
-export function setLang(l) { lang = l === "cantonese" ? "cantonese" : "mandarin"; }
+export function setLang(l) { lang = l === "mandarin" ? "mandarin" : "cantonese"; }
 
 const SIMPLIFIED = { "東": "东", "發": "发", "蘭": "兰", "槓": "杠" };
 /* A Chinese string in this language's script (the source is written in traditional characters). */
