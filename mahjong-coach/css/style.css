@@ -309,6 +309,19 @@ span.scope { cursor: default; }
 @keyframes drop { from { transform: translateY(-8px) scale(1.12); opacity: 0; } }
 
 /* narrower windows: smaller opponent tiles and tighter gaps so the middle keeps its width */
+/* Desktop (Figma 2429:33813): every opponent's label sits along the top, side players' beside their wind like
+   the player opposite (Player 1's name before its circle), and all three players' tiles start on the same line
+   under them. The floating buttons and your label line up with the middle of the Coach tile. */
+@media (min-width: 761px) and (min-height: 501px) {
+  .seat-left .who, .seat-right .who { flex-direction: row; gap: 12px; }
+  .seat-right .who { flex-direction: row-reverse; }
+  .seat-left { align-items: flex-start; }
+  .seat-right { align-items: flex-end; }
+  :root { --coach-lift: calc((12px + 40px * (1.5 + var(--depth)) + 1px - 48px) / 2); }
+  .fab { bottom: calc(26px + var(--coach-lift) + env(safe-area-inset-bottom)); }
+  body .me .me-plate { bottom: calc(26px + var(--coach-lift) + env(safe-area-inset-bottom)); }
+  .bar:not(.compact) { padding-bottom: 0; }
+}
 @media (max-width: 1200px) {
   .table { column-gap: 32px; }
   :root { --opp: 30px; }
@@ -435,6 +448,7 @@ span.scope { cursor: default; }
   color: #262626; font-size: calc(var(--w) * .235); line-height: 1.2; font-weight: 600; white-space: nowrap; letter-spacing: -.1px;
   text-shadow: 0 0 3px #fff, 0 0 2px #fff; }  /* written straight on the tile; a soft white halo keeps it clear of her robe lines */
 .coach-tile { --w: 40px; position: relative; display: block; width: var(--w); height: calc(var(--w) * (1.5 + var(--depth)) + 1px); }
+.ct-label { display: none; }  /* the tile is just Guanyin now (Figma 2429:33813); "Coach" stays its name for screen readers */
 .ct-body { position: absolute; inset: 0; animation: ctFloat 3.2s ease-in-out infinite; }
 .ct-face, .ct-edge, .ct-rim { position: absolute; left: 0; width: var(--w); height: calc(var(--w) * 1.5); border-radius: calc(var(--w) * .16); }
 .ct-rim { top: calc(var(--w) * var(--depth)); background: linear-gradient(transparent calc(100% - 1px), var(--edge-green-rim) 0), var(--edge-green); }
