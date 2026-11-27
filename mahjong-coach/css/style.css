@@ -804,7 +804,9 @@ body.dealing .me-plate, body.dealing .sheet-grab, body.dealing .dcount, body.dea
 body.undealing :is(.fab, .coach, .who, #bar > *, .me-plate, .sheet-grab, .dcount, .sheet-div) { transition: opacity .4s ease; }
 body.dealing-hide #table .tile, body.dealing-hide #sheet .tile { visibility: hidden; }
 body.dealing-hide.table-ready #table .tile { visibility: visible; }  /* phones: opponents' tiles are in place before the sheet rises */
-body.dealing .bar { background: transparent; transition: background .25s ease; }  /* the white box steps aside */
+/* the white box steps aside, and on desktop the line between the prompt and your tiles fades out with it */
+body.dealing .bar { background: transparent; box-shadow: none; transition: background .25s ease, box-shadow .25s ease; }
+body.undealing .bar { transition: box-shadow .4s ease; }
 /* first visit: "Start new game" sits under the face-down pile */
 /* the landing (Figma 2450:36099): warm background, the name in Instrument Serif, Start new game near the bottom */
 body.landing, html:has(body.landing) { background: #f4f2ec; }
