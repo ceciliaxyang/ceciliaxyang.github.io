@@ -988,8 +988,6 @@ const cardShown = () => resultAsked || (prefs.showScores && !(state.result && st
 const RESULT_HOLD = 1500;
 let resultHeld = false;
 let heldResult = state.phase === "over" ? state.result : null;  // a hand already over on load shows its card at once
-let confirmNew = false;     // New game was tapped once: the button now says Confirm (a second tap starts over)
-let confirmTimer = null;
 
 function renderModal() {
   const m = $("modal");
@@ -1245,23 +1243,8 @@ $("scoresBtn").addEventListener("click", () => {
   render();
 });
 $("guideBtn").addEventListener("click", () => { toggleSettings(false); guideOpen = true; render(); });
-/* New game asks once, in place: the first tap turns it into "Confirm new game", the second starts over.
-   Tapping anywhere else, pressing Escape or waiting 4 seconds puts it back. */
-function setConfirmNew(on) {
-  confirmNew = on;
-  clearTimeout(confirmTimer);
-  const b = $("newBtn");
-  b.textContent = on ? "Confirm new game" : "New game";
-  b.classList.toggle("confirm", on);
-  b.setAttribute("aria-label", on ? "Confirm: start a new game (scores reset)" : "New game");
-  if (on) confirmTimer = setTimeout(() => setConfirmNew(false), 4000);
-}
-$("newBtn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  // once the hand is over there's nothing to lose, so it starts straight away; mid-hand it asks first
-  if (confirmNew || state.phase === "over") newGame(); else if (!dealing) setConfirmNew(true);
-});
-document.addEventListener("click", (e) => { if (confirmNew && !e.target.closest("#newBtn")) setConfirmNew(false); });
+// New game starts straight away (Undo and the saved game make a stray tap cheap, so there's no confirm step)
+$("newBtn").addEventListener("click", (e) => { e.stopPropagation(); newGame(); });
 /* Phones: tuck the bottom sheet away while the pile gathers (so the animation sits in the middle of the
    screen), and open it again just as the tiles are dealt into your hand. */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1312,7 +1295,6 @@ async function startNextHand() {
 async function newGame() {
   if (dealing) return;
   dealing = true;
-  setConfirmNew(false);
   await dismissPane();
   epoch++;  // cancel any bot move still pending from the old game
   announce = null;
@@ -1337,10 +1319,10 @@ async function newGame() {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === " " && !e.repeat && announce && !guideOpen && !confirmNew && !e.target.closest?.("input, textarea, .settings")) {
+  if (e.key === " " && !e.repeat && announce && !guideOpen && !e.target.closest?.("input, textarea, .settings")) {
     e.preventDefault(); announce = null; update(); return;
   }
-  if (e.key === " " && !e.repeat && G.claimPendingFor(state, 0) && !guideOpen && !confirmNew && !e.target.closest?.("input, textarea, .settings")) {
+  if (e.key === " " && !e.repeat && G.claimPendingFor(state, 0) && !guideOpen && !e.target.closest?.("input, textarea, .settings")) {
     e.preventDefault();
     if (state.claim.options[0].win) mahjongOnDiscard();  // Space wins rather than passing on a winning tile
     else if (callPick.length) callPicked(); else claim({ type: "pass" });
@@ -1348,7 +1330,6 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Escape") {
     if (!$("settings").hidden) { toggleSettings(false); $("settingsBtn").focus(); }
-    else if (confirmNew) setConfirmNew(false);
     else if (guideOpen) { guideOpen = false; render(); }
     else if (state.phase === "over" && !resultClosed && !dealing) closeResult();
     else if (pane.open) closePane();

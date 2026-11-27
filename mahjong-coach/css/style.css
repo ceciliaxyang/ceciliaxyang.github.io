@@ -88,8 +88,6 @@ p { text-wrap: pretty; }
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { #undoBtn:not([hidden]) { animation: none; } }
-/* New game, armed: it turns black (like Coach) and reads Confirm until you tap again (or anywhere else) */
-.fab-btn.light.confirm, .fab-btn.light.confirm:hover { background: #000; color: #fff; }
 .fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
 /* New game when the hand is over: solid black, the main thing to do next. It breathes: grows a little and
    shrinks back, slowly and without stopping, to draw the eye */
