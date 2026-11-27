@@ -204,7 +204,8 @@ span.scope { cursor: default; }
    bright line along the top edge. The gradient tips a few degrees differently from tile to tile. */
 .tile.back, .tile.face-down {
   --jade-a: 180deg;
-  --sides: 0 var(--white-side) 0 #0b5a40, 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c9c9c2;
+  /* upside down: the green back layer (1/3 of the edge) is on top, the white body (2/3) under it */
+  --sides: 0 calc(var(--w) * var(--depth) / 3) 0 #0b5a40, 0 calc(var(--w) * var(--depth)) 0 var(--edge), 0 calc(var(--w) * var(--depth) + 1px) 0 #c9c9c2;
   background: linear-gradient(var(--jade-a), #127a5b, #0d6649);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08), inset 0 max(1px, calc(var(--w) * .033)) 0 rgba(150, 235, 200, .35),
     inset 0 0 calc(var(--w) * .15) rgba(90, 200, 155, .22),
@@ -320,7 +321,10 @@ span.scope { cursor: default; }
   .seat-right .who { flex-direction: row-reverse; }
   .seat-left { align-items: flex-start; }
   .seat-right { align-items: flex-end; }
-  :root { --coach-lift: calc((12px + 40px * (1.5 + var(--depth)) + 1px - 48px) / 2); }
+  /* the Coach tile: as big as a discard while quiet, growing to the size of your tiles when it has something to say */
+  :root { --coach-w: calc(var(--lg) * .8); --coach-lift: calc((12px + var(--coach-w) * (1.5 + var(--depth)) + 1px - 48px) / 2); }
+  .coach .coach-tile { --w: var(--coach-w); transition: transform .35s var(--spring); transform-origin: 50% 50%; }
+  .coach.has-note .coach-tile { transform: scale(calc(56 / 43)); }
   .fab { bottom: calc(26px + var(--coach-lift) + env(safe-area-inset-bottom)); }
   body .me .me-plate { bottom: calc(26px + var(--coach-lift) + env(safe-area-inset-bottom)); }
   .bar:not(.compact) { padding-bottom: 0; }
@@ -782,7 +786,7 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
   background: linear-gradient(calc(var(--jade-a) - var(--rot)), #127a5b, #0d6649);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08), inset calc(var(--ux) * var(--hl)) calc(var(--uy) * var(--hl)) 0 rgba(150, 235, 200, .35),
     inset 0 0 calc(var(--w) * .15) rgba(90, 200, 155, .22),
-    calc(var(--ux) * var(--d0)) calc(var(--uy) * var(--d0)) 0 #0b5a40,
+    calc(var(--ux) * var(--d1) / 3) calc(var(--uy) * var(--d1) / 3) 0 #0b5a40,
     calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge),
     calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #c9c9c2,
     calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);

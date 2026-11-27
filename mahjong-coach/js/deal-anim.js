@@ -433,16 +433,28 @@ function dealOrder() {
   return order;
 }
 
-/* Where the pile goes: the middle of the table, sized so n tiles fit as a swirl without touching. */
-function pileLayout(n) {
+/* Where the pile goes: the middle of the table. Its tiles are the same size as the opponents' tiles in play
+   (--opp), so the deal doesn't shrink or swell them much; the oval grows to fit n of them without touching, up to
+   most of the screen (above the Start button). With `fewer` (the start screen), if n won't fit at that size it
+   shows as many as do; otherwise (a new game, where every tile on the table must gather) the tiles shrink to fit. */
+function pileLayout(n, fewer = false) {
   // phones: centred in the screen (the sheet is tucked away); larger screens: the middle of the table
   const phone = matchMedia("(max-width: 600px)").matches;
   const c = phone ? { left: 0, top: 0, width: innerWidth, height: innerHeight }
     : document.querySelector(".felt")?.getBoundingClientRect() ?? { left: 0, top: 0, width: innerWidth, height: innerHeight };
   const cx = c.left + c.width / 2, cy = phone ? innerHeight * 0.46 : Math.min(c.top + c.height / 2, innerHeight * 0.42);
-  const maxW = Math.min(c.width || innerWidth, innerWidth - 32) * 0.9, maxH = innerHeight * 0.5;
-  const rx = Math.min(maxW / 2, 260), ry = Math.min(rx * 0.74, maxH / 2);
-  const w = Math.min(GHOST_W, Math.sqrt((Math.PI * rx * ry) / (n * 1.5 * 2.6)));
+  const maxW = Math.min(c.width || innerWidth, innerWidth - 32) * 0.9;
+  // room below for the Start button (36px gap + 48px button + a margin)
+  const maxH = Math.max(120, 2 * Math.min(cy - 16, innerHeight - cy - 36 - 48 - 24));
+  const opp = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--opp")) || GHOST_W;
+  const target = Math.min(GHOST_W, opp);
+  const PACK = 1.5 * 2.6;  // area each tile needs in the swirl, in tile-widths squared
+  // the oval n tiles of the target size need (a little wider than tall), within the room there is
+  let rx = Math.sqrt((n * PACK * target * target) / (Math.PI * 0.74)), ry = rx * 0.74;
+  if (rx > maxW / 2) { rx = maxW / 2; ry = Math.min(maxH / 2, (n * PACK * target * target) / (Math.PI * rx)); }
+  if (ry > maxH / 2) { ry = maxH / 2; rx = Math.min(maxW / 2, (n * PACK * target * target) / (Math.PI * ry)); }
+  let w = Math.min(target, Math.sqrt((Math.PI * rx * ry) / (n * PACK)));
+  if (fewer && w < target) { w = target; n = Math.max(12, Math.floor((Math.PI * rx * ry) / (PACK * w * w))); }
   const slots = swirl(n, w, rx, ry).map((t) => ({ x: cx + t.x, y: cy + t.y, rot: t.rot, s: w / GHOST_W }));
   slots.sort((a, b) => a.y - b.y);  // dealing takes tiles from the far side of the pile first
   return { cx, cy, rx, ry, w, slots };
@@ -558,7 +570,7 @@ export async function introDeal(startNew, hooks = {}) {
   body.classList.add("dealing", "dealing-hide");
   if (hooks.beforePile) await hooks.beforePile();
   const layer = newLayer();
-  const pile = pileLayout(60);
+  const pile = pileLayout(60, true);
   // the tiles start face up, like a set just tipped out of its box (a fair random mix of the 136 playable tiles)
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
   const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
