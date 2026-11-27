@@ -7,6 +7,15 @@ import { clack, shuffleRattle } from "./sound.js";
 import { faceSvg } from "./tiles.js";
 
 const GHOST_W = 40;  // every flying tile is drawn at this width and scaled to fit where it is or goes
+/* A loose tile's 3D edge (see .deal-layer .tile in style.css) is drawn straight down the screen whatever its
+   angle, --depth of its width plus a 1px rim. Its footprint on the table is its face swept down by that much:
+   the face rectangle's extent along an axis, plus half the edge's drop projected on it (the centre moves down by
+   the other half, the same for every tile, so it cancels out between two tiles). The extra axis (1, 0) is the
+   sweep's own side. */
+const DEPTH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--depth")) || 0.24;
+const dropOf = (w) => w * DEPTH + 1;
+const footAxes = (ra, rb) => [[Math.cos(ra), Math.sin(ra)], [-Math.sin(ra), Math.cos(ra)], [Math.cos(rb), Math.sin(rb)], [-Math.sin(rb), Math.cos(rb)], [1, 0]];
+const footExt = (hw, hh, drop) => (r, ux, uy) => hw * Math.abs(Math.cos(r) * ux + Math.sin(r) * uy) + hh * Math.abs(-Math.sin(r) * ux + Math.cos(r) * uy) + (drop / 2) * Math.abs(uy);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -90,6 +99,7 @@ function makeGhost(layer, p, html, back) {
 function pushShuffle(ghosts, pile) {
   const n = ghosts.length, GAP = 1, EPS = 0.01;  // px kept clear between tiles; rounding tolerance
   const hw = pile.w / 2 + GAP / 2, hh = pile.w * 0.75 + GAP / 2;
+  const extOf = footExt(hw, hh, dropOf(pile.w));  // face plus its 3D edge, so no edge is drawn over a neighbour
   const norm = (g) => Math.hypot((g.x - pile.cx) / pile.rx, (g.y - pile.cy) / pile.ry);
   const spread = () => ghosts.reduce((m, g) => m + norm(g), 0) / n;
   const spread0 = spread();
@@ -98,26 +108,26 @@ function pushShuffle(ghosts, pile) {
   /* how far b must move to be clear of a ({ x, y }), or null if they don't touch (separating-axis test) */
   function overlap(a, b) {
     const ra = (a.rot * Math.PI) / 180, rb = (b.rot * Math.PI) / 180;
-    const axes = [[Math.cos(ra), Math.sin(ra)], [-Math.sin(ra), Math.cos(ra)], [Math.cos(rb), Math.sin(rb)], [-Math.sin(rb), Math.cos(rb)]];
+    const axes = footAxes(ra, rb);
     const dx = b.x - a.x, dy = b.y - a.y;
     let best = Infinity, bx = 0, by = 0;
     for (const [ux, uy] of axes) {
-      const ext = (r) => hw * Math.abs(Math.cos(r) * ux + Math.sin(r) * uy) + hh * Math.abs(-Math.sin(r) * ux + Math.cos(r) * uy);
+      const ext = (r) => extOf(r, ux, uy);
       const d = dx * ux + dy * uy, o = ext(ra) + ext(rb) - Math.abs(d);
       if (o <= EPS) return null;  // touching (or a rounding error's worth) is fine
       if (o < best) { best = o; const sg = d < 0 ? -1 : 1, p = o + EPS; bx = ux * p * sg; by = uy * p * sg; }
     }
     return { x: bx, y: by };
   }
-  const near = (a, b) => Math.abs(a.x - b.x) < pile.w * 2 && Math.abs(a.y - b.y) < pile.w * 2;
+  const near = (a, b) => Math.abs(a.x - b.x) < pile.w * 2.5 && Math.abs(a.y - b.y) < pile.w * 2.5;
   /* how far b must move along (ux, uy) to be clear of a, or Infinity if moving that way can't clear it */
   function along(a, b, ux, uy) {
     const ra = (a.rot * Math.PI) / 180, rb = (b.rot * Math.PI) / 180;
-    const axes = [[Math.cos(ra), Math.sin(ra)], [-Math.sin(ra), Math.cos(ra)], [Math.cos(rb), Math.sin(rb)], [-Math.sin(rb), Math.cos(rb)]];
+    const axes = footAxes(ra, rb);
     const dx = b.x - a.x, dy = b.y - a.y;
     let best = Infinity;
     for (const [ax, ay] of axes) {
-      const ext = (r) => hw * Math.abs(Math.cos(r) * ax + Math.sin(r) * ay) + hh * Math.abs(-Math.sin(r) * ax + Math.cos(r) * ay);
+      const ext = (r) => extOf(r, ax, ay);
       const d = dx * ax + dy * ay, o = ext(ra) + ext(rb) - Math.abs(d);
       const rate = (ux * ax + uy * ay) * (d < 0 ? -1 : 1);  // how fast moving along u opens this gap
       if (rate > 0.05) best = Math.min(best, (o + EPS) / rate);
@@ -385,30 +395,22 @@ function shuffle(a) {
   return a;
 }
 
-/* Scatter n tiles (w wide, 1.5w tall) at any angle across an rx × ry oval with none touching. */
+/* Scatter n tiles (w wide, 1.5w tall, plus their 3D edge) at any angle across an rx × ry oval with none touching. */
 function swirl(n, w, rx, ry) {
-  const h = w * 1.5, margin = w * 0.08;
-  const corners = (t) => {
-    const c = Math.cos(t.rot * Math.PI / 180), s = Math.sin(t.rot * Math.PI / 180);
-    return [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(([x, y]) => [t.x + x * c - y * s, t.y + x * s + y * c]);
+  const margin = w * 0.08;
+  const extOf = footExt(w / 2 + margin / 2, w * 0.75 + margin / 2, dropOf(w));
+  const apart = (a, b) => {  // separating-axis test on the two footprints
+    const ra = (a.rot * Math.PI) / 180, rb = (b.rot * Math.PI) / 180, dx = b.x - a.x, dy = b.y - a.y;
+    return footAxes(ra, rb).some(([ux, uy]) => extOf(ra, ux, uy) + extOf(rb, ux, uy) <= Math.abs(dx * ux + dy * uy));
   };
-  const apart = (A, B) => {  // separating-axis test on the two rotated rectangles
-    for (const P of [A, B]) for (let i = 0; i < 2; i++) {
-      const dx = P[i + 1][0] - P[i][0], dy = P[i + 1][1] - P[i][1], l = Math.hypot(dx, dy), ax = -dy / l, ay = dx / l;
-      const a = A.map((p) => p[0] * ax + p[1] * ay), b = B.map((p) => p[0] * ax + p[1] * ay);
-      if (Math.max(...a) + margin < Math.min(...b) || Math.max(...b) + margin < Math.min(...a)) return true;
-    }
-    return false;
-  };
-  const placed = [], polys = [];
+  const placed = [];
   let grow = 1;
   while (placed.length < n) {
     let ok = false;
     for (let tries = 0; tries < 400 && !ok; tries++) {
       const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
       const t = { x: Math.cos(a) * d * rx * grow, y: Math.sin(a) * d * ry * grow, rot: Math.random() * 360 - 180 };
-      const P = corners(t);
-      if (polys.every((Q) => apart(P, Q))) { placed.push(t); polys.push(P); ok = true; }
+      if (placed.every((q) => apart(t, q))) { placed.push(t); ok = true; }
     }
     if (!ok) grow *= 1.05;  // crowded: let the pile spread a little
   }
