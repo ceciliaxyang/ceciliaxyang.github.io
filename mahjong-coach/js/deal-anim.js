@@ -437,15 +437,16 @@ function dealOrder() {
    (--opp), so the deal doesn't shrink or swell them much; the oval grows to fit n of them without touching, up to
    most of the screen (above the Start button). With `fewer` (the start screen), if n won't fit at that size it
    shows as many as do; otherwise (a new game, where every tile on the table must gather) the tiles shrink to fit. */
-function pileLayout(n, fewer = false) {
-  // phones: centred in the screen (the sheet is tucked away); larger screens: the middle of the table
+function pileLayout(n, fewer = false, area = null) {
+  // phones: centred in the screen (the sheet is tucked away); larger screens: the middle of the table.
+  // `area` (the start screen): fill this box instead ({ left, top, width, height }; it may run off the top)
   const phone = matchMedia("(max-width: 600px)").matches;
-  const c = phone ? { left: 0, top: 0, width: innerWidth, height: innerHeight }
-    : document.querySelector(".felt")?.getBoundingClientRect() ?? { left: 0, top: 0, width: innerWidth, height: innerHeight };
-  const cx = c.left + c.width / 2, cy = phone ? innerHeight * 0.46 : Math.min(c.top + c.height / 2, innerHeight * 0.42);
+  const c = area || (phone ? { left: 0, top: 0, width: innerWidth, height: innerHeight }
+    : document.querySelector(".felt")?.getBoundingClientRect() ?? { left: 0, top: 0, width: innerWidth, height: innerHeight });
+  const cx = c.left + c.width / 2, cy = area ? c.top + c.height / 2 : phone ? innerHeight * 0.46 : Math.min(c.top + c.height / 2, innerHeight * 0.42);
   const maxW = Math.min(c.width || innerWidth, innerWidth - 32) * 0.9;
-  // room below for the Start button (36px gap + 48px button + a margin)
-  const maxH = Math.max(120, 2 * Math.min(cy - 16, innerHeight - cy - 36 - 48 - 24));
+  // room below for the Start button (36px gap + 48px button + a margin), or the whole box when given one
+  const maxH = area ? c.height : Math.max(120, 2 * Math.min(cy - 16, innerHeight - cy - 36 - 48 - 24));
   const opp = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--opp")) || GHOST_W;
   const target = Math.min(GHOST_W, opp);
   const PACK = 1.5 * 2.6;  // area each tile needs in the swirl, in tile-widths squared
@@ -570,7 +571,20 @@ export async function introDeal(startNew, hooks = {}) {
   body.classList.add("dealing", "dealing-hide");
   if (hooks.beforePile) await hooks.beforePile();
   const layer = newLayer();
-  const pile = pileLayout(60, true);
+  // the landing (Figma 2450:36099): a warm table, the pile running off the top, the name, then Start new game
+  body.classList.add("landing");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn deal-start";
+  btn.textContent = "Start new game";
+  const title = document.createElement("h1");
+  title.className = "landing-title";
+  title.textContent = "Mahjong Coach";
+  layer.append(title, btn);
+  try { await document.fonts.load('200px "Instrument Serif"'); } catch { /* fine without it */ }
+  const tTop = title.getBoundingClientRect().top;
+  // the pile fills the space above the name, starting a little above the top of the screen
+  const pile = pileLayout(60, true, { left: 0, top: -0.04 * innerHeight, width: innerWidth, height: tTop + 0.04 * innerHeight - 8 });
   // the tiles start face up, like a set just tipped out of its box (a fair random mix of the 136 playable tiles)
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
   const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));
@@ -588,15 +602,11 @@ export async function introDeal(startNew, hooks = {}) {
     // Start pressed: let a flip in progress finish, and the pushes already going land
     return { stop: async () => { stopping = true; await ready; if (mixing) await mixing.stop(); } };
   })();
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "btn deal-start";
-  btn.textContent = "Start new game";
-  btn.style.top = `${Math.max(pile.cy + pile.ry + 36, (pile.bottom || 0) + 24)}px`;
-  layer.appendChild(btn);
   await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
   await idle.stop();
   btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
+  title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: "forwards" }).finished.then(() => title.remove());
+  body.classList.remove("landing");
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
     startNew();
     if (hooks.afterLand) await hooks.afterLand();

@@ -800,7 +800,15 @@ body.dealing-hide #table .tile, body.dealing-hide #sheet .tile { visibility: hid
 body.dealing-hide.table-ready #table .tile { visibility: visible; }  /* phones: opponents' tiles are in place before the sheet rises */
 body.dealing .bar { background: transparent; transition: background .25s ease; }  /* the white box steps aside */
 /* first visit: "Start new game" sits under the face-down pile */
-.deal-layer .deal-start { position: absolute; left: 50%; transform: translateX(-50%); }
+/* the landing (Figma 2450:36099): warm background, the name in Instrument Serif, Start new game near the bottom */
+body.landing, html:has(body.landing) { background: #f4f2ec; }
+html, body { transition: background-color .5s ease; }
+.deal-layer .deal-start { position: absolute; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); }
+.landing-title {
+  position: absolute; left: 0; right: 0; bottom: calc(58px + 48px + 37px + env(safe-area-inset-bottom)); margin: 0;
+  font-family: "Instrument Serif", Georgia, serif; font-weight: 400; color: #1e654c; text-align: center; white-space: nowrap;
+  font-size: min(200px, 13.9vw, 24vh); line-height: .96; letter-spacing: -0.04em; pointer-events: none;
+}
 
 /* Mahjong confetti (js/confetti.js): tiles from your winning hand, above everything, ignoring taps */
 .confetti { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; perspective: 800px; }
