@@ -584,7 +584,16 @@ export async function introDeal(startNew, hooks = {}) {
   try { await document.fonts.load('200px "Instrument Serif"'); } catch { /* fine without it */ }
   const tTop = title.getBoundingClientRect().top;
   // the pile fills the space above the name, starting a little above the top of the screen
-  const pile = pileLayout(60, true, { left: 0, top: -0.04 * innerHeight, width: innerWidth, height: tTop + 0.04 * innerHeight - 8 });
+  let pile = pileLayout(60, true, { left: 0, top: -0.04 * innerHeight, width: innerWidth, height: tTop + 0.04 * innerHeight - 8 });
+  // phones (Figma 2454:37387): the same pile at twice the size about the middle of the screen, so the tiles
+  // are big enough to read and the pile runs off the sides and the top
+  if (matchMedia("(max-width: 760px)").matches) {
+    const k = 2, ox = innerWidth / 2, oy = innerHeight / 2;
+    const at = (x, y) => ({ x: ox + (x - ox) * k, y: oy + (y - oy) * k });
+    pile = { ...pile, ...at(pile.cx, pile.cy), rx: pile.rx * k, ry: pile.ry * k, w: pile.w * k,
+      slots: pile.slots.map((p) => ({ ...p, ...at(p.x, p.y), s: p.s * k })) };
+    pile.cx = pile.x; pile.cy = pile.y;
+  }
   // the tiles start face up, like a set just tipped out of its box (a fair random mix of the 136 playable tiles)
   const kinds = shuffle(Array.from({ length: 136 }, (_, i) => i >> 2));
   const ghosts = pile.slots.map((p, i) => makeGhost(layer, { x: p.x, y: p.y, w: pile.w, rot: p.rot }, faceSvg(kinds[i]), false));

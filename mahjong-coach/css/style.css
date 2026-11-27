@@ -803,11 +803,15 @@ body.dealing .bar { background: transparent; transition: background .25s ease; }
 /* the landing (Figma 2450:36099): warm background, the name in Instrument Serif, Start new game near the bottom */
 body.landing, html:has(body.landing) { background: #f4f2ec; }
 html, body { transition: background-color .5s ease; }
-.deal-layer .deal-start { position: absolute; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); }
+.deal-layer .deal-start { position: absolute; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #d7251c; }
 .landing-title {
   position: absolute; left: 0; right: 0; bottom: calc(58px + 48px + 37px + env(safe-area-inset-bottom)); margin: 0;
   font-family: "Instrument Serif", Georgia, serif; font-weight: 400; color: #114e38; text-align: center; white-space: nowrap;
   font-size: min(200px, 13.9vw, 24vh); line-height: .96; letter-spacing: -0.04em; pointer-events: none;
+}
+/* phones (Figma 2454:37387): a bigger name, a little closer to the button */
+@media (max-width: 760px) {
+  .landing-title { font-size: min(18.3vw, 24vh); bottom: calc(58px + 48px + 33px + env(safe-area-inset-bottom)); }
 }
 
 /* Mahjong confetti (js/confetti.js): tiles from your winning hand, above everything, ignoring taps */
