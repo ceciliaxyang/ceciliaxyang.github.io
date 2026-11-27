@@ -4,8 +4,8 @@
 :root {
   color-scheme: light;
   --bg: #ffffff;
-  --page: #f7f7f7;   /* page background; the felt sits on it in white */
-  --tag: #ebebeb;    /* player name tags */
+  --page: #f4f2ec;   /* page background, warm beige (Figma Beige/beige 200); the phone sheet stays white */
+  --tag: rgba(223, 220, 214, .6);  /* wind circles: #dfdcd6 at 60% */
   --turn: #d7251c;   /* the tag of whoever has to act */
   --fg: #000000;
   --text: #222222;
@@ -82,7 +82,7 @@ p { text-wrap: pretty; }
 .fab-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .fab-btn.dark { background: rgba(34, 34, 34, .78); color: #fff; }
 .fab-btn.dark:hover { background: rgba(0, 0, 0, .85); }
-.fab-btn.light { background: rgba(221, 221, 221, .55); color: var(--text); }
+.fab-btn.light { background: rgba(223, 220, 214, .6); color: var(--text); }
 /* Icon-only FAB (Settings gear): a circle the same height as the pill buttons */
 .fab-btn.icon { width: 48px; padding: 0; display: inline-grid; place-items: center; }
 .fab-btn[hidden] { display: none; }
@@ -93,7 +93,7 @@ p { text-wrap: pretty; }
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { #undoBtn:not([hidden]) { animation: none; } }
-.fab-btn.light:hover { background: rgba(210, 210, 210, .7); }
+.fab-btn.light:hover { background: rgba(208, 204, 196, .7); }
 /* New game when the hand is over: solid black, the main thing to do next. It breathes: grows a little and
    shrinks back, slowly and without stopping, to draw the eye */
 .fab-btn.primary, .fab-btn.primary:hover { background: #000; color: #fff; animation: fab-breathe 2.4s ease-in-out infinite; }
@@ -324,6 +324,7 @@ span.scope { cursor: default; }
   .seat-right { align-items: flex-end; }
   .table { column-gap: 70px; }  /* 70px between the side players' tiles and the white box */
   .felt { gap: 35px; }
+  body .bar { border-radius: 0; box-shadow: inset 0 -1px 0 #dfdcd6; }  /* a line between the latest move and your tiles */
   /* the Coach tile: as big as a discard while quiet, growing to the size of your tiles when it has something to say */
   :root { --coach-w: calc(var(--lg) * .8); --coach-lift: calc((12px + var(--coach-w) * (1.5 + var(--depth)) + 1px - 48px) / 2); }
   .coach .coach-tile { --w: var(--coach-w); transition: transform .35s var(--spring); transform-origin: 50% 50%; }
@@ -388,7 +389,7 @@ span.scope { cursor: default; }
 .bar {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
   height: calc(40px + 20px + 16px + var(--lg) * var(--tile-r) + 24px + 48px + 40px);  /* includes the 40px padding */
-  padding: 40px 32px; border-radius: 40px; background: #fff;
+  padding: 40px 32px; border-radius: 40px; background: none;  /* no white box: it sits on the beige page */
 }
 .act-left { display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 0; max-width: 100%; }
 .act-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
