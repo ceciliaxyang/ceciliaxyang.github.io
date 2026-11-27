@@ -3,7 +3,7 @@
 import * as G from "./game.js";
 import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
-import { kindOf, FAN_GUIDE, isSuited } from "./engine.js";
+import { kindOf, isSuited } from "./engine.js";
 import { coachTileHtml, coachPortraitHtml } from "./coach-art.js";
 import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
@@ -526,7 +526,7 @@ function flyDiscards(boxRects) {
 function renderSettings() {
   $("sortBtn").setAttribute("aria-checked", String(prefs.autoSort));
   $("scoresBtn").setAttribute("aria-checked", String(prefs.showScores));
-  $("flowersBtn").setAttribute("aria-checked", String(prefs.noFlowers));
+  $("flowersBtn").setAttribute("aria-checked", String(!prefs.noFlowers));  // on = playing with flowers
   $("soundBtn").setAttribute("aria-checked", String(prefs.sound));
   setSoundEnabled(prefs.sound);
   document.querySelectorAll("[data-diff]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.diff === prefs.difficulty)));
@@ -976,7 +976,6 @@ function renderPane() {
 
 /* ---------------- modals ---------------- */
 
-let guideOpen = false;
 let resultClosed = false;
 let resultAsked = false;  // the card was asked for (View points, See their hand)
 // The results card comes up by itself only for another player's win (or a draw) when playing for points.
@@ -992,11 +991,6 @@ function renderModal() {
   const m = $("modal");
   const card = $("modalCard");
   if (dealing) { m.hidden = true; return; }  // the results card steps away while the next hand is dealt
-  if (guideOpen) {
-    m.hidden = false;
-    card.innerHTML = guideHtml();
-    return;
-  }
   if (state.phase !== "over" || resultClosed || resultHeld || !cardShown()) { m.hidden = true; return; }
   m.hidden = false;
   card.innerHTML = resultHtml();
@@ -1041,20 +1035,6 @@ function resultHtml() {
     <div class="btns">
       <button type="button" class="btn" data-new-game>Start new game</button>
     </div>`;
-}
-
-function guideHtml() {
-  const rows = FAN_GUIDE.map(([n, f, d]) => `<li><b>${n}</b><span>${f === 13 ? "Limit" : f + " fan"}</span><small>${d}</small></li>`).join("");
-  return `<h2>How to play</h2>
-    <div class="basics">
-      <p>Make a hand of <b>four sets and a pair</b> (14 tiles). A set is a <b>chow</b> (three in a row in one suit), a <b>peng</b> (three of a kind) or a <b>kong</b> (four of a kind, which earns you a replacement tile).</p>
-      <p>Each turn you draw, then discard. Anyone can claim a discard for a peng, kong or win; only the next player can claim it for a chow. A win beats a peng, and a peng beats a chow.</p>
-      <p>Flowers and seasons are set aside and replaced automatically. A winning hand needs at least <b>${state.minFan} fan</b>.</p>
-      <p>Scoring: on a self-drawn win each player pays the table value; on a discard the discarder pays double. Values are 1, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128… for 0, 1, 2, 3… fan.</p>
-    </div>
-    <h4>Fan</h4>
-    <ul class="guide">${rows}</ul>
-    <div class="btns"><button type="button" class="btn" data-close-guide>Back to the table</button></div>`;
 }
 
 /* ---------------- events ---------------- */
@@ -1121,12 +1101,11 @@ $("paneBody").addEventListener("click", (e) => {
 });
 
 $("modal").addEventListener("click", (e) => {
-  if (e.target.closest("[data-close-guide]") || (guideOpen && e.target === $("modal"))) { guideOpen = false; render(); return; }
   if (e.target.closest("[data-open-coach]")) { openList(); return; }
   if (e.target.closest("[data-next]")) startNextHand();
   if (e.target.closest("[data-new-game]")) newGame();
   // close the results card: its X, or a tap on the blurred table around it
-  if (state.phase === "over" && !guideOpen && (e.target.closest("[data-close-result]") || e.target === $("modal"))) closeResult();
+  if (state.phase === "over" && (e.target.closest("[data-close-result]") || e.target === $("modal"))) closeResult();
 });
 
 function closeResult() { resultClosed = true; resultAsked = false; render(); }
@@ -1236,7 +1215,6 @@ $("scoresBtn").addEventListener("click", () => {
   save();
   render();
 });
-$("guideBtn").addEventListener("click", () => { toggleSettings(false); guideOpen = true; render(); });
 // New game starts straight away (Undo and the saved game make a stray tap cheap, so there's no confirm step)
 $("newBtn").addEventListener("click", (e) => { e.stopPropagation(); newGame(); });
 /* Phones: tuck the bottom sheet away while the pile gathers (so the animation sits in the middle of the
@@ -1292,7 +1270,6 @@ async function newGame() {
   await dismissPane();
   epoch++;  // cancel any bot move still pending from the old game
   announce = null;
-  guideOpen = false;
   resultClosed = false;
   resultAsked = false;
   nudge = null;
@@ -1313,10 +1290,10 @@ async function newGame() {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === " " && !e.repeat && announce && !guideOpen && !e.target.closest?.("input, textarea, .settings")) {
+  if (e.key === " " && !e.repeat && announce && !e.target.closest?.("input, textarea, .settings")) {
     e.preventDefault(); announce = null; update(); return;
   }
-  if (e.key === " " && !e.repeat && G.claimPendingFor(state, 0) && !guideOpen && !e.target.closest?.("input, textarea, .settings")) {
+  if (e.key === " " && !e.repeat && G.claimPendingFor(state, 0) && !e.target.closest?.("input, textarea, .settings")) {
     e.preventDefault();
     if (state.claim.options[0].win) mahjongOnDiscard();  // Space wins rather than passing on a winning tile
     else if (callPick.length) callPicked(); else claim({ type: "pass" });
@@ -1324,7 +1301,6 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Escape") {
     if (!$("settings").hidden) { toggleSettings(false); $("settingsBtn").focus(); }
-    else if (guideOpen) { guideOpen = false; render(); }
     else if (state.phase === "over" && !resultClosed && !dealing) closeResult();
     else if (pane.open) closePane();
   }

@@ -146,7 +146,14 @@ p { text-wrap: pretty; }
 }
 .seg button[aria-checked="true"] { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .1); }
 .seg button:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
-.set-chev { flex-shrink: 0; color: var(--muted); }
+/* "Play with": a small heading over the toggles, each a 16px icon, its name and a switch */
+.set-heading { padding: 12px 14px; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); }
+.set-toggle .set-text b { font-weight: 400; }
+.set-icon { flex-shrink: 0; color: var(--text); }  /* 16px, the Points icon 20px (from their width/height) */
+/* the two choices stay on one line beside their names */
+.set-static .set-text b { white-space: nowrap; }
+.set-static .seg button { padding: 6px 10px; }
+.set-toggle { gap: 12px; }
 .fab .settings { top: auto; bottom: calc(100% + 8px); left: 0; right: auto; transform-origin: bottom left; overflow-y: auto; overscroll-behavior: contain; }
 .scopes { display: flex; gap: 8px; flex-wrap: wrap; }
 .scope {
@@ -620,7 +627,7 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
   .bubble { right: 12px; bottom: calc(12px + 64px + 8px + env(safe-area-inset-bottom)); }
 }
 
-/* Modal (results, fan guide): blurred white backdrop, big rounded card */
+/* Modal (results): blurred white backdrop, big rounded card */
 .modal {
   position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; overflow-y: auto;
   background: rgba(255, 255, 255, .55); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); animation: fade .3s ease;
@@ -646,13 +653,7 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 .score-cell em { display: block; font-style: normal; font-size: 12px; line-height: 16px; color: var(--muted); }
 .score-cell em.up { color: #23774a; }
 .score-cell em.down { color: var(--red); }
-.guide { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }
-.guide li { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
-.guide li b { font-size: 14px; line-height: 20px; font-weight: 500; }
-.guide li span { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.guide li small { grid-column: 1 / -1; font-size: 13px; line-height: 18px; color: var(--muted); }
 .modal-card h4 { margin: 28px 0 8px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.modal-card .basics p { margin: 0 0 10px; font-size: 14px; line-height: 21px; color: var(--text); }
 @media (max-width: 600px) {
   .modal { padding: 12px; align-items: end; }
   .modal-card { padding: 28px 22px; border-radius: 28px; }

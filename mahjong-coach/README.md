@@ -29,7 +29,7 @@ Then open http://localhost:3000/mahjong-coach/
   play efficient, fast hands with basic defense; Hard defend earlier, keep scoring pairs and take every call
   that speeds them up. In 800-hand simulations a Normal-strength player wins ~45% of hands against Easy
   bots and ~25% against Normal (the fair share at a four-player table); Hard is only slightly tougher.
-- A win needs at least 1 fan (`minFan` in `createGame`). The Fan guide button lists every fan.
+- A win needs at least 1 fan (`minFan` in `createGame`)..
 - The last 14 tiles are the dead wall. A hand with no winner when the live wall runs out is a draw.
 - The dealer keeps the deal after a dealer win or a draw. Otherwise it passes, and the round wind
   moves on once every seat has dealt.
