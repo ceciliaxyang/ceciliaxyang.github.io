@@ -42,7 +42,8 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-/* without SF Pro the text is Inter, a touch tighter (titles keep their own tighter spacing) */
+/* interface text: SF Pro Display at -0.2px; without SF Pro it's Inter at -0.4px (titles keep their own spacing) */
+body { letter-spacing: -0.2px; }
 html.no-sf body { font-family: Inter, system-ui, sans-serif; letter-spacing: -0.4px; }
 html, body { margin: 0; background: var(--page); color: var(--fg); }
 body {
