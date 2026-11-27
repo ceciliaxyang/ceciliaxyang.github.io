@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__Figma__use_figma"
+      "mcp__Figma__use_figma",
+      "mcp__Figma__*"
     ]
   }
 }
