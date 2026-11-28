@@ -1,0 +1,89 @@
+/* Layout: a header with Save, the patterns down the left (most common first), and the current card beside your
+   editable version. Built on Mahjong Coach's own world: the warm beige table, jade green, its title face. */
+:root {
+  --bg: #f4f2ec;          /* the game's table beige */
+  --surface: #fbfaf6;
+  --ink: #1f2420;
+  --ink-2: #5e625c;
+  --line: #e2ded4;
+  --jade: #0e6a4e;        /* the tile backs */
+  --jade-soft: #e3efe8;
+  --stage: #ebe8e0;
+  --note: #8a5a12;
+  --note-soft: #f6ead6;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-ui: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171a18; --surface: #1f2321; --ink: #ecebe6; --ink-2: #a3a69f; --line: #323733;
+    --jade: #5fbf98; --jade-soft: #20362c; --stage: #262b28; --note: #e2b46a; --note-soft: #3a2f1e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171a18; --surface: #1f2321; --ink: #ecebe6; --ink-2: #a3a69f; --line: #323733;
+  --jade: #5fbf98; --jade-soft: #20362c; --stage: #262b28; --note: #e2b46a; --note-soft: #3a2f1e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#app { max-width: 1360px; margin: 0 auto; padding-block: 24px 48px; }
+button { font: inherit; }
+
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px;
+  padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.brand { min-width: 0; max-width: 62ch; }
+.top h1 { margin: 0; font: 400 44px/1 var(--font-display); letter-spacing: -.5px; color: var(--jade); }
+.lede { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; }
+.save { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.save-status { color: var(--ink-2); font-size: 13px; }
+.btn-primary { height: 40px; padding: 0 18px; border: 0; border-radius: 100px; background: #222; color: #fff; font-weight: 500; cursor: pointer; }
+:root[data-theme="dark"] .btn-primary { background: var(--ink); color: var(--bg); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary { background: var(--ink); color: var(--bg); } }
+.btn-primary:disabled { opacity: .35; cursor: default; }
+.btn-primary:focus-visible, .nav-item:focus-visible, .link:focus-visible, textarea:focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; }
+
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 32px; padding-top: 24px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.patterns { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 20px;
+  max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
+@media (max-width: 900px) { .patterns { position: static; max-height: none; } }
+.nav-group h2 { margin: 0 0 6px; padding: 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.nav-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.nav-item { display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 9px 10px; border: 0; border-radius: 10px;
+  background: none; color: var(--ink); text-align: left; cursor: pointer; }
+.nav-item:hover { background: var(--surface); }
+.nav-item.on { background: var(--jade-soft); }
+.nav-name { font-size: 13.5px; line-height: 18px; font-weight: 500; }
+.nav-meta { display: flex; align-items: center; gap: 8px; }
+.freq { flex: 1; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.freq span { display: block; height: 100%; border-radius: 2px; background: var(--jade); opacity: .7; }
+.share { width: 3.6em; text-align: right; font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.chip { padding: 1px 7px; border-radius: 100px; background: var(--jade); color: var(--surface); font-size: 10.5px; font-weight: 600; letter-spacing: .02em; }
+.chip.note { background: var(--note-soft); color: var(--note); }
+
+.work { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.work-head { max-width: 72ch; }
+.eyebrow { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--jade); }
+.work-head h2 { margin: 4px 0 6px; font: 400 32px/1.1 var(--font-display); text-wrap: balance; }
+.when { margin: 0; color: var(--ink-2); }
+.when b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 1100px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+.col { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.col figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-weight: 600; }
+.cap-note { font-weight: 400; color: var(--ink-2); font-size: 12.5px; }
+.link { border: 0; background: none; padding: 0; color: var(--jade); font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.link:disabled { color: var(--ink-2); opacity: .5; cursor: default; }
+.stage { display: flex; justify-content: center; padding: 28px 16px; border-radius: 20px; background: var(--stage); min-width: 0; overflow-x: auto; }
+.stage.edit { padding-inline: 72px 16px; background: repeating-linear-gradient(135deg, var(--stage) 0 12px, color-mix(in srgb, var(--stage) 80%, var(--jade) 6%) 12px 24px); }
+.card-host { width: 400px; max-width: 100%; }
+.card-host::part(x) { display: none; }
+
+.notes { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.notes textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+  color: var(--ink); font: 400 14px/1.5 var(--font-ui); resize: vertical; }
+.fine { margin: -8px 0 0; color: var(--ink-2); font-size: 12.5px; max-width: 72ch; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
