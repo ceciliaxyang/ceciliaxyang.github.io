@@ -92,7 +92,9 @@ function roleOf(k, c, unseen) {
     : left <= 2 && gone > 0 ? `, and only ${left} ${left === 1 ? "is" : "are"} left` : "";
   const runs = waits.map((w) => [w, lo, hi].sort((a, b) => a - b).map(numOf).join("-")).join(" or ");
   return { kind: "shape", dead: left === 0, text: `next to your ${near.map((x) => numOf(x)).join(" and ")}. It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run${deadNote}`,
-    lead: `It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run (${runs})${deadNote}` };
+    // for "Here's what I'd do": what would finish it, and how many of those are still out there
+    lead: `It needs a ${waits.map((w) => numOf(w)).join(" or ")} to make a run (${runs})${left === 0 ? deadNote
+      : `, and ${left <= 4 ? "only " : ""}${left} ${left === 1 ? "is" : "are"} left`}`, left };
 }
 
 /* A finished run in hand c that uses tile k (k-2..k, k-1..k+1 or k..k+2), or null. */
@@ -624,7 +626,15 @@ export function hint(state) {
         ? `<p><b>Why not ${t(top0.k)}?</b> On paper it keeps a few more tiles in play, but you have three of them, a finished group. Keep it.</p>`
         : `<p><b>Why not ${t(top0.k)}?</b> On paper it keeps a few more tiles in play, but it's your only pair. Every winning hand needs one, so keep it.</p>`)
       : "";
-    let html = `${lead}${pairNote}${keptHtml}`
+    // half a run: say why the rest of your hand is better to keep, with the numbers from the list below
+    const others = ranked.list.filter((r) => r.k !== best.k && r.shanten === best.shanten);
+    const o = others[0];
+    const why = equal.length < 2 && role.kind === "shape" && o
+      ? best.ukeire > o.ukeire
+        ? `<p>Your other tiles have more ways to make groups, so throwing it leaves you the most useful tiles: ${best.ukeire}, against ${o.ukeire} if you threw ${t(o.k)}.</p>`
+        : best.ukeire === o.ukeire ? `<p>Throwing ${t(o.k)} instead would leave you just as many useful tiles (${o.ukeire}), so either is fine.</p>` : ""
+      : "";
+    let html = `${lead}${why}${pairNote}${keptHtml}`
       + `<p>Your top choices:</p><ul class="hint-list">${rows}</ul>`;
     if (ranked.threats.length) html += `<p class="tip">Heads up: ${ranked.threats.map((q) => state.players[q].name).join(" and ")} may be close to winning. Tiles they threw away are safe.</p>`;
     if (opts.kongs.length) html += `<p class="tip">You have four ${opts.kongs.map((x) => t(x.k)).join("")}. Set them down as a <i>kong</i> to get an extra tile.</p>`;
