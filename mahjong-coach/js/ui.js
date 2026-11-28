@@ -942,12 +942,13 @@ function renderPane() {
   if (pav && !pav.firstChild) pav.outerHTML = coachPortraitHtml().replace('class="coach-portrait"', 'id="paneAv" class="coach-portrait head"');
   const body = $("paneBody");
   // every card ends with how far you are from winning, unless the hand is over, and your hand as four sets and
-  // a pair: a dashed space for each tile still missing, a green check under each finished group (Figma 2466:40833)
+  // a pair, an empty tile numbered 1, 2, … for each tile still missing (Figma 2467:40844)
   const foot = (skip = null) => {
     if (state.phase === "over") return "";
     const groups = Coach.awayShape(state, skip);
-    const shape = groups ? `<div class="foot-shape" aria-hidden="true">${groups.map((g) => `<span class="fs-group"><span class="fs-tiles">${
-      g.tiles.map((k) => (k === null ? `<span class="fs-gap"></span>` : tileHtml(k, { size: "fs", title: false }))).join("")}</span>${g.done ? CHECK_ICON : ""}</span>`).join("")}</div>` : "";
+    let gap = 0;
+    const shape = groups ? `<div class="foot-shape" aria-hidden="true">${groups.map((g) => `<span class="fs-tiles">${
+      g.tiles.map((k) => (k === null ? `<span class="tile fs empty"><span>${++gap}</span></span>` : tileHtml(k, { size: "fs", title: false }))).join("")}</span>`).join("")}</div>` : "";
     return `<div class="pane-foot"><p>${Coach.awayNote(state)}</p>${shape}</div>`;
   };
   if (pane.view === "note") {
@@ -982,9 +983,6 @@ function renderPane() {
   // not your move: one quiet line so the panel isn't empty
   body.innerHTML = h ? suggestion : `<p class="empty">It's not your turn yet. I'll speak up if I spot something.</p>${foot()}`;
 }
-
-// the footnote's check: a filled green circle with a white tick
-const CHECK_ICON = `<svg class="fs-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="7.5" fill="#038026"/><path d="M4.8 8.2l2.1 2.1 4.3-4.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /* ---------------- modals ---------------- */
 

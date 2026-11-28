@@ -529,17 +529,17 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 .pane-body h3 { margin: 8px 0 16px; font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: -.8px; text-wrap: balance; }
 .pane-body p { margin: 0 0 14px; font-size: 15px; line-height: 23px; color: var(--text); }
 .pane-body p .tile, .pane-body li .tile { vertical-align: -7px; margin: 0 1px; }
-/* the footnote at the end of every coach card (Figma 2466:40833): how far you are from winning, then your hand as
-   four sets and a pair, 20px tiles, a dashed space for each missing tile, a green check 12px under each finished group */
-.pane-body .pane-foot { display: flex; flex-direction: column; gap: 12px; margin: 20px 0 0; padding-top: 12px; border-top: 1px solid var(--hair); }
+/* the footnote at the end of every coach card (Figma 2467:40844): how far you are from winning, then your hand as
+   four sets and a pair in 20px tiles, an empty tile numbered 1, 2, … for each tile still missing */
+.pane-body .pane-foot { display: flex; flex-direction: column; gap: 12px; margin: 20px 0 0; padding: 16px 0 6px; border-top: 1px solid var(--hair); }  /* + the buttons' own 38px = 44px to Got it */
 .pane-body .pane-foot p { margin: 0; font-size: 13px; line-height: 18px; color: var(--muted); }
 .foot-shape { display: flex; flex-wrap: wrap; gap: 12px 8px; align-items: flex-start; }
-.fs-group { display: flex; flex-direction: column; align-items: center; gap: calc(12px - (20px * var(--depth) + 1px)); }  /* 12px from the tiles' faces */
 .fs-tiles { display: flex; gap: 2px; align-items: flex-start; }
 .tile.fs { --w: 20px; }
-.fs-gap { width: 20px; height: 30px; flex-shrink: 0; border-radius: 3px;
-  background: var(--felt) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='30'%3E%3Crect x='.5' y='.5' width='19' height='29' rx='2.5' fill='none' stroke='%238c8c8c' stroke-dasharray='3 2'/%3E%3C/svg%3E"); }
-.fs-check { display: block; flex-shrink: 0; }
+/* an empty tile: a plain white face with a fine dashed outline and grey sides, numbered in light grey */
+.tile.empty { --edge-green: #c1c1c1; --edge-green-rim: #6c6c6c; background: #fff;
+  outline: .5px dashed rgba(0, 0, 0, .4); outline-offset: -.5px;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; line-height: 14px; font-weight: 500; color: #c1c1c1; }
 .pane-body .tip { padding: 14px 16px; border-radius: 16px; background: var(--felt); font-size: 14px; line-height: 21px; }
 /* the coach's portrait at the top of the panel */
 /* the coach in the panel header: no disc behind her, just her soft gold glow; her robe fades out at the bottom */
