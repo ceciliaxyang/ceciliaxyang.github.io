@@ -558,12 +558,12 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
    four sets and a pair in 20px tiles, an empty tile numbered 1, 2, … for each tile still missing */
 .pane-body .pane-foot { display: flex; flex-direction: column; gap: 12px; margin: 20px 0 0; padding: 16px 0 6px; border-top: 1px solid var(--hair); }  /* + the buttons' own 38px = 44px to Got it */
 .pane-body .pane-foot p { margin: 0; font-size: 13px; line-height: 18px; color: var(--muted); }
-.foot-shape { display: flex; flex-wrap: wrap; gap: 12px 8px; align-items: flex-start; }
+.foot-shape { display: flex; flex-wrap: wrap; gap: 12px 8px; align-items: center; justify-content: space-between; }  /* spread across the card */
 .fs-tiles { display: flex; gap: 2px; align-items: flex-start; }
 .tile.fs { --w: 20px; }
-/* an empty tile: a plain white face with a fine dashed outline and grey sides, numbered in light grey */
-.tile.empty { --edge-green: #c1c1c1; --edge-green-rim: #6c6c6c; background: #fff;
-  outline: .5px dashed rgba(0, 0, 0, .4); outline-offset: -.5px;
+/* an empty tile: a plain white face with a fine dotted outline and warm grey sides, numbered in light grey */
+.tile.empty { --edge: #c5c1bb; --edge-green: #c5c1bb; --edge-green-rim: #c5c1bb;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 30' preserveAspectRatio='none'%3E%3Crect x='.25' y='.25' width='19.5' height='29.5' rx='3' fill='none' stroke='%23000' stroke-opacity='.4' stroke-width='.5' stroke-dasharray='.71 2'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
   display: inline-flex; align-items: center; justify-content: center; font-size: 11px; line-height: 14px; font-weight: 500; color: #c1c1c1; }
 .pane-body .tip { padding: 14px 16px; border-radius: 16px; background: var(--felt); font-size: 14px; line-height: 21px; }
 /* the coach's portrait at the top of the panel */
@@ -583,7 +583,7 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 /* each button is its own material, so text scrolling underneath blurs behind it */
 .pane-actions .btn { pointer-events: auto; -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%);
   box-shadow: none; }  /* flat: no shadow */
-.pane-actions .btn:not(.light) { background: rgba(17, 17, 17, .86); }
+.pane-actions .btn:not(.light) { background: var(--text); }  /* #222222, like every dark button */
 .pane-actions .btn.red { background: var(--red); }  /* Mahjong: the same red as the white box's button */
 .pane-actions .btn.light { background: rgba(214, 214, 211, .9); }  /* a darker grey so it stands out from the white card */
 .pane-actions .btn.light:hover { background: rgba(200, 200, 196, .95); }
