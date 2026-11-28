@@ -150,6 +150,8 @@ p { text-wrap: pretty; }
 .set-heading { padding: 12px 14px; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--text); }
 .set-toggle .set-text b { font-weight: 400; }
 .set-icon { flex-shrink: 0; width: 16px; height: 16px; color: var(--text); }
+.set-icon.lg { width: 20px; height: 20px; }  /* Points and Special hands (Figma 2442:36283) */
+.set-toggle .set-text small { margin-top: 2px; line-height: 12px; color: #6c6c6c; }  /* 4px under the name */
 /* the two choices stay on one line beside their names */
 .set-static .set-text b { white-space: nowrap; }
 .set-static .seg button { padding: 6px 10px; }
