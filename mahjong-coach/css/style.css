@@ -325,23 +325,23 @@ span.scope { cursor: default; }
   .table { column-gap: 70px; }  /* 70px between the side players' tiles and the white box */
   /* 32px from the face of the top player's tiles to the discards, and from the discards to the prompt */
   .felt { gap: 32px; margin-top: calc(-16px - var(--opp) * var(--depth) - 1px); }
-  /* the prompt: 24px above, 32px around the button, then a line between the latest move and your tiles */
-  body .bar { border-radius: 0; box-shadow: inset 0 -1px 0 #dfdcd6; gap: 32px; padding: 24px 32px 32px;
+  /* the prompt: 24px above, 32px around the button */
+  body .bar { border-radius: 0; gap: 32px; padding: 24px 32px 32px;
     height: calc(24px + 20px + 16px + var(--lg) * var(--tile-r) + 32px + 48px + 32px); }
   body .center > .me { margin-top: -14px; }  /* 32px under the line */
-  /* Figma 2429:33813 ("Frame 75"): the middle column fills the window down to the floating buttons. The space
-     under the prompt (down to the line) and the space under the line (down to your tiles) share any spare height
-     equally, so both grow and shrink with the window. In a window too short for it all, the page scrolls as before. */
+  /* Figma 2429:33813 ("Frame 76"): the middle column fills the window down to the floating buttons, and the
+     discards, the prompt and your tiles spread down it: any spare height goes in equal shares between the discards
+     and the prompt, and between the prompt and your tiles. In a window too short for it all, the page scrolls. */
   /* at least as tall as the window minus the page's top and bottom padding (the side players' tiles don't stretch it) */
   .center { min-height: calc(100vh - 20px - 140px - env(safe-area-inset-top)); min-height: calc(100dvh - 20px - 140px - env(safe-area-inset-top)); }
-  /* no line between the prompt and your tiles, except with the compact prompt (Figma 2464:39778), where it sits at
-     the bottom of the discards-and-prompt area, which grows */
-  .felt { flex: 1 0 auto; transition: box-shadow .25s ease; }
-  .felt:has(.bar.compact) { box-shadow: inset 0 -1px 0 #dfdcd6; }
-  body .bar { box-shadow: none; }
-  body.dealing .felt:has(.bar.compact) { box-shadow: none; }  /* New game: the line steps aside with the prompt */
-  body.undealing .felt { transition: box-shadow .4s ease; }
+  .felt { flex: 1 0 auto; }
+  body .felt > .bar { margin-top: auto; }  /* the prompt sits at the bottom of the discards area */
   body .center > .me { flex: 1 0 auto; justify-content: flex-end; }
+  /* no line between the prompt and your tiles, except with the compact prompt (Figma 2464:39778): there it sits
+     halfway between the two */
+  .center:has(.bar.compact) > .me::before { content: ""; align-self: stretch; height: 1px; margin: auto 0; background: #dfdcd6 content-box;
+    border-block: 14px solid transparent; border-bottom-width: 20px; transition: opacity .25s ease; }  /* 24px under the prompt, 38px above your tiles */
+  body.dealing .center > .me::before { opacity: 0; }  /* New game: the line steps aside with the prompt */
   /* the prompt (Figma): 18px; player and tile names semibold and dark, the rest medium grey */
   body .bar .say { font-size: 18px; line-height: 20px; }
   body .bar .say b { font-weight: 600; }
