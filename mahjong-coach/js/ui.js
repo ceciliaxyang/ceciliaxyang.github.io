@@ -954,7 +954,10 @@ function renderPane() {
     let gap = 0;
     const shape = groups ? `<div class="foot-shape" aria-hidden="true">${groups.map((g) => `<span class="fs-tiles">${
       g.tiles.map((k) => (k === null ? `<span class="tile fs empty"><span>${++gap}</span></span>` : tileHtml(k, { size: "fs", title: false }))).join("")}</span>`).join("")}</div>` : "";
-    const line = over ? Coach.awayNote(state).replace(/^You're /, "You ended ") : Coach.awayNote(state);
+    let line = over ? Coach.awayNote(state).replace(/^You're /, "You ended ") : Coach.awayNote(state);
+    // at the end of a hand, if you were closer at some point, say how close (Coach Copy v12)
+    const best = over && moves.length ? Math.min(...moves.map((m) => m.away)) : null;
+    if (best !== null && best >= 0 && best < Coach.distance(state)) line += ` The closest you got during this game was ${best + 1} tile${best === 0 ? "" : "s"} away.`;
     return `<div class="pane-foot"><p>${line}</p>${shape}</div>`;
   };
   if (pane.view === "note") {
