@@ -607,7 +607,7 @@ export function hint(state) {
         : `<p><b>Why not ${t(top0.k)}?</b> On paper it keeps a few more tiles in play, but it's your only pair. Every winning hand needs one, so keep it.</p>`)
       : "";
     let html = `${lead}${pairNote}${keptHtml}`
-      + `<p>Your top choices (how far from winning, and how many useful tiles are left):</p><ul class="hint-list">${rows}</ul>`;
+      + `<p>Your top choices:</p><ul class="hint-list">${rows}</ul>`;
     if (ranked.threats.length) html += `<p class="tip">Heads up: ${ranked.threats.map((q) => state.players[q].name).join(" and ")} may be close to winning. Tiles they threw away are safe.</p>`;
     if (opts.kongs.length) html += `<p class="tip">You have four ${opts.kongs.map((x) => t(x.k)).join("")}. Set them down as a <i>kong</i> to get an extra tile.</p>`;
     return { title: "Here's what I'd do", pick: { k: best.k, ks: equal, label: equal.length > 1 ? "Throw one away" : "Throw away" }, html };
