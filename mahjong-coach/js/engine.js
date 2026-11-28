@@ -135,6 +135,66 @@ export function shanten(c, open = 0, unseen = null) {
   return s;
 }
 
+/* The groups behind the standard shanten count, for showing a hand as "four sets and a pair": finished
+   sets, partial sets (two tiles of a set, with where the missing tile goes), the pair, and the tiles left
+   over. Scored exactly as standardShanten (same `live` rule for partials), so the gaps it leaves always add
+   up to the "N tiles to win" the coach gives. Ties go to more finished sets, then having the pair. */
+export function shapeGroups(c, open = 0, unseen = null) {
+  const live = unseen ? unseen.map((x) => x > 0) : null;
+  const ok = (k) => !live || live[k];
+  const need = 4 - open;
+  const v = c.slice(), left = new Array(34).fill(0);
+  const sets = [], parts = [], pairs = [];
+  const block = (k) => (k < 27 ? Math.floor(k / 9) : 3);  // like standardShanten: at most one pair per suit (or honors)
+  let best = null;
+  const score = () => {
+    const m = Math.min(sets.length, need);
+    const p = pairs.length > 0 ? 1 : 0;
+    const t = Math.min(parts.length + pairs.length - p, need - m);
+    return { s: 2 * (need - m) - t - p, m, p };
+  };
+  function dfs(k) {
+    while (k < 34 && v[k] === 0) k++;
+    if (k === 34) {
+      const sc = score();
+      if (!best || sc.s < best.s || (sc.s === best.s && (sc.m > best.m || (sc.m === best.m && sc.p > best.p))))
+        best = { ...sc, sets: sets.map((x) => x.slice()), parts: parts.map((x) => ({ ...x })), pairs: pairs.slice(), rest: left.slice() };
+      return;
+    }
+    const n = k < 27 ? k % 9 : -1;  // 0-8 within a suit; -1 for winds and dragons
+    if (v[k] >= 3) { v[k] -= 3; sets.push([k, k, k]); dfs(k); sets.pop(); v[k] += 3; }
+    if (n >= 0 && n <= 6 && v[k + 1] && v[k + 2]) {
+      v[k]--; v[k + 1]--; v[k + 2]--; sets.push([k, k + 1, k + 2]); dfs(k); sets.pop(); v[k]++; v[k + 1]++; v[k + 2]++;
+    }
+    if (v[k] >= 2) {
+      v[k] -= 2;
+      if (!pairs.some((q) => block(q) === block(k))) { pairs.push(k); dfs(k); pairs.pop(); }
+      if (ok(k)) { parts.push({ tiles: [k, k], gap: 2 }); dfs(k); parts.pop(); }
+      v[k] += 2;
+    }
+    if (n >= 0 && n <= 7 && v[k + 1] && ((n > 0 && ok(k - 1)) || (n < 7 && ok(k + 2)))) {
+      // two in a row: the gap goes on the end that can still be filled (after it, unless that's off the end or gone)
+      const after = n < 7 && ok(k + 2);
+      v[k]--; v[k + 1]--; parts.push({ tiles: [k, k + 1], gap: after ? 2 : 0 }); dfs(k); parts.pop(); v[k]++; v[k + 1]++;
+    }
+    if (n >= 0 && n <= 6 && v[k + 2] && ok(k + 1)) {
+      v[k]--; v[k + 2]--; parts.push({ tiles: [k, k + 2], gap: 1 }); dfs(k); parts.pop(); v[k]++; v[k + 2]++;
+    }
+    v[k]--; left[k]++; dfs(k); left[k]--; v[k]++;
+  }
+  dfs(0);
+  // only as many sets and partials as the hand has room for; extra pairs become partials (three of a kind)
+  const p = best.pairs.length ? best.pairs[0] : null;
+  const extra = best.pairs.slice(p === null ? 0 : 1).map((k) => ({ tiles: [k, k], gap: 2 }));
+  const m = Math.min(best.sets.length, need);
+  const rest = best.rest.slice();
+  best.sets.slice(m).forEach((g) => g.forEach((k) => rest[k]++));
+  const allParts = [...best.parts, ...extra];
+  const keepParts = allParts.slice(0, Math.max(0, need - m));
+  allParts.slice(keepParts.length).forEach((g) => g.tiles.forEach((k) => rest[k]++));
+  return { s: best.s, sets: best.sets.slice(0, m), parts: keepParts, pair: p, rest };
+}
+
 /* Which hand shape a concealed hand is closest to: "orphans", "sevenPairs" or "standard". */
 export function closestShape(c, open = 0, unseen = null) {
   if (open > 0) return "standard";

@@ -2,7 +2,7 @@
 // was clearly worse, writes a note explaining why. Notes are plain objects rendered by ui.js.
 // Voice: written for a first-time player. Short, plain sentences, one idea each ("You need two more X to
 // claim a peng."). No jargon without saying what it means ("points", not "fan"; "2 more tiles to win").
-import { kindOf, shanten, closestShape, ORPHANS, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
+import { kindOf, shanten, closestShape, shapeGroups, ORPHANS, isHonor, isTerminal, isSuited, suitOf, numOf, isDragon, FAN_GUIDE } from "./engine.js";
 import { tileHtml, tileName } from "./tiles.js";
 import { actOptions, unseenFor, handCounts, seatWind } from "./game.js";
 import { rankDiscards, recommendClaim, isValueTile } from "./strategy.js";
@@ -180,6 +180,32 @@ export function distance(state) {
 export function awayNote(state) {
   const s = distance(state);
   return s < 0 ? "You have a winning hand." : `You're ${s + 1} tile${s === 0 ? "" : "s"} away from winning.`;
+}
+
+/* The same hand as four sets and a pair (Figma 2466:40833): each group's tiles, null where a tile is still
+   missing, and whether it's finished. Your called sets come first, then sets in your hand, then the unfinished
+   ones, then the pair. The gaps add up to the footnote's count. Null when the hand is closest to a special shape
+   (seven pairs, thirteen orphans), where four sets and a pair would be the wrong picture. `skip`: a tile kind to
+   keep out of the unfinished groups if there's a choice (the one the coach says to throw away). */
+export function awayShape(state, skip = null) {
+  const pl = state.players[0];
+  const c = handCounts(pl), unseen = unseenFor(state, 0), open = pl.melds.length;
+  const s = distance(state);
+  if (s < -1 || closestShape(c, open, unseen) !== "standard") return null;
+  const g = shapeGroups(c, open, unseen);
+  if (g.s !== s) return null;
+  const singles = [];
+  for (let k = 0; k < 34; k++) for (let i = 0; i < g.rest[k]; i++) singles.push(k);
+  singles.sort((a, b) => (a === skip) - (b === skip));
+  const groups = [
+    ...pl.melds.map((m) => ({ tiles: m.tiles.map(kindOf).sort((a, b) => a - b), done: true })),
+    ...g.sets.map((t) => ({ tiles: t, done: true })),
+  ];
+  for (const p of g.parts) { const t = p.tiles.slice(); t.splice(p.gap, 0, null); groups.push({ tiles: t, done: false }); }
+  while (groups.length < 4) { const k = singles.shift(); groups.push({ tiles: k === undefined ? [null, null, null] : [k, null, null], done: false }); }
+  if (g.pair !== null) groups.push({ tiles: [g.pair, g.pair], done: true });
+  else { const k = singles.shift(); groups.push({ tiles: k === undefined ? [null, null] : [k, null], done: false }); }
+  return groups;
 }
 
 /* The one thing to work on, by the kind of note the coach gave most this hand. */
