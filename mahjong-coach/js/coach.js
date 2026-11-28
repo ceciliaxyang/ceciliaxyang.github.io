@@ -495,8 +495,8 @@ export function reviewClaim(before, resp) {
     if (ev.closed && before.points !== false) p.push(`<p>It also showed your tiles to everyone, and you lost the <b>1 point</b> for never taking a tile.</p>`);
     if (!mine.fanPath && before.points !== false) p.push(`<p>Nothing in your hand earns points yet, so winning is now harder.</p>`);
     p.push(before.points === false
-      ? `<p class="tip">Tip: only take a tile if it gets you closer to winning.</p>`
-      : `<p class="tip">Tip: only take a tile if it gets you closer to winning, or if it's a dragon or your own wind.</p>`);
+      ? `<p class="tip">Tip: taking a tile locks those tiles into a set and shows your hand to everyone, so only take one if it gets you closer to winning.</p>`
+      : `<p class="tip">Tip: taking a tile locks those tiles into a set and shows your hand to everyone, so only take one if it gets you closer to winning, or if it's a dragon or your own wind.</p>`);
     return note(before, {
       kind: "claim",
       title: `Letting that ${tileName(k)} go was better`,
