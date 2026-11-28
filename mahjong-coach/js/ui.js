@@ -784,8 +784,8 @@ function renderBar() {
   } else if (myTurn()) {
     // name the tile you just drew (it's still in your hand), so you don't have to hunt for it
     const justDrew = state.drawn !== null && state.drawn !== undefined && state.players[0].hand.includes(state.drawn);
-    say = state.afterClaim ? "Now discard a tile."
-      : selected !== null ? "Press Discard, or tap the tile again to put it back."
+    say = selected !== null ? `Discard your <b>${tileName(kindOf(selected))}</b>,<span class="say-more"> or tap it again to put it back.</span>`
+      : state.afterClaim ? "Now discard a tile."
       : justDrew ? `You just drew <b>${tileName(kindOf(state.drawn))}</b>. Tap a tile to pick your discard.`
       : "Your turn. Tap a tile to pick your discard.";
     if (selected !== null) {
