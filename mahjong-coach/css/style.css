@@ -649,16 +649,22 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 .hint-box p:last-child, .hint-box ul:last-child { margin-bottom: 0; }
 
 @media (max-width: 600px) {
-  /* the sheet is as tall as what it says (up to 82% of the screen, then it scrolls), so there's no empty space under Got it */
-  .pane { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: none; height: auto; max-height: 82vh; border-radius: 28px 28px 0 0;
+  /* the sheet is as tall as what it says, so there's no empty space under Got it. It scrolls only when that's taller
+     than the screen, less a sliver at the top (the status bar + 40px) so the table still shows behind it */
+  .pane { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: none; height: auto; border-radius: 28px 28px 0 0;
+    max-height: calc(100vh - 40px - env(safe-area-inset-top)); max-height: calc(100dvh - 40px - env(safe-area-inset-top));
     background: #fff; box-shadow: 0 -20px 60px rgba(0, 0, 0, .14); transform-origin: center; transform: translateY(105%); opacity: 1;
     transition: transform .45s var(--ease), visibility 0s .45s; }
   .pane.open { transition: transform .45s var(--ease), visibility 0s; }
   /* at least as tall as your bottom sheet, so it covers it completely; its buttons always sit at the bottom */
-  .pane { min-height: min(var(--sheet-full, 0px), 82vh); }
+  .pane { min-height: min(var(--sheet-full, 0px), calc(100dvh - 40px - env(safe-area-inset-top))); }
+  /* a little tighter on phones, so most cards fit without scrolling */
+  .compare-card { gap: 8px; padding: 14px 12px 12px; }
+  .hint-list li { padding: 6px 0; }
+  .pane-body .pane-foot { margin-top: 16px; }
   .pane-body { display: flex; flex-direction: column; }
   .pane-body > .pane-actions { margin-top: auto; }
-  .pane-body > :nth-last-child(2) { margin-bottom: 24px; }  /* the gap the buttons' own top margin gave before */
+  .pane-body > :nth-last-child(2) { margin-bottom: 16px; }  /* the gap the buttons' own top margin gave before */
   .pane-head { padding: 18px 16px 8px 24px; }
   .pane-body { padding: 28px 24px calc(32px + env(safe-area-inset-bottom)); }
   .pane-actions { margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; }

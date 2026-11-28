@@ -200,7 +200,7 @@ function sevenPairsShape(c, unseen, skip) {
   }
   singles.sort((a, b) => (a === skip) - (b === skip) || unseen[b] - unseen[a] || a - b);
   while (groups.length < 7) { const k = singles.shift(); groups.push({ tiles: k === undefined ? [null, null] : [k, null], done: false }); }
-  return groups;
+  return handOrder(groups);
 }
 function orphansShape(c) {
   const pairK = ORPHANS.find((k) => c[k] >= 2);
@@ -237,7 +237,15 @@ export function awayShape(state, skip = null) {
   while (groups.length < 4) { const k = singles.shift(); groups.push({ tiles: k === undefined ? [null, null, null] : [k, null, null], done: false }); }
   if (g.pair !== null) groups.push({ tiles: [g.pair, g.pair], done: true });
   else { const k = singles.shift(); groups.push({ tiles: k === undefined ? [null, null] : [k, null], done: false }); }
-  return groups;
+  return handOrder(groups, pl.melds.length);
+}
+
+/* The groups in the order your tiles sit in your hand (Characters, Circles, Bamboo, then winds and dragons, low to
+   high), so each one is easy to find. Your called sets stay first, as they're laid out apart from your hand; groups
+   that are only empty tiles go last. */
+function handOrder(groups, called = 0) {
+  const key = (g) => { const ks = g.tiles.filter((k) => k !== null); return ks.length ? Math.min(...ks) : Infinity; };
+  return [...groups.slice(0, called), ...groups.slice(called).sort((a, b) => key(a) - key(b))];
 }
 
 /* The one thing to work on, by the kind of note the coach gave most this hand. */
