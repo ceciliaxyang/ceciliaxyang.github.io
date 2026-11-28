@@ -94,9 +94,9 @@ p { text-wrap: pretty; }
 }
 @media (prefers-reduced-motion: reduce) { #undoBtn:not([hidden]) { animation: none; } }
 .fab-btn.light:hover { background: rgba(208, 204, 196, .7); }
-/* New game when the hand is over: solid black, the main thing to do next. It breathes: grows a little and
+/* New game when the hand is over: solid #222222, the main thing to do next. It breathes: grows a little and
    shrinks back, slowly and without stopping, to draw the eye */
-.fab-btn.primary, .fab-btn.primary:hover { background: #000; color: #fff; animation: fab-breathe 2.4s ease-in-out infinite; }
+.fab-btn.primary, .fab-btn.primary:hover { background: var(--text); color: #fff; animation: fab-breathe 2.4s ease-in-out infinite; }
 @keyframes fab-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 @media (prefers-reduced-motion: reduce) { .fab-btn.primary { animation: none; } }
 @media (max-width: 600px) {
@@ -325,18 +325,22 @@ span.scope { cursor: default; }
   .table { column-gap: 70px; }  /* 70px between the side players' tiles and the white box */
   /* 32px from the face of the top player's tiles to the discards, and from the discards to the prompt */
   .felt { gap: 32px; margin-top: calc(-16px - var(--opp) * var(--depth) - 1px); }
-  /* the prompt: 24px above, 32px around the button */
-  body .bar { border-radius: 0; gap: 32px; padding: 24px 32px 32px;
-    height: calc(24px + 20px + 16px + var(--lg) * var(--tile-r) + 32px + 48px + 32px); }
+  /* the prompt: 24px above, 28px from the words to the tile in play, 36px to the button, 32px below */
+  body .bar { border-radius: 0; gap: 36px; padding: 24px 32px 32px;
+    height: calc(24px + 20px + 28px + var(--lg) * var(--tile-r) + 36px + 48px + 32px); }
+  body .bar:not(.compact) .act-left { gap: 28px; }
   body .center > .me { margin-top: -14px; }  /* 32px under the line */
+  /* no line (Figma 2429:33813): 96px from the button to your tiles, 32 + 32 + 32 */
+  body .center:not(:has(.bar.compact)) > .me { margin-top: 16px; }
   /* Figma 2429:33813 ("Frame 76"): the middle column fills the window down to the floating buttons, and the
      discards, the prompt and your tiles spread down it: any spare height goes in equal shares between the discards
      and the prompt, and between the prompt and your tiles. In a window too short for it all, the page scrolls. */
   /* at least as tall as the window minus the page's top and bottom padding (the side players' tiles don't stretch it) */
-  .center { min-height: calc(100vh - 20px - 140px - env(safe-area-inset-top)); min-height: calc(100dvh - 20px - 140px - env(safe-area-inset-top)); }
-  .felt { flex: 1 0 auto; }
+  .center { min-height: calc(100vh - 20px - 179px - env(safe-area-inset-top)); min-height: calc(100dvh - 20px - 179px - env(safe-area-inset-top)); }  /* 110px from your tiles to the floating buttons */
+  /* spare height splits 68 : 96, the same proportions as the two spaces in the frame, so they keep their shape */
+  .felt { flex: 68 0 auto; }
   body .felt > .bar { margin-top: auto; }  /* the prompt sits at the bottom of the discards area */
-  body .center > .me { flex: 1 0 auto; justify-content: flex-end; }
+  body .center > .me { flex: 96 0 auto; justify-content: flex-end; }
   /* no line between the prompt and your tiles, except with the compact prompt (Figma 2464:39778): there it sits
      halfway between the two */
   .center:has(.bar.compact) > .me::before { content: ""; align-self: stretch; height: 1px; margin: auto 0; background: #dfdcd6 content-box;
