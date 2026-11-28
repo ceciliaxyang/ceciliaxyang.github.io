@@ -35,6 +35,17 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<script>
+  // first visit (no saved game): hide the table from the very first paint, so it doesn't flash up before the
+  // landing pile appears. ui.js / deal-anim.js take over these classes once they load (same check as ui.js load())
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("autoplay")) return;
+    var key = q.has("sandbox") ? "mahjong-coach:test" : "mahjong-coach:v1", s = null;
+    try { s = JSON.parse(localStorage.getItem(key)); } catch (e) { /* storage unavailable */ }
+    if (!(s && s.version === 1 && s.players)) document.body.classList.add("dealing", "dealing-hide", "landing");
+  })();
+</script>
   <div class="page">
     <h1 class="visually-hidden">Mahjong coach</h1>
 
