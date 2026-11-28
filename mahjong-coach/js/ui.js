@@ -947,12 +947,15 @@ function renderPane() {
   // every card ends with how far you are from winning, unless the hand is over, and your hand as four sets and
   // a pair, an empty tile numbered 1, 2, … for each tile still missing (Figma 2467:40844)
   const foot = (skip = null) => {
-    if (state.phase === "over") return "";
+    // once the hand is over: nothing if you won, otherwise how close you ended up
+    const over = state.phase === "over";
+    if (over && (!state.result || (state.result.type !== "draw" && state.result.winner === 0))) return "";
     const groups = Coach.awayShape(state, skip);
     let gap = 0;
     const shape = groups ? `<div class="foot-shape" aria-hidden="true">${groups.map((g) => `<span class="fs-tiles">${
       g.tiles.map((k) => (k === null ? `<span class="tile fs empty"><span>${++gap}</span></span>` : tileHtml(k, { size: "fs", title: false }))).join("")}</span>`).join("")}</div>` : "";
-    return `<div class="pane-foot"><p>${Coach.awayNote(state)}</p>${shape}</div>`;
+    const line = over ? Coach.awayNote(state).replace(/^You're /, "You ended ") : Coach.awayNote(state);
+    return `<div class="pane-foot"><p>${line}</p>${shape}</div>`;
   };
   if (pane.view === "note") {
     const n = notes.find((x) => x.id === pane.id);
