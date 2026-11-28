@@ -632,6 +632,7 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 .why-list .tile { vertical-align: -7px; margin: 0 1px; }
 /* "2 more tiles to win" stays on one line; on narrow phones the useful-tiles count wraps instead */
 .hint-list li { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hair); font-size: 14px; line-height: 20px; }
+.hint-list li:first-child { border-top: 0; }  /* no line straight under "Your top choices:" */
 .hint-list li span:nth-child(2) { font-weight: 600; white-space: nowrap; }
 .hint-list li span:last-child { color: var(--muted); text-align: right; }
 .notes { list-style: none; margin: 8px 0 0; padding: 0; }
