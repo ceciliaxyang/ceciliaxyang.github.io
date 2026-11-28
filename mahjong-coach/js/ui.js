@@ -962,8 +962,8 @@ function renderPane() {
     const canUndo = n.snapshot && n.handNo === state.handNo;
     body.innerHTML = `<h3>${n.title}</h3>${cmp}${setCard}${n.html}${foot()}
       <div class="pane-actions">
-        ${canUndo ? `<button type="button" class="btn" data-undo="${n.id}">${UNDO_ICON}Take it back</button>` : ""}
-        <button type="button" class="btn light" data-close>Got it</button>
+        ${canUndo ? `<button type="button" class="btn light" data-undo="${n.id}">${UNDO_ICON}Take it back</button>` : ""}
+        <button type="button" class="btn" data-close>Got it</button>
       </div>`;
     return;
   }
