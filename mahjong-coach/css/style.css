@@ -808,12 +808,18 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
 .deal-layer .tile {
   --ux: sin(var(--rot)); --uy: cos(var(--rot));
   --d0: var(--white-side); --d1: calc(var(--w) * var(--depth)); --d2: calc(var(--w) * var(--depth) + 1px); --d3: calc(var(--w) * (var(--depth) + .04));
+  /* elevation (Figma landing 2450:36099, on the whole pile): 0 4 8 at 10%, 0 2 6 at 4% and a 1px hairline at 2%,
+     falling from the bottom of the tile's edge so it reads as the shadow of the whole tile */
+  --lift: calc(var(--ux) * (var(--d2) + 4px)) calc(var(--uy) * (var(--d2) + 4px)) 8px rgba(0, 0, 0, .10),
+    calc(var(--ux) * (var(--d2) + 2px)) calc(var(--uy) * (var(--d2) + 2px)) 6px rgba(0, 0, 0, .04),
+    0 0 0 1px rgba(0, 0, 0, .02);
   background: linear-gradient(calc(180deg - var(--rot)), #ffffff, var(--face));
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05),
     calc(var(--ux) * var(--d0)) calc(var(--uy) * var(--d0)) 0 var(--edge),
     calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge-green),
     calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 var(--edge-green-rim),
-    calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+    calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12),
+    var(--lift);
 }
 .deal-layer .tile.back {
   --hl: max(1px, calc(var(--w) * .033));
@@ -823,7 +829,8 @@ body.hand-over:not(.has-summary) .coach { opacity: 0; visibility: hidden; pointe
     calc(var(--ux) * var(--d1) / 3) calc(var(--uy) * var(--d1) / 3) 0 #0b5a40,
     calc(var(--ux) * var(--d1)) calc(var(--uy) * var(--d1)) 0 var(--edge),
     calc(var(--ux) * var(--d2)) calc(var(--uy) * var(--d2)) 0 #c9c9c2,
-    calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12);
+    calc(var(--ux) * var(--d3)) calc(var(--uy) * var(--d3)) calc(var(--w) * .3) rgba(0, 0, 0, .12),
+    var(--lift);
 }
 /* a tile seen edge-on mid-flip: its thickness, white face layer then green back layer (reversed when turning face up) */
 .deal-layer .tile.flip-side { background: linear-gradient(to right, #fff 0 8%, var(--edge) 8% 52%, var(--edge-green) 52% 100%); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
