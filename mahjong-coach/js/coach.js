@@ -260,6 +260,7 @@ export function summaryNote(state, moves, handNotes, tookBack) {
   const good = moves.filter((m) => m.ok).length;
   const all = moves.length && good === moves.length;
   const congrats = won ? "Congratulations on your win! " : "";
+  if (r.type === "draw") p.push(`<p>Nobody won — the wall ran out.</p>`);
   if (moves.length) {
     p.push(all
       ? `<p>${congrats}All ${won ? "of " : ""}your choices matched what I'd have done.${won ? "" : " Well played!"}</p>`
@@ -349,7 +350,7 @@ export function reviewAct(before, action) {
     p.push(`<p><b>Why:</b> ${loneWhy(best, mine, before)}</p>`);
   } else {
     // one reason per line, in the order of the boxes above: your tile, then the better one
-    p.push(`<p class="why-head"><b>Why:</b></p><ul class="why-list"><li>Your ${t(k)} was ${roleMine.text}.</li><li>${t(best.k)} is ${roleBest.text}.</li></ul>`);
+    p.push(`<p class="why-head"><b>Why:</b></p><ul class="why-list"><li>${t(k)} was ${roleMine.text}.</li><li>${t(best.k)} is ${roleBest.text}.</li></ul>`);
   }
   // a short list of the tiles you'd hope for is useful; early in a hand it's a wall of tiles, so leave it out
   if (best.tiles.length <= 8) p.push(`<p>Throwing ${t(best.k)}, you'd hope to pick up one of these:</p>${tileStrip(best.tiles, unseen)}`);
