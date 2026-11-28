@@ -583,6 +583,8 @@ export async function introDeal(startNew, hooks = {}) {
   title.className = "landing-title";
   title.textContent = "Mahjong Coach";
   layer.append(title, btn);
+  // listen from the moment the button shows: a tap while the title font is still loading still starts the game
+  const started = new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
   try { await document.fonts.load('200px "Instrument Serif"'); } catch { /* fine without it */ }
   const tTop = title.getBoundingClientRect().top;
   // the pile fills the space above the name, starting a little above the top of the screen
@@ -613,7 +615,7 @@ export async function introDeal(startNew, hooks = {}) {
     // Start pressed: let a flip in progress finish, and the pushes already going land
     return { stop: async () => { stopping = true; await ready; if (mixing) await mixing.stop(); } };
   })();
-  await new Promise((resolve) => btn.addEventListener("click", resolve, { once: true }));
+  await started;
   await idle.stop();
   btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished.then(() => btn.remove());
   title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: "forwards" }).finished.then(() => title.remove());
