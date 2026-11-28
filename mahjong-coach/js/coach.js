@@ -631,8 +631,8 @@ export function hint(state) {
     const o = others[0];
     const why = equal.length < 2 && role.kind === "shape" && o
       ? best.ukeire > o.ukeire
-        ? `<p>Your other tiles have more ways to make groups, so throwing it leaves you the most useful tiles: ${best.ukeire}, against ${o.ukeire} if you threw ${t(o.k)}.</p>`
-        : best.ukeire === o.ukeire ? `<p>Throwing ${t(o.k)} instead would leave you just as many useful tiles (${o.ukeire}), so either is fine.</p>` : ""
+        ? `<p>Your other tiles have more ways to make groups, so throwing it leaves you the most useful tiles.</p>`
+        : best.ukeire === o.ukeire ? `<p>Throwing ${t(o.k)} instead would leave you just as many useful tiles, so either is fine.</p>` : ""
       : "";
     let html = `${lead}${why}${pairNote}${keptHtml}`
       + `<p>Your top choices:</p><ul class="hint-list">${rows}</ul>`;
