@@ -120,6 +120,19 @@ function pushShuffle(ghosts, pile) {
     return { x: bx, y: by };
   }
   const near = (a, b) => Math.abs(a.x - b.x) < pile.w * 2.5 && Math.abs(a.y - b.y) < pile.w * 2.5;
+  // tiles bucketed by where they lie, so each one only checks the tiles around it instead of all of them
+  const CELL = pile.w * 2.5;
+  const cellOf = (g) => [Math.floor(g.x / CELL), Math.floor(g.y / CELL)];
+  function buckets() {
+    const m = new Map();
+    ghosts.forEach((g, i) => { const [cx, cy] = cellOf(g), k = cx + "," + cy; if (!m.has(k)) m.set(k, []); m.get(k).push(i); });
+    return m;
+  }
+  function around(m, g) {
+    const [cx, cy] = cellOf(g), out = [];
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const b = m.get((cx + dx) + "," + (cy + dy)); if (b) out.push(...b); }
+    return out;
+  }
   /* how far b must move along (ux, uy) to be clear of a, or Infinity if moving that way can't clear it */
   function along(a, b, ux, uy) {
     const ra = (a.rot * Math.PI) / 180, rb = (b.rot * Math.PI) / 180;
@@ -140,18 +153,19 @@ function pushShuffle(ghosts, pile) {
      once nothing overlaps. */
   function settle(held, dirOf) {
     for (let pass = 0; pass < 40; pass++) {
+      const cells = buckets();
       const depth = new Array(n).fill(Infinity), queue = [...held];
       held.forEach((i) => { depth[i] = 0; });
       for (let q = 0; q < queue.length; q++) {
         const i = queue[q];
-        for (let j = 0; j < n; j++) {
+        for (const j of around(cells, ghosts[i])) {
           if (depth[j] !== Infinity || !near(ghosts[i], ghosts[j]) || !overlap(ghosts[i], ghosts[j])) continue;
           depth[j] = depth[i] + 1; queue.push(j);
         }
       }
       let moved = false;
-      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
-        if (held.has(i) && held.has(j)) continue;
+      for (let i = 0; i < n; i++) for (const j of around(cells, ghosts[i])) {
+        if (j <= i || (held.has(i) && held.has(j))) continue;
         const a = ghosts[i], b = ghosts[j];
         if (!near(a, b)) continue;
         const m = overlap(a, b);
@@ -249,7 +263,7 @@ function pushShuffle(ghosts, pile) {
     const dur = 650 + Math.random() * 250;
     shuffleRattle(dur / 1000, 6);
     return {
-      x: hand.x, y: hand.y, group, dir: [Math.cos(tang), Math.sin(tang)], dur, t0: performance.now(), done: 0,
+      x: hand.x, y: hand.y, group, dir: [Math.cos(tang), Math.sin(tang)], dur, elapsed: 0, age: 0, done: 0,
       // the group moves as one piece: along the push, turning a little about its middle
       place(e) {
         const ph = (spin * e * Math.PI) / 180, c = Math.cos(ph), sn = Math.sin(ph);
@@ -269,7 +283,25 @@ function pushShuffle(ghosts, pile) {
   let running = true, nextStart = performance.now() + 350, stopped;
   const finished = new Promise((r) => { stopped = r; });
   let state = snap();
+  const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
+  // what's drawn glides after where the tiles are, so a tile shoved aside slides there instead of snapping
+  const shown = ghosts.map((g) => ({ x: g.x, y: g.y, rot: g.rot }));
+  const draw = (dt) => {
+    const k = 1 - Math.exp(-dt / 70);  // closes about 2/3 of the gap every 70ms
+    let still = true;
+    ghosts.forEach((g, i) => {
+      const d = shown[i], ex = g.x - d.x, ey = g.y - d.y, er = g.rot - d.rot;
+      if (Math.abs(ex) < 0.05 && Math.abs(ey) < 0.05 && Math.abs(er) < 0.05) { if (d.x !== g.x || d.y !== g.y || d.rot !== g.rot) { Object.assign(d, { x: g.x, y: g.y, rot: g.rot }); setPlace(Object.assign({}, g, d)); } return; }
+      still = false;
+      d.x += ex * k; d.y += ey * k; d.rot += er * k;
+      setPlace(Object.assign({}, g, d));
+    });
+    return still;
+  };
+  let last = performance.now();
   const frame = (now) => {
+    const dt = Math.min(50, now - last);  // a long pause (a background tab) doesn't turn into one big step
+    last = now;
     if (running && now >= nextStart && hands.length < 3) {
       const busy = new Set(hands.flatMap((h) => h.group));
       const h = newHand(busy, hands);
@@ -281,20 +313,28 @@ function pushShuffle(ghosts, pile) {
     const held = new Set(owner.keys());
     const dirOf = (i) => owner.get(i).dir;
     for (const h of shuffle(hands.slice())) {
-      const p = Math.min(1, (now - h.t0) / h.dur), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-      for (const tryE of [e, h.done + (e - h.done) / 2, h.done + (e - h.done) / 4]) {
+      // a full step, or half, or a quarter; if even that would squeeze a tile, this hand waits this frame. Once
+      // this frame has used its share of time, the hands left wait for the next one, so a frame never stalls
+      // a push that was held up moves up to twice as fast until it has made up the time, so it still goes its
+      // full distance, smoothly
+      h.age += dt;
+      const step = dt + Math.min(dt, Math.max(0, h.age - h.elapsed - dt));
+      let moved = false;
+      for (const f of performance.now() - now > 10 ? [] : [1, 0.5, 0.25]) {
+        const el = Math.min(h.dur, h.elapsed + step * f), tryE = ease(el / h.dur);
         restore(state);
         h.place(tryE);
         // two hands' groups can't push each other: if this one would touch another's, it waits
         const blocked = h.group.some((i) => hands.some((o) => o !== h && o.group.some((j) => near(ghosts[i], ghosts[j]) && overlap(ghosts[i], ghosts[j]))));
-        if (!blocked && settle(held, dirOf)) { h.done = tryE; state = snap(); break; }
+        if (!blocked && settle(held, dirOf)) { h.elapsed = el; h.done = tryE; state = snap(); moved = true; break; }
       }
       restore(state);
-      if (p >= 1) h.over = true;
+      if (h.elapsed >= h.dur || h.age > h.dur * 2.5) h.over = true;  // done, or stuck long enough to give up
     }
     for (let q = hands.length - 1; q >= 0; q--) if (hands[q].over) hands.splice(q, 1);
-    for (const g of ghosts) setPlace(g);
-    if (running || hands.length) requestAnimationFrame(frame); else stopped();
+    const still = draw(dt);
+    if (running || hands.length || !still) requestAnimationFrame(frame);
+    else { ghosts.forEach(setPlace); stopped(); }
   };
   requestAnimationFrame(frame);
   // Start pressed: no new hands; the pushes already going finish
