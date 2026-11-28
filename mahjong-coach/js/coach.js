@@ -179,7 +179,34 @@ export function distance(state) {
 /* The footnote at the end of every coach card while a hand is on: how far your hand is from winning right now. */
 export function awayNote(state) {
   const s = distance(state);
-  return s < 0 ? "You have a winning hand." : `You're ${s + 1} tile${s === 0 ? "" : "s"} away from winning.`;
+  if (s < 0) return "You have a winning hand.";
+  const pl = state.players[0];
+  const shape = closestShape(handCounts(pl), pl.melds.length, unseenFor(state, 0));
+  const with_ = shape === "sevenPairs" ? " with seven pairs" : shape === "orphans" ? " with thirteen orphans" : "";
+  return `You're ${s + 1} tile${s === 0 ? "" : "s"} away from winning${with_}.`;
+}
+
+/* The special hands, drawn the same way (only when Special hands is on). Seven pairs: the pairs you have, then a
+   single and an empty tile for each pair still to make. Thirteen orphans: the 1s and 9s of each suit, the winds,
+   the dragons, an empty tile for each one missing, your pair's second tile beside its first, or (no pair yet) one
+   empty tile on its own for it. */
+function sevenPairsShape(c, unseen, skip) {
+  const groups = [], singles = [];
+  for (let k = 0; k < 34; k++) {
+    if (c[k] >= 2 && groups.length < 7) groups.push({ tiles: [k, k], done: true });
+    else if (c[k] >= 1) singles.push(k);
+  }
+  singles.sort((a, b) => (a === skip) - (b === skip) || unseen[b] - unseen[a] || a - b);
+  while (groups.length < 7) { const k = singles.shift(); groups.push({ tiles: k === undefined ? [null, null] : [k, null], done: false }); }
+  return groups;
+}
+function orphansShape(c) {
+  const pairK = ORPHANS.find((k) => c[k] >= 2);
+  const groups = [[0, 8], [9, 17], [18, 26], [27, 28, 29, 30], [31, 32, 33]].map((ks) => ({
+    tiles: ks.flatMap((k) => (c[k] >= 1 ? (k === pairK ? [k, k] : [k]) : [null])), done: false,
+  }));
+  if (pairK === undefined) groups.push({ tiles: [null], done: false });
+  return groups;
 }
 
 /* The same hand as four sets and a pair (Figma 2466:40833): each group's tiles, null where a tile is still
@@ -191,7 +218,10 @@ export function awayShape(state, skip = null) {
   const pl = state.players[0];
   const c = handCounts(pl), unseen = unseenFor(state, 0), open = pl.melds.length;
   const s = distance(state);
-  if (s < -1 || closestShape(c, open, unseen) !== "standard") return null;
+  if (s < -1) return null;
+  const shape = closestShape(c, open, unseen);
+  if (shape === "sevenPairs") return sevenPairsShape(c, unseen, skip);
+  if (shape === "orphans") return orphansShape(c);
   const g = shapeGroups(c, open, unseen);
   if (g.s !== s) return null;
   const singles = [];

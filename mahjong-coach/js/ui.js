@@ -3,7 +3,7 @@
 import * as G from "./game.js";
 import * as St from "./strategy.js";
 import * as Coach from "./coach.js";
-import { kindOf, isSuited } from "./engine.js";
+import { kindOf, isSuited, RULES } from "./engine.js";
 import { coachTileHtml, coachPortraitHtml } from "./coach-art.js";
 import { dealAnimation, introDeal } from "./deal-anim.js";
 import { setSoundEnabled } from "./sound.js";
@@ -25,7 +25,9 @@ const PREFS = TEST ? "mahjong-coach:test-prefs" : "mahjong-coach:prefs";
 // before that switch was remembered as a choice carry "mandarin" just because it was the old default).
 const savedPrefs = loadPrefs();
 if (!savedPrefs.langChosen) delete savedPrefs.lang;
-const prefs = { showScores: false, autoSort: true, difficulty: "normal", sound: true, noFlowers: true, lang: "cantonese", ...savedPrefs };
+const prefs = { showScores: false, autoSort: true, difficulty: "normal", sound: true, noFlowers: true, specialHands: false, lang: "cantonese", ...savedPrefs };
+// specialHands: seven pairs and thirteen orphans also win (off by default: a win is always four sets and a pair)
+RULES.special = prefs.specialHands;
 setLang(prefs.lang);
 const firstVisit = !load();  // no saved game: start with the face-down pile and a "Start new game" button
 let state = load() || G.createGame({ noFlowers: prefs.noFlowers, points: prefs.showScores });
@@ -527,6 +529,7 @@ function renderSettings() {
   $("sortBtn").setAttribute("aria-checked", String(prefs.autoSort));
   $("scoresBtn").setAttribute("aria-checked", String(prefs.showScores));
   $("flowersBtn").setAttribute("aria-checked", String(!prefs.noFlowers));  // on = playing with flowers
+  $("specialBtn").setAttribute("aria-checked", String(prefs.specialHands));
   $("soundBtn").setAttribute("aria-checked", String(prefs.sound));
   setSoundEnabled(prefs.sound);
   document.querySelectorAll("[data-diff]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.diff === prefs.difficulty)));
@@ -1215,6 +1218,12 @@ $("soundBtn").addEventListener("click", () => {
 });
 $("flowersBtn").addEventListener("click", () => {
   prefs.noFlowers = !prefs.noFlowers;  // takes effect from the next hand dealt
+  savePrefs();
+  render();
+});
+$("specialBtn").addEventListener("click", () => {
+  prefs.specialHands = !prefs.specialHands;
+  RULES.special = prefs.specialHands;  // the rule follows straight away: the Win button and the coach update now
   savePrefs();
   render();
 });

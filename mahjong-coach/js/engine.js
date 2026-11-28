@@ -108,6 +108,10 @@ function standardShanten(c, open, live) {
   return best;
 }
 
+/* House rules the engine reads. special: seven pairs and thirteen orphans also win (Settings, "Special hands";
+   off by default, so a win is always four sets and a pair). */
+export const RULES = { special: false };
+
 function sevenPairsShanten(c) {
   let pairs = 0, kinds = 0;
   for (let k = 0; k < 34; k++) {
@@ -131,7 +135,7 @@ function orphansShanten(c) {
 export function shanten(c, open = 0, unseen = null) {
   const live = unseen ? unseen.map((x) => x > 0) : null;
   let s = standardShanten(c, open, live);
-  if (open === 0) s = Math.min(s, sevenPairsShanten(c), orphansShanten(c));
+  if (open === 0 && RULES.special) s = Math.min(s, sevenPairsShanten(c), orphansShanten(c));
   return s;
 }
 
@@ -197,7 +201,7 @@ export function shapeGroups(c, open = 0, unseen = null) {
 
 /* Which hand shape a concealed hand is closest to: "orphans", "sevenPairs" or "standard". */
 export function closestShape(c, open = 0, unseen = null) {
-  if (open > 0) return "standard";
+  if (open > 0 || !RULES.special) return "standard";
   const std = standardShanten(c, 0, unseen ? unseen.map((x) => x > 0) : null);
   const o = orphansShanten(c), sp = sevenPairsShanten(c);
   if (o < std && o <= sp) return "orphans";
@@ -263,7 +267,7 @@ export function decompose(counts, open) {
       c[k] += 2;
     }
   }
-  if (open === 0) {
+  if (open === 0 && RULES.special) {
     const total = c.reduce((a, b) => a + b, 0);
     if (total === 14 && c.every((x) => x === 0 || x === 2)) out.push({ special: "sevenPairs" });
     if (total === 14 && ORPHANS.every((k) => c[k] >= 1) && c.every((x, k) => x === 0 || ORPHANS.includes(k)))
